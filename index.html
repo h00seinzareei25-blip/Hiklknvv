@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#15604A">
+<title>دفتر حساب</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دفتر حساب">
+<style>
+  @font-face{font-family:'Vazirmatn';src:url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:400;font-display:swap;}
+  @font-face{font-family:'Vazirmatn';src:url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');font-weight:700;font-display:swap;}
+  @font-face{font-family:'Vazirmatn';src:url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Black.woff2') format('woff2');font-weight:900;font-display:swap;}
+
+  :root{
+    --bg:#EAEEEC;--surface:#FFFFFF;--ink:#16211D;--muted:#6B7A73;--line:#DCE3DF;
+    --brand:#15604A;--brand-deep:#0E3F31;--gold:#C39A3E;--gold-soft:#F3E9CF;
+    --income:#1E8E5A;--income-soft:#E4F3EA;--expense:#C2453A;--expense-soft:#FAE8E6;
+    --shadow:0 6px 24px rgba(14,63,49,.10);--shadow-sm:0 2px 8px rgba(14,63,49,.07);--radius:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Vazirmatn','Tahoma',sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.7;font-size:15px;padding-bottom:96px;}
+  button,input,select{font-family:inherit;font-size:inherit;color:inherit;}
+  button{cursor:pointer;border:none;background:none;}
+  .wrap{max-width:520px;margin:0 auto;padding:0 14px;}
+
+  header{background:linear-gradient(160deg,var(--brand) 0%,var(--brand-deep) 100%);
+    color:#fff;padding:calc(22px + env(safe-area-inset-top)) 0 70px;position:relative;overflow:hidden;}
+  header::after{content:"";position:absolute;inset:0;
+    background-image:repeating-linear-gradient(0deg,transparent,transparent 33px,rgba(255,255,255,.05) 33px,rgba(255,255,255,.05) 34px);pointer-events:none;}
+  .brand-row{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+  .brand-name{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;}
+  .brand-mark{width:30px;height:30px;border-radius:9px;background:var(--gold);display:grid;place-items:center;color:var(--brand-deep);font-weight:900;font-size:17px;}
+  .tools{display:flex;gap:6px;}
+  .tool-btn{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.13);color:#fff;display:grid;place-items:center;font-size:18px;transition:background .15s;}
+  .tool-btn:active{background:rgba(255,255,255,.28);}
+  .balance{position:relative;z-index:1;text-align:center;margin-top:18px;}
+  .balance .lbl{font-size:13px;color:rgba(255,255,255,.72);letter-spacing:.5px;}
+  .balance .amt{font-size:38px;font-weight:900;margin-top:4px;direction:ltr;}
+  .balance .amt .u{font-size:16px;font-weight:700;color:var(--gold-soft);margin-inline-start:4px;}
+  .balance .rule{width:54px;height:3px;background:var(--gold);border-radius:2px;margin:10px auto 0;}
+
+  .stats{display:flex;gap:12px;margin-top:-50px;position:relative;z-index:2;}
+  .stat{flex:1;background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);}
+  .stat .top{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);}
+  .dot{width:9px;height:9px;border-radius:50%;}.dot.in{background:var(--income);}.dot.out{background:var(--expense);}
+  .stat .val{font-weight:800;font-size:18px;margin-top:6px;direction:ltr;text-align:right;}
+  .val.in{color:var(--income);}.val.out{color:var(--expense);}
+
+  .filters{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;align-items:center;}
+  .month-pick{display:flex;align-items:center;gap:4px;background:var(--surface);border-radius:12px;padding:5px;box-shadow:var(--shadow-sm);}
+  .month-pick button{width:30px;height:30px;border-radius:8px;color:var(--brand);font-size:17px;font-weight:700;}
+  .month-pick button:active{background:var(--income-soft);}
+  .month-pick .m{min-width:96px;text-align:center;font-weight:700;font-size:13.5px;}
+  .search{flex:1;min-width:120px;background:var(--surface);border-radius:12px;padding:9px 13px;box-shadow:var(--shadow-sm);border:1px solid transparent;}
+  .search:focus{outline:none;border-color:var(--brand);}
+  .chips{display:flex;gap:7px;overflow-x:auto;margin-top:12px;padding-bottom:4px;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{white-space:nowrap;padding:6px 13px;border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm);font-size:13px;color:var(--muted);font-weight:600;}
+  .chip.active{background:var(--brand);color:#fff;}
+
+  .day-group{margin-top:20px;}
+  .day-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px;font-size:13px;}
+  .day-head .d{color:var(--muted);font-weight:700;}
+  .day-head .s{font-weight:700;direction:ltr;}
+  .tx-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;}
+  .tx{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line);}
+  .tx:last-child{border-bottom:none;}
+  .tx .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex-shrink:0;}
+  .ic.in{background:var(--income-soft);}.ic.out{background:var(--expense-soft);}
+  .tx .mid{flex:1;min-width:0;}
+  .tx .desc{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx .cat{font-size:12px;color:var(--muted);margin-top:2px;}
+  .tx .amt{font-weight:800;font-size:15px;direction:ltr;flex-shrink:0;}
+  .amt.in{color:var(--income);}.amt.out{color:var(--expense);}
+  .empty{text-align:center;color:var(--muted);padding:54px 20px;}
+  .empty .big{font-size:42px;margin-bottom:10px;opacity:.5;}
+
+  .fab{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    background:var(--brand);color:#fff;border-radius:30px;padding:14px 26px;font-weight:800;font-size:15px;
+    box-shadow:0 8px 24px rgba(14,63,49,.32);display:flex;align-items:center;gap:8px;z-index:40;transition:transform .12s;}
+  .fab:active{transform:translateX(-50%) scale(.96);}
+
+  .scrim{position:fixed;inset:0;background:rgba(14,33,29,.45);z-index:50;opacity:0;visibility:hidden;transition:.2s;}
+  .scrim.show{opacity:1;visibility:visible;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:520px;margin:0 auto;background:var(--surface);
+    border-radius:24px 24px 0 0;padding:18px 18px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(110%);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:92vh;overflow-y:auto;}
+  .sheet.show{transform:translateY(0);}
+  .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px;}
+  .sheet h2{margin:0 0 16px;font-size:18px;display:flex;justify-content:space-between;align-items:center;}
+  .sheet h2 .add-mini{font-size:13px;color:var(--brand);font-weight:700;background:var(--income-soft);padding:6px 12px;border-radius:10px;}
+
+  .type-toggle{display:flex;background:var(--bg);border-radius:14px;padding:5px;margin-bottom:16px;}
+  .type-toggle button{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted);transition:.15s;}
+  .type-toggle button.act-out{background:var(--expense);color:#fff;}
+  .type-toggle button.act-in{background:var(--income);color:#fff;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;padding-inline-start:2px;}
+  .field input,.field select{width:100%;padding:13px;border-radius:13px;border:1.5px solid var(--line);background:#fff;transition:border-color .15s;}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--brand);}
+  .amount-in{font-size:22px!important;font-weight:800;text-align:center;direction:ltr;}
+  .date-row{display:flex;gap:8px;}.date-row select{flex:1;}
+  .cat-grid{display:flex;gap:7px;flex-wrap:wrap;}
+  .cat-opt{padding:8px 13px;border-radius:20px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:600;color:var(--ink);}
+  .cat-opt.sel{border-color:var(--brand);background:var(--income-soft);color:var(--brand);}
+  .save-btn{width:100%;padding:15px;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:16px;margin-top:6px;transition:transform .1s;}
+  .save-btn:active{transform:scale(.98);}
+  .del-link{display:block;width:100%;text-align:center;color:var(--expense);font-weight:700;margin-top:14px;padding:8px;font-size:14px;}
+
+  .menu-item{display:flex;align-items:center;gap:13px;padding:15px 6px;border-bottom:1px solid var(--line);font-weight:600;}
+  .menu-item:last-child{border-bottom:none;}
+  .menu-item .mi{width:40px;height:40px;border-radius:11px;background:var(--income-soft);display:grid;place-items:center;font-size:19px;flex-shrink:0;}
+  .menu-item .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px;}
+  .menu-item .txt{flex:1;min-width:0;}
+
+  /* category editor */
+  .cat-tabs{display:flex;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:14px;}
+  .cat-tabs button{flex:1;padding:9px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted);}
+  .cat-tabs button.act{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-sm);}
+  .cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .cat-row .icbtn{width:46px;height:46px;border-radius:12px;background:var(--bg);font-size:22px;display:grid;place-items:center;flex-shrink:0;}
+  .cat-row .nm{flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--line);background:#fff;}
+  .cat-row .nm:focus{outline:none;border-color:var(--brand);}
+  .cat-row .rm{width:38px;height:38px;border-radius:10px;color:var(--expense);font-size:18px;flex-shrink:0;}
+  .cat-row .rm:active{background:var(--expense-soft);}
+
+  .emoji-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px;}
+  .emoji-grid button{aspect-ratio:1;border-radius:11px;background:var(--bg);font-size:22px;display:grid;place-items:center;}
+  .emoji-grid button:active{background:var(--income-soft);}
+
+  /* FS banner */
+  .fsbar{display:none;background:var(--gold-soft);color:var(--brand-deep);padding:10px 14px;
+    border-radius:12px;margin:14px 0 -4px;font-size:13px;font-weight:600;align-items:center;justify-content:space-between;gap:10px;}
+  .fsbar.show{display:flex;}
+  .fsbar button{background:var(--brand);color:#fff;padding:7px 14px;border-radius:9px;font-weight:700;font-size:12.5px;white-space:nowrap;}
+
+  .rep-bar-wrap{height:8px;background:var(--bg);border-radius:5px;overflow:hidden;}
+  .rep-bar{height:100%;background:var(--expense);border-radius:5px;}
+
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:11px 20px;border-radius:24px;font-size:13.5px;font-weight:600;z-index:90;opacity:0;transition:.25s;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand-row">
+      <div class="brand-name"><span class="brand-mark">ح</span><span>دفتر حساب</span></div>
+      <div class="tools">
+        <button class="tool-btn" id="reportBtn" title="گزارش">▦</button>
+        <button class="tool-btn" id="menuBtn" title="منو">≡</button>
+      </div>
+    </div>
+    <div class="balance">
+      <div class="lbl">موجودی این ماه</div>
+      <div class="amt" id="balAmt">۰<span class="u">تومان</span></div>
+      <div class="rule"></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="top"><span class="dot in"></span>درآمد</div><div class="val in" id="incVal">۰</div></div>
+    <div class="stat"><div class="top"><span class="dot out"></span>هزینه</div><div class="val out" id="expVal">۰</div></div>
+  </div>
+
+  <div class="fsbar" id="fsBar">
+    <span id="fsMsg">برای ذخیرهٔ خودکار، دسترسی به فایل را دوباره تأیید کن.</span>
+    <button id="fsReconnect">اتصال</button>
+  </div>
+
+  <div class="filters">
+    <div class="month-pick">
+      <button id="prevM">‹</button><span class="m" id="mLabel">—</span><button id="nextM">›</button>
+    </div>
+    <input class="search" id="search" placeholder="جستجو…">
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="list"></div>
+</div>
+
+<button class="fab" id="addBtn"><span style="font-size:20px;">＋</span> ثبت تراکنش</button>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- add/edit -->
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2 id="sheetTitle">ثبت تراکنش</h2>
+  <div class="type-toggle" id="typeToggle">
+    <button data-type="expense">هزینه</button><button data-type="income">درآمد</button>
+  </div>
+  <div class="field"><label>مبلغ (تومان)</label><input class="amount-in" id="amountIn" inputmode="numeric" placeholder="۰" autocomplete="off"></div>
+  <div class="field"><label>بابتِ</label><input id="descIn" placeholder="مثلاً خرید نان، قبض برق…" autocomplete="off"></div>
+  <div class="field"><label>دسته‌بندی</label><div class="cat-grid" id="catGrid"></div></div>
+  <div class="field"><label>تاریخ</label><div class="date-row"><select id="dY"></select><select id="dM"></select><select id="dD"></select></div></div>
+  <button class="save-btn" id="saveBtn">ذخیره</button>
+  <button class="del-link" id="delBtn" style="display:none;">حذف این تراکنش</button>
+</div>
+
+<!-- menu -->
+<div class="sheet" id="menuSheet">
+  <div class="grab"></div>
+  <h2>منو و داده‌ها</h2>
+  <div class="menu-item" id="manageCats"><span class="mi">🏷️</span><div class="txt">مدیریت دسته‌ها<div class="sub">افزودن، ویرایش نام و آیکن، حذف</div></div></div>
+  <div class="menu-item" id="fsConnect" style="display:none;"><span class="mi">🔗</span><div class="txt" id="fsConnectTxt">ذخیرهٔ خودکار در فایل<div class="sub" id="fsConnectSub">یک فایل انتخاب کن تا تغییرات خودکار ذخیره شوند</div></div></div>
+  <div class="menu-item" id="expJson"><span class="mi">⬇</span><div class="txt">دریافت پشتیبان (JSON)</div></div>
+  <div class="menu-item" id="impJson"><span class="mi">⬆</span><div class="txt">بازیابی از فایل پشتیبان</div></div>
+  <div class="menu-item" id="expCsv"><span class="mi">▤</span><div class="txt">خروجی اکسل (CSV)</div></div>
+  <div class="menu-item" id="clearAll" style="color:var(--expense);"><span class="mi" style="background:var(--expense-soft);">✕</span><div class="txt">پاک کردن همهٔ داده‌ها</div></div>
+  <input type="file" id="fileIn" accept="application/json" style="display:none;">
+</div>
+
+<!-- categories manager -->
+<div class="sheet" id="catSheet">
+  <div class="grab"></div>
+  <h2>مدیریت دسته‌ها <button class="add-mini" id="addCat">＋ دستهٔ جدید</button></h2>
+  <div class="cat-tabs" id="catTabs"><button data-t="expense" class="act">هزینه</button><button data-t="income">درآمد</button></div>
+  <div id="catList"></div>
+  <button class="save-btn" id="catDone" style="margin-top:16px;">تمام</button>
+</div>
+
+<!-- emoji picker -->
+<div class="sheet" id="emojiSheet">
+  <div class="grab"></div>
+  <h2>انتخاب آیکن</h2>
+  <div class="field"><label>یا یک ایموجی/نویسه دلخواه بنویس</label><input id="emojiCustom" placeholder="مثلاً 🌿" autocomplete="off" style="text-align:center;font-size:22px;"></div>
+  <div class="emoji-grid" id="emojiGrid"></div>
+  <button class="save-btn" id="emojiUseCustom" style="margin-top:14px;">استفاده از نویسهٔ دلخواه</button>
+</div>
+
+<!-- report -->
+<div class="sheet" id="reportSheet">
+  <div class="grab"></div>
+  <h2 id="repTitle">گزارش ماه</h2>
+  <div id="repBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------- Jalaali conversion ---------- */
+function div(a,b){return ~~(a/b);}
+function g2j(gy,gm,gd){var gdm=[0,31,59,90,120,151,181,212,243,273,304,334];var gy2=(gm>2)?(gy+1):gy;
+  var days=355666+(365*gy)+div(gy2+3,4)-div(gy2+99,100)+div(gy2+399,400)+gd+gdm[gm-1];
+  var jy=-1595+(33*div(days,12053));days%=12053;jy+=4*div(days,1461);days%=1461;
+  if(days>365){jy+=div(days-1,365);days=(days-1)%365;}var jm,jd;
+  if(days<186){jm=1+div(days,31);jd=1+(days%31);}else{jm=7+div(days-186,30);jd=1+((days-186)%30);}
+  return {jy:jy,jm:jm,jd:jd};}
+function jLeap(jy){return [1,5,9,13,17,22,26,30].indexOf(jy%33)!==-1;}
+function jMonthLen(jy,jm){if(jm<=6)return 31;if(jm<=11)return 30;return jLeap(jy)?30:29;}
+function todayJ(){var n=new Date();return g2j(n.getFullYear(),n.getMonth()+1,n.getDate());}
+var MONTHS=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+
+/* ---------- helpers ---------- */
+function fa(n){return String(n).replace(/[0-9]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'[d];});}
+function enDigits(s){return String(s).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);}).replace(/[^0-9]/g,'');}
+function faAware(s){return String(s).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);});}
+function group(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function money(n){return fa(group(Math.round(n)));}
+function jKey(j){return j.jy+'-'+String(j.jm).padStart(2,'0');}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- default categories ---------- */
+var DEFAULT_CATS={
+  expense:[['خوراک','🍞'],['حمل‌ونقل','🚌'],['قبوض','🧾'],['مسکن','🏠'],['درمان','💊'],
+           ['پوشاک','👕'],['تفریح','🎉'],['آموزش','📚'],['خرید','🛍️'],['سایر','•']],
+  income:[['حقوق','💼'],['فروش','🏷️'],['هدیه','🎁'],['سود','📈'],['بازپرداخت','↩️'],['سایر','•']]
+};
+function catIcon(type,name){var arr=(state.cats[type]||[]);for(var i=0;i<arr.length;i++)if(arr[i][0]===name)return arr[i][1];
+  return type==='income'?'💰':'•';}
+
+var EMOJIS=['🍞','🍎','🍔','🛒','🥦','🍽️','☕','🍵','🚗','🚌','🚕','⛽','🚲','✈️','🏠','🛋️','💡','🔥','💧','🔌',
+  '💊','🏥','🦷','👓','👕','👟','👜','💄','🎉','🎮','🎬','🎵','📺','📚','✏️','🎓','💼','🏷️','🎁','📈',
+  '💰','🪙','💳','🏦','🧾','↩️','🔁','🐱','🐶','☎️','📱','💻','🎈','❤️','⭐','🌿','🧹','🎀','🚬','•'];
+
+/* ---------- state ---------- */
+var STORE='hesabdar_v2';
+var state=load();
+var view=todayJ();
+var curType='expense', curCat=null, editId=null, activeChip='all';
+var catTab='expense';
+
+function defaultState(){return {tx:[],cats:clone(DEFAULT_CATS)};}
+function load(){
+  try{
+    var r=localStorage.getItem(STORE);
+    if(r){var s=JSON.parse(r);if(s&&s.tx&&s.cats)return s;}
+    var old=localStorage.getItem('hesabdar_v1');
+    if(old){var arr=JSON.parse(old);if(Array.isArray(arr))return {tx:arr,cats:clone(DEFAULT_CATS)};}
+  }catch(e){}
+  return defaultState();
+}
+function saveLocal(){try{localStorage.setItem(STORE,JSON.stringify(state));}catch(e){toast('ذخیره ناموفق بود');}}
+
+/* ---------- File System Access auto-save ---------- */
+var FS_OK=('showSaveFilePicker' in window);
+var fileHandle=null, writeT=null;
+
+function idbOpen(){return new Promise(function(res,rej){var o=indexedDB.open('hesab_kv',1);
+  o.onupgradeneeded=function(){o.result.createObjectStore('kv');};
+  o.onsuccess=function(){res(o.result);};o.onerror=function(){rej();};});}
+function idbSet(k,v){return idbOpen().then(function(db){return new Promise(function(res){
+  var t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){res();};});});}
+function idbGet(k){return idbOpen().then(function(db){return new Promise(function(res){
+  var t=db.transaction('kv','readonly');var r=t.objectStore('kv').get(k);r.onsuccess=function(){res(r.result);};r.onerror=function(){res(null);};});}).catch(function(){return null;});}
+function idbDel(k){return idbOpen().then(function(db){return new Promise(function(res){
+  var t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=function(){res();};});});}
+
+function persist(){
+  saveLocal();
+  if(fileHandle){clearTimeout(writeT);writeT=setTimeout(writeFile,400);}
+}
+function writeFile(){
+  if(!fileHandle)return;
+  fileHandle.createWritable().then(function(w){
+    return w.write(JSON.stringify(state,null,2)).then(function(){return w.close();});
+  }).catch(function(){});
+}
+function connectFile(){
+  window.showSaveFilePicker({suggestedName:'hesab-data.json',
+    types:[{description:'JSON',accept:{'application/json':['.json']}}]})
+  .then(function(h){fileHandle=h;return idbSet('fh',h);})
+  .then(function(){writeFile();updateFsUI();hideSheets();toast('ذخیرهٔ خودکار فعال شد ✓');})
+  .catch(function(){});
+}
+function loadFromFile(){
+  return fileHandle.getFile().then(function(f){return f.text();}).then(function(t){
+    if(t){var s=JSON.parse(t);if(s&&s.tx&&s.cats){state=s;saveLocal();}}
+  }).catch(function(){});
+}
+function initFs(){
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});
+  if(!FS_OK){return;}
+  document.getElementById('fsConnect').style.display='flex';
+  idbGet('fh').then(function(h){
+    if(!h){updateFsUI();return;}
+    h.queryPermission({mode:'readwrite'}).then(function(p){
+      if(p==='granted'){fileHandle=h;loadFromFile().then(function(){render();updateFsUI();});}
+      else{ // needs a user gesture to reconnect
+        pendingHandle=h;
+        document.getElementById('fsBar').classList.add('show');
+        updateFsUI();
+      }
+    });
+  });
+}
+var pendingHandle=null;
+function reconnect(){
+  if(!pendingHandle)return;
+  pendingHandle.requestPermission({mode:'readwrite'}).then(function(p){
+    if(p==='granted'){fileHandle=pendingHandle;pendingHandle=null;
+      document.getElementById('fsBar').classList.remove('show');
+      loadFromFile().then(function(){render();updateFsUI();toast('ذخیرهٔ خودکار وصل شد ✓');});}
+  });
+}
+function updateFsUI(){
+  if(!FS_OK)return;
+  var sub=document.getElementById('fsConnectSub'),txt=document.getElementById('fsConnectTxt');
+  if(fileHandle){txt.firstChild.textContent='ذخیرهٔ خودکار فعال است ';sub.textContent='فایل: '+(fileHandle.name||'انتخاب‌شده')+' — برای تغییر فایل بزن';}
+  else{txt.firstChild.textContent='ذخیرهٔ خودکار در فایل ';sub.textContent='یک فایل انتخاب کن تا تغییرات خودکار ذخیره شوند';}
+}
+
+/* ---------- rendering ---------- */
+function monthTx(){var k=jKey(view);return state.tx.filter(function(t){return jKey({jy:t.jy,jm:t.jm})===k;});}
+function render(){
+  document.getElementById('mLabel').textContent=MONTHS[view.jm-1]+' '+fa(view.jy);
+  var list=monthTx(),inc=0,exp=0;
+  list.forEach(function(t){if(t.type==='income')inc+=t.amount;else exp+=t.amount;});
+  document.getElementById('incVal').textContent=money(inc);
+  document.getElementById('expVal').textContent=money(exp);
+  document.getElementById('balAmt').innerHTML=money(inc-exp)+'<span class="u">تومان</span>';
+
+  var present={};list.forEach(function(t){present[t.cat]=true;});
+  var chips='<button class="chip '+(activeChip==='all'?'active':'')+'" data-c="all">همه</button>';
+  Object.keys(present).forEach(function(c){chips+='<button class="chip '+(activeChip===c?'active':'')+'" data-c="'+escapeHtml(c)+'">'+escapeHtml(c)+'</button>';});
+  var chipsEl=document.getElementById('chips');chipsEl.innerHTML=chips;
+  chipsEl.querySelectorAll('.chip').forEach(function(b){b.onclick=function(){activeChip=b.dataset.c;render();};});
+
+  var q=faAware(document.getElementById('search').value.trim());
+  var filtered=list.filter(function(t){
+    if(activeChip!=='all'&&t.cat!==activeChip)return false;
+    if(q&&!((t.desc||'').includes(q)||(t.cat||'').includes(q)))return false;
+    return true;});
+  filtered.sort(function(a,b){return b.jd-a.jd || b.id-a.id;});
+
+  var listEl=document.getElementById('list');
+  if(!filtered.length){listEl.innerHTML='<div class="empty"><div class="big">🪙</div>'+
+    (list.length?'تراکنشی با این فیلتر پیدا نشد.':'هنوز تراکنشی ثبت نشده.<br>با دکمهٔ پایین شروع کن.')+'</div>';return;}
+  var groups={};filtered.forEach(function(t){(groups[t.jd]=groups[t.jd]||[]).push(t);});
+  var days=Object.keys(groups).map(Number).sort(function(a,b){return b-a;});
+  var html='';
+  days.forEach(function(d){var items=groups[d],net=0;items.forEach(function(t){net+=(t.type==='income'?t.amount:-t.amount);});
+    html+='<div class="day-group"><div class="day-head"><span class="d">'+fa(d)+' '+MONTHS[view.jm-1]+'</span>'+
+      '<span class="s" style="color:'+(net>=0?'var(--income)':'var(--expense)')+'">'+(net>=0?'+':'−')+money(Math.abs(net))+'</span></div><div class="tx-card">';
+    items.forEach(function(t){var sign=t.type==='income'?'+':'−';
+      html+='<div class="tx" data-id="'+t.id+'"><div class="ic '+(t.type==='income'?'in':'out')+'">'+catIcon(t.type,t.cat)+'</div>'+
+        '<div class="mid"><div class="desc">'+escapeHtml(t.desc||t.cat)+'</div><div class="cat">'+escapeHtml(t.cat)+'</div></div>'+
+        '<div class="amt '+(t.type==='income'?'in':'out')+'">'+sign+money(t.amount)+'</div></div>';});
+    html+='</div></div>';});
+  listEl.innerHTML=html;
+  listEl.querySelectorAll('.tx').forEach(function(el){el.onclick=function(){openEdit(Number(el.dataset.id));};});
+}
+
+/* ---------- add/edit sheet ---------- */
+function fillCatGrid(){
+  var g=document.getElementById('catGrid');
+  if(!curCat||!state.cats[curType].some(function(c){return c[0]===curCat;}))curCat=(state.cats[curType][0]||['',''])[0];
+  g.innerHTML=state.cats[curType].map(function(c){
+    return '<button class="cat-opt'+(c[0]===curCat?' sel':'')+'" data-c="'+escapeHtml(c[0])+'">'+c[1]+' '+escapeHtml(c[0])+'</button>';}).join('');
+  g.querySelectorAll('.cat-opt').forEach(function(b){b.onclick=function(){curCat=b.dataset.c;fillCatGrid();};});
+}
+function setType(t){curType=t;
+  if(!state.cats[t].some(function(c){return c[0]===curCat;}))curCat=(state.cats[t][0]||['',''])[0];
+  document.getElementById('typeToggle').querySelectorAll('button').forEach(function(b){
+    b.className=(b.dataset.type===t)?(t==='income'?'act-in':'act-out'):'';});
+  fillCatGrid();}
+function fillDateSelects(j){
+  var y=document.getElementById('dY'),m=document.getElementById('dM'),d=document.getElementById('dD'),cur=todayJ();
+  y.innerHTML='';for(var yy=cur.jy+1;yy>=cur.jy-6;yy--)y.innerHTML+='<option value="'+yy+'">'+fa(yy)+'</option>';
+  m.innerHTML='';MONTHS.forEach(function(nm,i){m.innerHTML+='<option value="'+(i+1)+'">'+nm+'</option>';});
+  y.value=j.jy;m.value=j.jm;refreshDays();d.value=j.jd;m.onchange=y.onchange=refreshDays;}
+function refreshDays(){var y=+document.getElementById('dY').value,m=+document.getElementById('dM').value,
+  d=document.getElementById('dD'),prev=+d.value||1,len=jMonthLen(y,m);d.innerHTML='';
+  for(var i=1;i<=len;i++)d.innerHTML+='<option value="'+i+'">'+fa(i)+'</option>';d.value=Math.min(prev,len);}
+function openAdd(){editId=null;document.getElementById('sheetTitle').textContent='ثبت تراکنش';
+  document.getElementById('delBtn').style.display='none';document.getElementById('amountIn').value='';
+  document.getElementById('descIn').value='';setType('expense');
+  fillDateSelects((view.jm===todayJ().jm&&view.jy===todayJ().jy)?todayJ():{jy:view.jy,jm:view.jm,jd:1});
+  showSheet('sheet');setTimeout(function(){document.getElementById('amountIn').focus();},300);}
+function openEdit(id){var t=state.tx.find(function(x){return x.id===id;});if(!t)return;editId=id;
+  document.getElementById('sheetTitle').textContent='ویرایش تراکنش';document.getElementById('delBtn').style.display='block';
+  curCat=t.cat;setType(t.type);
+  document.getElementById('amountIn').value=fa(group(t.amount));document.getElementById('descIn').value=t.desc||'';
+  fillDateSelects({jy:t.jy,jm:t.jm,jd:t.jd});showSheet('sheet');}
+function saveTx(){var amt=parseInt(enDigits(document.getElementById('amountIn').value),10);
+  if(!amt||amt<=0){toast('مبلغ را وارد کن');return;}
+  var rec={id:editId||Date.now(),type:curType,cat:curCat,desc:document.getElementById('descIn').value.trim(),amount:amt,
+    jy:+document.getElementById('dY').value,jm:+document.getElementById('dM').value,jd:+document.getElementById('dD').value};
+  if(editId){var i=state.tx.findIndex(function(x){return x.id===editId;});state.tx[i]=rec;toast('ویرایش شد');}
+  else{state.tx.push(rec);toast('ثبت شد ✓');}
+  persist();view={jy:rec.jy,jm:rec.jm};hideSheets();render();}
+function delTx(){if(!editId)return;state.tx=state.tx.filter(function(x){return x.id!==editId;});persist();hideSheets();render();toast('حذف شد');}
+
+/* ---------- category manager ---------- */
+function openCats(){catTab='expense';document.getElementById('catTabs').querySelectorAll('button').forEach(function(b){b.className=b.dataset.t==='expense'?'act':'';});renderCatList();showSheet('catSheet');}
+function renderCatList(){
+  var el=document.getElementById('catList');
+  el.innerHTML=state.cats[catTab].map(function(c,idx){
+    return '<div class="cat-row" data-i="'+idx+'">'+
+      '<button class="icbtn" data-act="icon">'+c[1]+'</button>'+
+      '<input class="nm" value="'+escapeHtml(c[0])+'" data-act="name">'+
+      '<button class="rm" data-act="del">🗑</button></div>';}).join('');
+  el.querySelectorAll('.cat-row').forEach(function(row){
+    var idx=+row.dataset.i;
+    row.querySelector('[data-act="icon"]').onclick=function(){openEmoji(function(em){state.cats[catTab][idx][1]=em;persist();renderCatList();});};
+    row.querySelector('[data-act="name"]').onchange=function(e){
+      var old=state.cats[catTab][idx][0],nw=e.target.value.trim()||old;
+      state.cats[catTab][idx][0]=nw;
+      // propagate rename to existing transactions of this type
+      if(nw!==old)state.tx.forEach(function(t){if(t.type===catTab&&t.cat===old)t.cat=nw;});
+      persist();};
+    row.querySelector('[data-act="del"]').onclick=function(){
+      if(state.cats[catTab].length<=1){toast('حداقل یک دسته لازم است');return;}
+      if(confirm('دستهٔ «'+state.cats[catTab][idx][0]+'» حذف شود؟'))
+        {state.cats[catTab].splice(idx,1);persist();renderCatList();}};
+  });
+}
+function addCat(){state.cats[catTab].push(['دستهٔ جدید','•']);persist();renderCatList();
+  var rows=document.getElementById('catList').querySelectorAll('.cat-row');
+  var last=rows[rows.length-1];if(last){var inp=last.querySelector('.nm');inp.focus();inp.select();}}
+
+/* ---------- emoji picker ---------- */
+var emojiCb=null;
+function openEmoji(cb){emojiCb=cb;document.getElementById('emojiCustom').value='';
+  var g=document.getElementById('emojiGrid');
+  g.innerHTML=EMOJIS.map(function(e){return '<button data-e="'+e+'">'+e+'</button>';}).join('');
+  g.querySelectorAll('button').forEach(function(b){b.onclick=function(){pickEmoji(b.dataset.e);};});
+  showSheet('emojiSheet');}
+function pickEmoji(e){var cb=emojiCb;document.getElementById('emojiSheet').classList.remove('show');
+  // keep catSheet open underneath; scrim stays
+  document.getElementById('scrim').classList.add('show');
+  if(cb)cb(e);}
+
+/* ---------- sheets ---------- */
+function showSheet(id){document.getElementById('scrim').classList.add('show');document.getElementById(id).classList.add('show');}
+function hideSheets(){document.getElementById('scrim').classList.remove('show');
+  ['sheet','menuSheet','catSheet','emojiSheet','reportSheet'].forEach(function(s){document.getElementById(s).classList.remove('show');});}
+
+/* ---------- report ---------- */
+function openReport(){var list=monthTx();
+  document.getElementById('repTitle').textContent='گزارش '+MONTHS[view.jm-1]+' '+fa(view.jy);
+  if(!list.length){document.getElementById('repBody').innerHTML='<div class="empty">داده‌ای برای این ماه نیست.</div>';showSheet('reportSheet');return;}
+  var byCat={},totalExp=0;list.forEach(function(t){if(t.type==='expense'){byCat[t.cat]=(byCat[t.cat]||0)+t.amount;totalExp+=t.amount;}});
+  var rows=Object.keys(byCat).map(function(c){return [c,byCat[c]];}).sort(function(a,b){return b[1]-a[1];});
+  var html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">تفکیک هزینه‌ها بر اساس دسته</div>';
+  if(!rows.length)html+='<div class="empty">هزینه‌ای ثبت نشده.</div>';
+  rows.forEach(function(r){var pct=totalExp?Math.round(r[1]/totalExp*100):0;
+    html+='<div style="margin-bottom:13px;"><div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-bottom:5px;">'+
+      '<span>'+catIcon('expense',r[0])+' '+escapeHtml(r[0])+'</span><span dir="ltr">'+money(r[1])+' · '+fa(pct)+'٪</span></div>'+
+      '<div class="rep-bar-wrap"><div class="rep-bar" style="width:'+pct+'%;"></div></div></div>';});
+  document.getElementById('repBody').innerHTML=html;showSheet('reportSheet');}
+
+/* ---------- import/export ---------- */
+function exportJson(){download(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'پشتیبان-دفترحساب-'+jKey(todayJ())+'.json');toast('فایل پشتیبان ساخته شد');}
+function exportCsv(){var head=['نوع','دسته','بابت','مبلغ','سال','ماه','روز'],lines=[head.join(',')];
+  state.tx.slice().sort(function(a,b){return (a.jy-b.jy)||(a.jm-b.jm)||(a.jd-b.jd);}).forEach(function(t){
+    lines.push([t.type==='income'?'درآمد':'هزینه',t.cat,'"'+(t.desc||'').replace(/"/g,'""')+'"',t.amount,t.jy,t.jm,t.jd].join(','));});
+  download(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'}),'دفترحساب-'+jKey(todayJ())+'.csv');toast('خروجی اکسل ساخته شد');}
+function download(blob,name){var a=document.createElement('a'),url=URL.createObjectURL(blob);
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove();},100);}
+function importJson(file){var r=new FileReader();r.onload=function(){try{var p=JSON.parse(r.result);
+  if(Array.isArray(p))state={tx:p.filter(function(t){return t&&t.amount;}),cats:clone(DEFAULT_CATS)};
+  else if(p&&p.tx)state={tx:p.tx,cats:(p.cats||clone(DEFAULT_CATS))};else throw 0;
+  persist();hideSheets();render();updateFsUI();toast('بازیابی شد ✓');}catch(e){toast('فایل معتبر نیست');}};r.readAsText(file);}
+
+/* ---------- toast ---------- */
+var toastT;function toast(msg){var el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('show');},1900);}
+
+/* ---------- bindings ---------- */
+document.getElementById('amountIn').addEventListener('input',function(e){var raw=enDigits(e.target.value);e.target.value=raw?fa(group(raw)):'';});
+document.getElementById('addBtn').onclick=openAdd;
+document.getElementById('saveBtn').onclick=saveTx;
+document.getElementById('delBtn').onclick=delTx;
+document.getElementById('scrim').onclick=hideSheets;
+document.getElementById('typeToggle').querySelectorAll('button').forEach(function(b){b.onclick=function(){setType(b.dataset.type);};});
+document.getElementById('prevM').onclick=function(){view.jm--;if(view.jm<1){view.jm=12;view.jy--;}activeChip='all';render();};
+document.getElementById('nextM').onclick=function(){view.jm++;if(view.jm>12){view.jm=1;view.jy++;}activeChip='all';render();};
+document.getElementById('search').oninput=render;
+document.getElementById('menuBtn').onclick=function(){updateFsUI();showSheet('menuSheet');};
+document.getElementById('reportBtn').onclick=openReport;
+document.getElementById('manageCats').onclick=openCats;
+document.getElementById('addCat').onclick=addCat;
+document.getElementById('catDone').onclick=hideSheets;
+document.getElementById('catTabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){
+  catTab=b.dataset.t;document.getElementById('catTabs').querySelectorAll('button').forEach(function(x){x.className=x.dataset.t===catTab?'act':'';});renderCatList();};});
+document.getElementById('emojiUseCustom').onclick=function(){var v=document.getElementById('emojiCustom').value.trim();
+  if(!v){toast('یک نویسه بنویس');return;}pickEmoji(Array.from(v)[0]);};
+document.getElementById('fsConnect').onclick=connectFile;
+document.getElementById('fsReconnect').onclick=reconnect;
+document.getElementById('expJson').onclick=exportJson;
+document.getElementById('expCsv').onclick=exportCsv;
+document.getElementById('impJson').onclick=function(){document.getElementById('fileIn').click();};
+document.getElementById('fileIn').onchange=function(e){if(e.target.files[0])importJson(e.target.files[0]);e.target.value='';};
+document.getElementById('clearAll').onclick=function(){if(confirm('همهٔ تراکنش‌ها پاک شوند؟ این کار قابل بازگشت نیست.'))
+  {state.tx=[];persist();hideSheets();render();toast('پاک شد');}};
+
+/* ---------- service worker ---------- */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+
+render();
+initFs();
+</script>
+</body>
+</html>
