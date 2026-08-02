@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">آب‌یار</string>
+    <string name="notification_channel_name">یادآوری نوشیدن آب</string>
+    <string name="notification_channel_description">یادآوری‌های زمان‌بندی‌شده برای نوشیدن آب</string>
+    <string name="notification_title">وقت نوشیدن آب است 💧</string>
+    <string name="notification_text">یک لیوان آب بنوش تا به هدف امروز نزدیک‌تر شوی.</string>
+    <string name="notification_action_add">نوشیدم · ۲۵۰ میلی‌لیتر</string>
+    <string name="widget_description">نمایش پیشرفت آب امروز و افزودن سریع یک لیوان</string>
+    <string name="widget_add">+ ۲۵۰</string>
+    <string name="widget_open">باز کردن آب‌یار</string>
+</resources>
