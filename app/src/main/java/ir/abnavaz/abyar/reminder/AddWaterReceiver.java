@@ -10,6 +10,8 @@ import ir.abnavaz.abyar.widget.WaterWidgetProvider;
 
 public final class AddWaterReceiver extends BroadcastReceiver {
     public static final String ACTION_WATER_CHANGED = "ir.abnavaz.abyar.WATER_CHANGED";
+    public static final String INTERNAL_PERMISSION =
+            "ir.abnavaz.abyar.permission.INTERNAL_BROADCAST";
     public static final String EXTRA_AMOUNT_ML = "amount_ml";
     public static final String EXTRA_FROM_NOTIFICATION = "from_notification";
 
@@ -30,6 +32,9 @@ public final class AddWaterReceiver extends BroadcastReceiver {
             }
         }
 
-        context.sendBroadcast(new Intent(ACTION_WATER_CHANGED).setPackage(context.getPackageName()));
+        context.sendBroadcast(
+                new Intent(ACTION_WATER_CHANGED).setPackage(context.getPackageName()),
+                INTERNAL_PERMISSION
+        );
     }
 }

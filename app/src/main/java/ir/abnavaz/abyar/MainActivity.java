@@ -93,7 +93,12 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(waterChangedReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(waterChangedReceiver, filter);
+            registerReceiver(
+                    waterChangedReceiver,
+                    filter,
+                    AddWaterReceiver.INTERNAL_PERMISSION,
+                    null
+            );
         }
     }
 
@@ -316,17 +321,27 @@ public final class MainActivity extends Activity {
         int total = store.getTodayTotalMl();
         int goal = store.getGoalMl();
         int percent = goal == 0 ? 0 : Math.min(100, Math.round(total * 100f / goal));
-        amountText.setText(PersianNumbers.format(total) + " میلی‌لیتر");
-        progressBar.setProgress(percent, true);
+        amountText.setText(getString(R.string.today_amount, PersianNumbers.format(total)));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            progressBar.setProgress(percent, true);
+        } else {
+            progressBar.setProgress(percent);
+        }
         percentText.setText(percent >= 100
                 ? "آفرین! هدف امروز کامل شد ✓"
                 : PersianNumbers.format(percent) + "٪ از هدف روزانه");
         remainingText.setText(percent >= 100
                 ? "هدف کامل شده"
                 : PersianNumbers.format(Math.max(0, goal - total)) + " میلی‌لیتر مانده");
-        glassesText.setText(PersianNumbers.format(store.getTodayCount()) + " بار ثبت");
-        goalText.setText(PersianNumbers.format(goal) + " ml");
-        weightText.setText("بر اساس وزن " + PersianNumbers.format(store.getWeightKg()) + " کیلوگرم  ›");
+        glassesText.setText(getString(
+                R.string.intake_count,
+                PersianNumbers.format(store.getTodayCount())
+        ));
+        goalText.setText(getString(R.string.goal_amount, PersianNumbers.format(goal)));
+        weightText.setText(getString(
+                R.string.weight_summary,
+                PersianNumbers.format(store.getWeightKg())
+        ));
         refreshReminder();
         if (historyView != null) {
             historyView.setValues(store.getLastSevenDaysMl(), goal);
@@ -438,11 +453,11 @@ public final class MainActivity extends Activity {
         final int[] selectedHours = {store.getStartHour(), store.getEndHour()};
         startButton.setOnClickListener(v -> showHourPicker("ساعت شروع", selectedHours[0], hour -> {
             selectedHours[0] = hour;
-            startButton.setText("شروع: " + hourLabel(hour));
+            startButton.setText(getString(R.string.start_time, hourLabel(hour)));
         }));
         endButton.setOnClickListener(v -> showHourPicker("ساعت پایان", selectedHours[1], hour -> {
             selectedHours[1] = hour;
-            endButton.setText("پایان: " + hourLabel(hour));
+            endButton.setText(getString(R.string.end_time, hourLabel(hour)));
         }));
         times.addView(startButton, weighted());
         times.addView(endButton, weighted());
