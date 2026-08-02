@@ -502,6 +502,30 @@ public final class MainActivity extends Activity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != 801) {
+            return;
+        }
+        boolean granted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (!granted) {
+            store.setRemindersEnabled(false);
+            ReminderScheduler.cancel(this);
+            refreshReminder();
+            Toast.makeText(
+                    this,
+                    "برای فعال‌شدن یادآوری باید اجازه اعلان را بدهید",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
     private EditText numberInput(String hint, String initial) {
         EditText input = new EditText(this);
         input.setHint(hint);
