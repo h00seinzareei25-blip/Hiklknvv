@@ -1321,7 +1321,7 @@ public final class MainActivity extends Activity {
                 canvas.drawText(PersianNumbers.format(day), cx, cy, paint);
                 if (isToday && !success && total == 0) {
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setStrokeWidth(dp(1.5f));
+                    paint.setStrokeWidth(1.5f * getResources().getDisplayMetrics().density);
                     paint.setColor(localTheme.ocean);
                     canvas.drawCircle(cx, cy - dp(4), dp(12), paint);
                     paint.setStyle(Paint.Style.FILL);
