@@ -38,7 +38,7 @@
             android:paddingTop="4dp"
             android:paddingRight="10dp"
             android:paddingBottom="4dp"
-            android:text="+۲۵۰"
+            android:text="@string/widget_add"
             android:textColor="@color/ocean_dark"
             android:textSize="12sp"
             android:textStyle="bold" />
