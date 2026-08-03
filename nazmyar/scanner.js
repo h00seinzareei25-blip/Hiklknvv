@@ -80,6 +80,7 @@ async function scanFolder(folderPath) {
     const result = classify(entry.name, ext);
 
     files.push({
+      id: `${entry.name}::${stat.size}::${stat.mtimeMs}`,
       name: entry.name,
       path: fullPath,
       ext: ext || '(بدون پسوند)',
@@ -87,8 +88,12 @@ async function scanFolder(folderPath) {
       sizeLabel: formatSize(stat.size),
       modified: stat.mtime.toISOString(),
       category: result.category,
+      offlineCategory: result.category,
       method: result.method,
       confidence: result.confidence,
+      suggestedName: entry.name,
+      reason: '',
+      aiDone: false,
     });
   }
 

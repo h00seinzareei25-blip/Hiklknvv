@@ -1,13 +1,14 @@
 {
   "name": "nazmyar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "نظم‌یار — مرتب‌سازی هوشمند فایل‌های ویندوز",
   "main": "main.js",
   "author": "Nazmyar",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "pack:win": "electron-packager . Nazmyar --platform=win32 --arch=x64 --out=../dist --overwrite --asar --ignore=\"node_modules/(electron|electron-packager)\""
+    "pack:win": "electron-packager . Nazmyar --platform=win32 --arch=x64 --out=../dist --overwrite --asar --ignore=\"node_modules/(electron|electron-packager)\"",
+    "build:win": "bash scripts/build-win.sh"
   },
   "devDependencies": {
     "electron": "^33.2.0",

@@ -37,7 +37,7 @@
         </button>
       </nav>
       <div class="rail-foot">
-        <span class="stage-pill" id="stageLabel">نسخه ۰٫۱</span>
+        <span class="stage-pill" id="stageLabel">نسخه ۰٫۲</span>
       </div>
     </aside>
 
@@ -47,7 +47,7 @@
         <header class="hero">
           <p class="brand">نظم‌یار</p>
           <h1 class="headline">فایل‌هایت را با یک نگاه مرتب کن</h1>
-          <p class="lede">پوشه‌ای انتخاب کن؛ برنامه بدون نیاز به اینترنت فایل‌ها را اسکن و دسته‌بندی پیشنهادی می‌دهد.</p>
+          <p class="lede">اول آفلاین اسکن می‌شود؛ بعد با هوش مصنوعی دسته و نام بهتر پیشنهاد می‌گیرد.</p>
           <div class="cta-row">
             <button class="btn btn-primary" id="btnPickFolder">
               <span>انتخاب پوشه</span>
@@ -77,15 +77,15 @@
         <div class="hint-strip" id="emptyHint">
           <div class="hint-block">
             <h3>آفلاین کار می‌کند</h3>
-            <p>تشخیص از روی پسوند و اسم فایل — هوش مصنوعی اختیاری است.</p>
+            <p>تشخیص پایه از روی پسوند و اسم فایل، حتی بدون اینترنت.</p>
           </div>
           <div class="hint-block">
-            <h3>بدون جابه‌جایی خودکار</h3>
-            <p>در این نسخه فقط اسکن و پیش‌نمایش؛ جابه‌جایی در مرحله بعد می‌آید.</p>
+            <h3>هوش مصنوعی اختیاری</h3>
+            <p>با Gemini یا OpenRouter دسته دقیق‌تر و نام پیشنهادی می‌گیری.</p>
           </div>
           <div class="hint-block">
-            <h3>یادگیری نام برنامه‌ها</h3>
-            <p>فتوشاپ، اتوکد، پریمیر و صدها نام دیگر را از روی اسم تشخیص می‌دهد.</p>
+            <h3>تغییر نام با تأیید</h3>
+            <p>نام پیشنهادی فقط پیشنهاد است؛ اعمالش با یک کلیک و تأیید خودت انجام می‌شود.</p>
           </div>
         </div>
       </section>
@@ -95,29 +95,45 @@
         <header class="section-head">
           <div>
             <h2>پیش‌نمایش دسته‌بندی</h2>
-            <p class="lede sm">پیشنهاد فعلی فقط نمایشی است؛ هنوز فایلی جابه‌جا نمی‌شود.</p>
+            <p class="lede sm" id="previewHint">اول اسکن آفلاین؛ برای دسته و نام هوشمند، تحلیل AI را بزن.</p>
           </div>
-          <div class="filters">
-            <input type="search" id="searchInput" placeholder="جستجوی فایل…" />
-            <select id="catFilter">
-              <option value="">همه دسته‌ها</option>
-            </select>
+          <div class="preview-actions">
+            <button class="btn btn-primary" id="btnAiAnalyze" disabled>تحلیل با هوش مصنوعی</button>
+            <button class="btn btn-ghost" id="btnApplyRenames" disabled>اعمال نام‌های پیشنهادی</button>
           </div>
         </header>
+
+        <div class="ai-bar" id="aiBar" hidden>
+          <div class="ai-bar-text" id="aiBarText">در حال تحلیل…</div>
+          <div class="progress"><div class="progress-fill" id="aiProgressFill"></div></div>
+        </div>
+
+        <div class="filters row-filters">
+          <input type="search" id="searchInput" placeholder="جستجوی فایل…" />
+          <select id="catFilter">
+            <option value="">همه دسته‌ها</option>
+          </select>
+          <label class="check">
+            <input type="checkbox" id="onlyChangedNames" />
+            فقط نام‌های پیشنهادی متفاوت
+          </label>
+        </div>
 
         <div class="table-wrap">
           <table class="file-table" id="fileTable">
             <thead>
               <tr>
-                <th>نام فایل</th>
+                <th>نام فعلی</th>
+                <th>نام پیشنهادی AI</th>
                 <th>حجم</th>
-                <th>دسته پیشنهادی</th>
-                <th>روش تشخیص</th>
+                <th>دسته</th>
+                <th>روش</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="fileTableBody">
               <tr class="empty-row">
-                <td colspan="4">هنوز پوشه‌ای اسکن نشده. از خانه یک پوشه انتخاب کنید.</td>
+                <td colspan="6">هنوز پوشه‌ای اسکن نشده. از خانه یک پوشه انتخاب کنید.</td>
               </tr>
             </tbody>
           </table>
@@ -129,13 +145,13 @@
         <header class="section-head">
           <div>
             <h2>تنظیمات</h2>
-            <p class="lede sm">کلیدهای API برای مرحله‌های بعدی آماده می‌شوند؛ فعلاً ذخیره محلی می‌شوند.</p>
+            <p class="lede sm">کلیدها فقط روی همین سیستم ذخیره می‌شوند و فقط اسم فایل‌ها برای API فرستاده می‌شود.</p>
           </div>
         </header>
 
         <form class="settings-form" id="settingsForm">
           <fieldset>
-            <legend>ارائه‌دهنده هوش مصنوعی (اختیاری)</legend>
+            <legend>هوش مصنوعی</legend>
             <label class="field">
               <span>ارائه‌دهنده فعال</span>
               <select id="aiProvider">
@@ -149,12 +165,20 @@
               <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" />
             </label>
             <label class="field">
+              <span>مدل Gemini</span>
+              <input type="text" id="geminiModel" placeholder="gemini-2.0-flash" value="gemini-2.0-flash" />
+            </label>
+            <label class="field">
               <span>کلید OpenRouter</span>
               <input type="password" id="openrouterKey" placeholder="sk-or-…" autocomplete="off" />
             </label>
             <label class="field">
               <span>مدل OpenRouter</span>
               <input type="text" id="openrouterModel" placeholder="مثلاً openai/gpt-4o-mini" value="openai/gpt-4o-mini" />
+            </label>
+            <label class="check field-check">
+              <input type="checkbox" id="autoAiAfterScan" />
+              بعد از اسکن، خودکار با AI تحلیل شود
             </label>
           </fieldset>
 
