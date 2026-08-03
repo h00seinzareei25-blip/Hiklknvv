@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظم‌یار</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="grid-fade"></div>
+  </div>
+
+  <div class="app">
+    <aside class="rail">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="36" height="36">
+          <rect x="4" y="8" width="16" height="32" rx="3" fill="currentColor" opacity="0.35"/>
+          <rect x="16" y="4" width="16" height="40" rx="3" fill="currentColor" opacity="0.65"/>
+          <rect x="28" y="12" width="16" height="24" rx="3" fill="currentColor"/>
+        </svg>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="home" title="خانه">
+          <span class="nav-ico">⌂</span>
+          <span>خانه</span>
+        </button>
+        <button class="nav-btn" data-view="preview" title="پیش‌نمایش">
+          <span class="nav-ico">☰</span>
+          <span>پیش‌نمایش</span>
+        </button>
+        <button class="nav-btn" data-view="settings" title="تنظیمات">
+          <span class="nav-ico">⚙</span>
+          <span>تنظیمات</span>
+        </button>
+      </nav>
+      <div class="rail-foot">
+        <span class="stage-pill" id="stageLabel">نسخه ۰٫۲</span>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <!-- HOME -->
+      <section class="view view-home active" id="view-home">
+        <header class="hero">
+          <p class="brand">نظم‌یار</p>
+          <h1 class="headline">فایل‌هایت را با یک نگاه مرتب کن</h1>
+          <p class="lede">اول آفلاین اسکن می‌شود؛ بعد با هوش مصنوعی دسته و نام بهتر پیشنهاد می‌گیرد.</p>
+          <div class="cta-row">
+            <button class="btn btn-primary" id="btnPickFolder">
+              <span>انتخاب پوشه</span>
+              <span class="btn-arrow">←</span>
+            </button>
+            <button class="btn btn-ghost" id="btnRescan" disabled>اسکن دوباره</button>
+          </div>
+        </header>
+
+        <div class="folder-bar" id="folderBar" hidden>
+          <div class="folder-path">
+            <span class="muted">پوشه انتخاب‌شده</span>
+            <strong id="folderPathLabel">—</strong>
+          </div>
+          <div class="folder-stats">
+            <div class="stat">
+              <span class="stat-n" id="statCount">۰</span>
+              <span class="stat-l">فایل</span>
+            </div>
+            <div class="stat">
+              <span class="stat-n" id="statCats">۰</span>
+              <span class="stat-l">دسته</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hint-strip" id="emptyHint">
+          <div class="hint-block">
+            <h3>آفلاین کار می‌کند</h3>
+            <p>تشخیص پایه از روی پسوند و اسم فایل، حتی بدون اینترنت.</p>
+          </div>
+          <div class="hint-block">
+            <h3>هوش مصنوعی اختیاری</h3>
+            <p>با Gemini یا OpenRouter دسته دقیق‌تر و نام پیشنهادی می‌گیری.</p>
+          </div>
+          <div class="hint-block">
+            <h3>جابه‌جایی به دسته‌ها</h3>
+            <p>بعد از تشخیص، فایل‌ها را به همین پوشه یا یک مسیر ثابت همیشگی منتقل کن.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PREVIEW -->
+      <section class="view view-preview" id="view-preview">
+        <header class="section-head">
+          <div>
+            <h2>پیش‌نمایش دسته‌بندی</h2>
+            <p class="lede sm" id="previewHint">اول اسکن آفلاین؛ برای دسته و نام هوشمند، تحلیل AI را بزن.</p>
+          </div>
+          <div class="preview-actions">
+            <button class="btn btn-primary" id="btnAiAnalyze" disabled>تحلیل با هوش مصنوعی</button>
+            <button class="btn btn-ghost" id="btnApplyRenames" disabled>اعمال نام‌ها</button>
+            <button class="btn btn-accent" id="btnOrganize" disabled>جابه‌جایی به دسته‌ها</button>
+            <button class="btn btn-ghost" id="btnUndoOrganize" disabled>برگرداندن</button>
+          </div>
+        </header>
+
+        <div class="dest-bar" id="destBar">
+          <div class="dest-modes">
+            <label class="check">
+              <input type="radio" name="destMode" value="same" id="destModeSame" checked />
+              همین پوشه فعلی
+            </label>
+            <label class="check">
+              <input type="radio" name="destMode" value="fixed" id="destModeFixed" />
+              مسیر ثابت همیشگی
+            </label>
+          </div>
+          <div class="dest-fixed" id="destFixedRow">
+            <input type="text" id="fixedRootPath" placeholder="مسیر مقصد ثابت…" readonly />
+            <button type="button" class="btn-mini" id="btnPickFixedRoot">انتخاب مسیر</button>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="applyNameOnMove" checked />
+            هنگام جابه‌جایی، نام پیشنهادی هم اعمال شود
+          </label>
+        </div>
+
+        <div class="ai-bar" id="aiBar" hidden>
+          <div class="ai-bar-text" id="aiBarText">در حال تحلیل…</div>
+          <div class="progress"><div class="progress-fill" id="aiProgressFill"></div></div>
+        </div>
+
+        <div class="filters row-filters">
+          <input type="search" id="searchInput" placeholder="جستجوی فایل…" />
+          <select id="catFilter">
+            <option value="">همه دسته‌ها</option>
+          </select>
+          <label class="check">
+            <input type="checkbox" id="onlyChangedNames" />
+            فقط نام‌های پیشنهادی متفاوت
+          </label>
+        </div>
+
+        <div class="table-wrap">
+          <table class="file-table" id="fileTable">
+            <thead>
+              <tr>
+                <th>نام فعلی</th>
+                <th>نام پیشنهادی AI</th>
+                <th>حجم</th>
+                <th>دسته</th>
+                <th>روش</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fileTableBody">
+              <tr class="empty-row">
+                <td colspan="6">هنوز پوشه‌ای اسکن نشده. از خانه یک پوشه انتخاب کنید.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view view-settings" id="view-settings">
+        <header class="section-head compact">
+          <div>
+            <h2>تنظیمات</h2>
+            <p class="lede sm">کلید API محلی است؛ فقط نام/نمونه کوتاه فایل ارسال می‌شود.</p>
+          </div>
+        </header>
+
+        <form class="settings-form" id="settingsForm">
+          <div class="settings-scroll">
+            <fieldset class="settings-box">
+              <legend>هوش مصنوعی</legend>
+
+              <div class="fields-grid">
+                <label class="field">
+                  <span>ارائه‌دهنده</span>
+                  <select id="aiProvider">
+                    <option value="none">خاموش — فقط آفلاین</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openrouter">OpenRouter</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="provider-panel" id="geminiPanel" hidden>
+                <label class="field">
+                  <span>کلید Gemini</span>
+                  <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span>مدل Gemini</span>
+                  <input type="text" id="geminiModel" placeholder="gemini-2.0-flash" value="gemini-2.0-flash" />
+                </label>
+              </div>
+
+              <div class="provider-panel" id="openrouterPanel" hidden>
+                <label class="field">
+                  <span>کلید OpenRouter</span>
+                  <input type="password" id="openrouterKey" placeholder="sk-or-…" autocomplete="off" />
+                </label>
+                <input type="hidden" id="openrouterModel" value="openrouter/free" />
+
+                <div class="free-models-block" id="freeModelsBlock">
+                  <div class="free-models-head">
+                    <strong>مدل‌های رایگان</strong>
+                    <div class="free-models-toolbar">
+                      <button type="button" class="btn-mini" id="btnRefreshFreeModels">بروزرسانی</button>
+                      <button type="button" class="btn-mini" id="btnSelectAllFree">همه</button>
+                      <button type="button" class="btn-mini" id="btnClearFree">پاک</button>
+                    </div>
+                  </div>
+                  <p class="muted sm" id="freeModelsMeta">چند مدل تیک بزن تا با هم رأی بدهند</p>
+                  <div class="free-models-list" id="freeModelsList">
+                    <div class="muted sm">در حال بارگذاری…</div>
+                  </div>
+                  <label class="check vote-check">
+                    <input type="checkbox" id="multiModelVote" checked />
+                    رأی‌گیری چند مدل با هم (پیشنهادی)
+                  </label>
+                </div>
+              </div>
+
+              <div class="checks-row">
+                <label class="check">
+                  <input type="checkbox" id="includeContentSample" checked />
+                  نمونه محتوا به AI
+                </label>
+                <label class="check">
+                  <input type="checkbox" id="autoAiAfterScan" />
+                  تحلیل خودکار بعد از اسکن
+                </label>
+              </div>
+            </fieldset>
+            <pre class="test-result" id="testResult" hidden></pre>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
+            <button type="button" class="btn btn-ghost" id="btnTestAi">تست اتصال AI</button>
+            <span class="save-msg" id="saveMsg" hidden>ذخیره شد</span>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
