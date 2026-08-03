@@ -327,8 +327,68 @@ button, input, select { font-family: inherit; }
 .preview-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-items: center;
+}
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #d4843f 100%);
+  color: #2a1608;
+  box-shadow: 0 8px 22px rgba(240, 163, 94, 0.22);
+}
+.btn-accent:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(240, 163, 94, 0.3);
+}
+.dest-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(10, 16, 23, 0.45);
+}
+.dest-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+.dest-fixed {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 220px;
+}
+.dest-bar.fixed-on .dest-fixed { display: flex; }
+.dest-fixed input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  direction: ltr;
+  text-align: right;
+  font-size: 0.8rem;
+}
+.cat-edit {
+  width: 100%;
+  min-width: 120px;
+  max-width: 200px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--brand);
+  border-radius: 8px;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+}
+.cat-edit:hover, .cat-edit:focus {
+  border-color: rgba(45, 212, 168, 0.35);
+  background: rgba(0,0,0,0.2);
+  outline: none;
 }
 .filters, .row-filters {
   display: flex;

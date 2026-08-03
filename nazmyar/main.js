@@ -5,8 +5,10 @@ const { scanFolder } = require('./scanner');
 const { analyzeFiles, sanitizeFileName, testConnection } = require('./ai');
 const { listFreeOpenRouterModels } = require('./openrouterFree');
 const { attachContentSamples } = require('./contentSampler');
+const { organizeFiles, undoOrganize } = require('./organizer');
 
 let mainWindow;
+let lastOrganizeLog = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -39,10 +41,10 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-ipcMain.handle('pick-folder', async () => {
+ipcMain.handle('pick-folder', async (_event, title) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
-    title: 'انتخاب پوشه برای مرتب‌سازی',
+    title: title || 'انتخاب پوشه',
   });
   if (result.canceled || !result.filePaths.length) return null;
   return result.filePaths[0];
@@ -106,7 +108,7 @@ ipcMain.handle('ai-analyze', async (event, payload) => {
 
     const sampledCount = enriched.filter((f) => f.contentSample).length;
     const results = await analyzeFiles(enriched, settings, (progress) => {
-      event.sender.send('ai-progress', { ...progress, phase: 'ai' });
+      event.sender.send('ai-progress', { ...progress, phase: progress.phase || 'ai' });
     });
     return {
       ok: true,
@@ -149,6 +151,44 @@ ipcMain.handle('rename-file', async (_event, { filePath, newName }) => {
   }
 });
 
+ipcMain.handle('organize-files', async (event, payload) => {
+  const items = payload?.items || [];
+  const options = payload?.options || {};
+  if (!items.length) return { ok: false, error: 'موردی برای جابه‌جایی نیست.' };
+
+  try {
+    const result = await organizeFiles(items, options, (progress) => {
+      event.sender.send('organize-progress', progress);
+    });
+    lastOrganizeLog = {
+      ...result,
+      sourceFolder: options.sourceFolder || null,
+    };
+    return { ...result, canUndo: result.moved > 0 };
+  } catch (err) {
+    return { ok: false, error: err.message || 'خطا در مرتب‌سازی' };
+  }
+});
+
+ipcMain.handle('undo-organize', async () => {
+  if (!lastOrganizeLog) {
+    return { ok: false, error: 'عملیات قابل برگشتی وجود ندارد.' };
+  }
+  try {
+    const result = await undoOrganize(lastOrganizeLog);
+    if (result.ok) lastOrganizeLog = null;
+    return result;
+  } catch (err) {
+    return { ok: false, error: err.message || 'خطا در برگشت' };
+  }
+});
+
+ipcMain.handle('can-undo-organize', () => ({
+  ok: true,
+  canUndo: !!(lastOrganizeLog && lastOrganizeLog.moved > 0),
+  moved: lastOrganizeLog?.moved || 0,
+}));
+
 ipcMain.handle('open-path', async (_event, targetPath) => {
   if (targetPath && fs.existsSync(targetPath)) {
     await shell.openPath(targetPath);
@@ -158,5 +198,5 @@ ipcMain.handle('open-path', async (_event, targetPath) => {
 ipcMain.handle('get-app-info', () => ({
   version: app.getVersion(),
   name: 'نظم‌یار',
-  stage: 'نسخه ۰٫۲٫۵ — رأی‌گیری چند مدل',
+  stage: 'نسخه ۰٫۳ — جابه‌جایی به پوشه دسته',
 }));

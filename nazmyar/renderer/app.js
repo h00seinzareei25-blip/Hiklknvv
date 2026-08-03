@@ -3,6 +3,8 @@
     folderPath: null,
     files: [],
     aiRunning: false,
+    organizing: false,
+    canUndo: false,
     freeModels: [],
     freeModelsSource: '',
     selectedFreeIds: ['openrouter/free'],
@@ -72,6 +74,9 @@
       includeContentSample: !!$('includeContentSample').checked,
       autoAiAfterScan: !!$('autoAiAfterScan').checked,
       multiModelVote: !!$('multiModelVote').checked,
+      destMode: $('destModeFixed').checked ? 'fixed' : 'same',
+      fixedRootPath: ($('fixedRootPath').value || '').trim(),
+      applyNameOnMove: !!$('applyNameOnMove').checked,
     };
   }
 
@@ -87,6 +92,13 @@
       $('autoAiAfterScan').checked = !!data.autoAiAfterScan;
       $('includeContentSample').checked = data.includeContentSample !== false;
       $('multiModelVote').checked = data.multiModelVote !== false;
+      $('applyNameOnMove').checked = data.applyNameOnMove !== false;
+      $('fixedRootPath').value = data.fixedRootPath || '';
+      if (data.destMode === 'fixed') {
+        $('destModeFixed').checked = true;
+      } else {
+        $('destModeSame').checked = true;
+      }
 
       const selected = Array.isArray(data.openrouterFreeSelected) && data.openrouterFreeSelected.length
         ? data.openrouterFreeSelected
@@ -97,7 +109,13 @@
         state.selectedFreeIds = [DEFAULT_FREE_MODEL];
       }
       syncPrimaryModel();
+      syncDestBar();
     } catch { /* ignore */ }
+  }
+
+  function syncDestBar() {
+    const fixed = $('destModeFixed').checked;
+    $('destBar').classList.toggle('fixed-on', fixed);
   }
 
   function saveSettings() {
@@ -204,6 +222,7 @@
 
   function updateActionButtons() {
     const hasFiles = state.files.length > 0;
+    const busy = state.aiRunning || state.organizing;
     const settings = getSettings();
     const orReady = settings.aiProvider === 'openrouter'
       && settings.openrouterKey
@@ -212,9 +231,21 @@
       (settings.aiProvider === 'gemini' && settings.geminiKey) ||
       orReady
     );
-    $('btnAiAnalyze').disabled = !hasFiles || state.aiRunning || !aiReady;
-    $('btnApplyRenames').disabled = state.aiRunning || !state.files.some((f) => nameChanged(f));
-    if (orReady) {
+    const destOk = settings.destMode === 'same'
+      ? !!state.folderPath
+      : !!settings.fixedRootPath;
+
+    $('btnAiAnalyze').disabled = !hasFiles || busy || !aiReady;
+    $('btnApplyRenames').disabled = busy || !state.files.some((f) => nameChanged(f));
+    $('btnOrganize').disabled = !hasFiles || busy || !destOk;
+    $('btnUndoOrganize').disabled = busy || !state.canUndo;
+
+    if (hasFiles) {
+      const destLabel = settings.destMode === 'fixed'
+        ? `مقصد ثابت: ${settings.fixedRootPath || '—'}`
+        : 'مقصد: همین پوشه فعلی';
+      $('previewHint').textContent = `${destLabel} · دسته‌ها را چک کن و «جابه‌جایی به دسته‌ها» را بزن`;
+    } else if (orReady) {
       const n = settings.openrouterFreeSelected.length;
       const vote = settings.multiModelVote && n >= 2;
       $('previewHint').textContent = vote
@@ -263,7 +294,9 @@
           <div class="${suggestClass}" title="${escapeAttr(f.suggestedName || '')}">${suggestText}</div>
         </td>
         <td>${escapeHtml(f.sizeLabel)}</td>
-        <td><span class="badge ${f.method === 'ai' || f.method === 'ai-vote' ? 'ai' : (f.confidence === 'کم' ? 'low' : '')}">${escapeHtml(f.category)}</span></td>
+        <td>
+          <input class="cat-edit" data-id="${escapeAttr(f.id)}" value="${escapeAttr(f.category)}" title="دسته را می‌توانی ویرایش کنی" />
+        </td>
         <td class="method">${methodLabel(f.method)}${f.aiDone ? ` · ${escapeHtml(f.confidence || '')}` : ` · ${escapeHtml(f.confidence)}`}</td>
         <td>
           <button class="btn-mini btn-rename-one" data-id="${escapeAttr(f.id)}" ${changed ? '' : 'disabled'}>اعمال نام</button>
@@ -273,6 +306,16 @@
 
     body.querySelectorAll('.btn-rename-one').forEach((btn) => {
       btn.addEventListener('click', () => applyOneRename(btn.dataset.id));
+    });
+    body.querySelectorAll('.cat-edit').forEach((input) => {
+      input.addEventListener('change', () => {
+        const file = findById(input.dataset.id);
+        if (!file) return;
+        const next = (input.value || '').trim() || 'متفرقه';
+        file.category = next;
+        fillCatFilter();
+        updateActionButtons();
+      });
     });
     updateActionButtons();
   }
@@ -503,8 +546,131 @@
     if (state.folderPath) await doScan(state.folderPath);
   });
 
+  async function runOrganize() {
+    if (!state.files.length || state.organizing) return;
+    const settings = getSettings();
+    saveSettings();
+
+    if (settings.destMode === 'fixed' && !settings.fixedRootPath) {
+      showToast('اول مسیر ثابت مقصد را انتخاب کن');
+      return;
+    }
+
+    const rootLabel = settings.destMode === 'fixed' ? settings.fixedRootPath : state.folderPath;
+    const ok = confirm(
+      `${state.files.length} فایل به زیرپوشه‌های دسته منتقل می‌شوند.\nمقصد ریشه:\n${rootLabel}\n\nادامه می‌دهی؟`,
+    );
+    if (!ok) return;
+
+    state.organizing = true;
+    updateActionButtons();
+    setAiProgress(true, 'در حال جابه‌جایی فایل‌ها…', 5);
+
+    const offProgress = window.nazmyar.onOrganizeProgress((p) => {
+      const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+      setAiProgress(
+        true,
+        `جابه‌جایی ${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))} · منتقل‌شده ${toFaDigits(String(p.moved || 0))}`,
+        pct,
+      );
+    });
+
+    try {
+      const result = await window.nazmyar.organizeFiles({
+        items: state.files.map((f) => ({
+          id: f.id,
+          path: f.path,
+          name: f.name,
+          category: f.category,
+          suggestedName: f.suggestedName,
+        })),
+        options: {
+          mode: settings.destMode,
+          sourceFolder: state.folderPath,
+          fixedRoot: settings.fixedRootPath,
+          applySuggestedName: settings.applyNameOnMove,
+        },
+      });
+
+      if (!result.ok) {
+        showToast(result.error || 'خطا در جابه‌جایی', { long: true });
+        setAiProgress(false);
+        return;
+      }
+
+      state.canUndo = !!result.canUndo;
+
+      const byId = new Map((result.moves || []).map((m) => [m.id, m]));
+      state.files = state.files
+        .map((f) => {
+          const move = byId.get(f.id);
+          if (!move) return f;
+          if (move.skipped) {
+            return { ...f, path: move.to || f.path, name: move.name || f.name, suggestedName: move.name || f.suggestedName };
+          }
+          // moved out of current flat list
+          return null;
+        })
+        .filter(Boolean);
+
+      fillCatFilter();
+      renderTable();
+      updateHomeStats();
+      showToast(
+        `منتقل شد: ${toFaDigits(String(result.moved))} · رد شده: ${toFaDigits(String(result.skipped))}${result.failed ? ` · خطا: ${toFaDigits(String(result.failed))}` : ''}`,
+        { long: true },
+      );
+      setAiProgress(true, 'جابه‌جایی تمام شد', 100);
+      setTimeout(() => setAiProgress(false), 900);
+    } finally {
+      offProgress();
+      state.organizing = false;
+      updateActionButtons();
+    }
+  }
+
+  async function runUndoOrganize() {
+    if (!state.canUndo || state.organizing) return;
+    const ok = confirm('آخرین جابه‌جایی برگردانده شود؟');
+    if (!ok) return;
+
+    state.organizing = true;
+    updateActionButtons();
+    setAiProgress(true, 'در حال برگرداندن…', 30);
+    try {
+      const result = await window.nazmyar.undoOrganize();
+      if (!result.ok) {
+        showToast(result.error || 'برگشت ناموفق بود');
+        return;
+      }
+      state.canUndo = false;
+      showToast(`برگردانده شد: ${toFaDigits(String(result.restored || 0))}`);
+      if (state.folderPath) await doScan(state.folderPath);
+    } finally {
+      setAiProgress(false);
+      state.organizing = false;
+      updateActionButtons();
+    }
+  }
+
   $('btnAiAnalyze').addEventListener('click', () => runAiAnalyze());
   $('btnApplyRenames').addEventListener('click', () => applyAllRenames());
+  $('btnOrganize').addEventListener('click', () => runOrganize());
+  $('btnUndoOrganize').addEventListener('click', () => runUndoOrganize());
+
+  $('destModeSame').addEventListener('change', () => { syncDestBar(); saveSettings(); updateActionButtons(); });
+  $('destModeFixed').addEventListener('change', () => { syncDestBar(); saveSettings(); updateActionButtons(); });
+  $('applyNameOnMove').addEventListener('change', () => { saveSettings(); });
+  $('btnPickFixedRoot').addEventListener('click', async () => {
+    const folder = await window.nazmyar.pickFolder('انتخاب مسیر ثابت مقصد');
+    if (!folder) return;
+    $('fixedRootPath').value = folder;
+    $('destModeFixed').checked = true;
+    syncDestBar();
+    saveSettings();
+    updateActionButtons();
+    showToast('مسیر ثابت ذخیره شد');
+  });
 
   $('searchInput').addEventListener('input', renderTable);
   $('catFilter').addEventListener('change', renderTable);
@@ -586,10 +752,13 @@
 
   async function boot() {
     loadSettings();
+    syncDestBar();
     updateFreeModelsVisibility();
     try {
       const info = await window.nazmyar.getAppInfo();
       if (info?.stage) $('stageLabel').textContent = info.stage;
+      const undo = await window.nazmyar.canUndoOrganize();
+      state.canUndo = !!undo?.canUndo;
     } catch { /* browser preview fallback */ }
     updateHomeStats();
     renderTable();

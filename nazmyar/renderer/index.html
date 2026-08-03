@@ -84,8 +84,8 @@
             <p>با Gemini یا OpenRouter دسته دقیق‌تر و نام پیشنهادی می‌گیری.</p>
           </div>
           <div class="hint-block">
-            <h3>تغییر نام با تأیید</h3>
-            <p>نام پیشنهادی فقط پیشنهاد است؛ اعمالش با یک کلیک و تأیید خودت انجام می‌شود.</p>
+            <h3>جابه‌جایی به دسته‌ها</h3>
+            <p>بعد از تشخیص، فایل‌ها را به همین پوشه یا یک مسیر ثابت همیشگی منتقل کن.</p>
           </div>
         </div>
       </section>
@@ -99,9 +99,32 @@
           </div>
           <div class="preview-actions">
             <button class="btn btn-primary" id="btnAiAnalyze" disabled>تحلیل با هوش مصنوعی</button>
-            <button class="btn btn-ghost" id="btnApplyRenames" disabled>اعمال نام‌های پیشنهادی</button>
+            <button class="btn btn-ghost" id="btnApplyRenames" disabled>اعمال نام‌ها</button>
+            <button class="btn btn-accent" id="btnOrganize" disabled>جابه‌جایی به دسته‌ها</button>
+            <button class="btn btn-ghost" id="btnUndoOrganize" disabled>برگرداندن</button>
           </div>
         </header>
+
+        <div class="dest-bar" id="destBar">
+          <div class="dest-modes">
+            <label class="check">
+              <input type="radio" name="destMode" value="same" id="destModeSame" checked />
+              همین پوشه فعلی
+            </label>
+            <label class="check">
+              <input type="radio" name="destMode" value="fixed" id="destModeFixed" />
+              مسیر ثابت همیشگی
+            </label>
+          </div>
+          <div class="dest-fixed" id="destFixedRow">
+            <input type="text" id="fixedRootPath" placeholder="مسیر مقصد ثابت…" readonly />
+            <button type="button" class="btn-mini" id="btnPickFixedRoot">انتخاب مسیر</button>
+          </div>
+          <label class="check">
+            <input type="checkbox" id="applyNameOnMove" checked />
+            هنگام جابه‌جایی، نام پیشنهادی هم اعمال شود
+          </label>
+        </div>
 
         <div class="ai-bar" id="aiBar" hidden>
           <div class="ai-bar-text" id="aiBarText">در حال تحلیل…</div>
