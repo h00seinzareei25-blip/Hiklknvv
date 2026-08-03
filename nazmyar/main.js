@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { scanFolder } = require('./scanner');
-const { analyzeFiles, sanitizeFileName } = require('./ai');
+const { analyzeFiles, sanitizeFileName, testConnection } = require('./ai');
 
 let mainWindow;
 
@@ -55,6 +55,14 @@ ipcMain.handle('scan-folder', async (_event, folderPath) => {
     return { ok: true, folderPath, files, count: files.length };
   } catch (err) {
     return { ok: false, error: err.message || 'خطا در اسکن پوشه' };
+  }
+});
+
+ipcMain.handle('ai-test', async (_event, settings) => {
+  try {
+    return await testConnection(settings || {});
+  } catch (err) {
+    return { ok: false, error: err.message || 'تست اتصال ناموفق بود' };
   }
 });
 
@@ -116,5 +124,5 @@ ipcMain.handle('open-path', async (_event, targetPath) => {
 ipcMain.handle('get-app-info', () => ({
   version: app.getVersion(),
   name: 'نظم‌یار',
-  stage: 'نسخه ۰٫۲ — هوش مصنوعی دسته‌بندی و نام',
+  stage: 'نسخه ۰٫۲٫۱ — رفع خطای Gemini 403',
 }));

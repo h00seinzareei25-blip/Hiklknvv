@@ -5,6 +5,15 @@
 
 const BATCH_SIZE = 25;
 
+const GEMINI_FALLBACK_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-2.5-flash',
+  'gemini-flash-latest',
+];
+
 function sanitizeFileName(name, originalExt) {
   if (!name || typeof name !== 'string') return null;
   let cleaned = name
@@ -22,6 +31,13 @@ function sanitizeFileName(name, originalExt) {
     if (!hasExt) cleaned += ext;
   }
   return cleaned;
+}
+
+function cleanKey(key) {
+  return String(key || '')
+    .replace(/^\uFEFF/, '')
+    .replace(/\s+/g, '')
+    .trim();
 }
 
 function buildPrompt(files) {
@@ -60,27 +76,90 @@ function extractJson(text) {
   }
 }
 
-async function callGemini({ apiKey, model, prompt }) {
-  const m = model || 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+function formatGeminiError(status, data) {
+  const raw = data?.error?.message || data?.error?.status || '';
+  const statusName = data?.error?.status || '';
+  const lower = `${raw} ${statusName}`.toLowerCase();
+
+  if (status === 403 || statusName === 'PERMISSION_DENIED' || lower.includes('permission')) {
+    return [
+      'Gemini خطای 403 (دسترسی رد شد) داد.',
+      'راه‌حل‌های رایج:',
+      '۱) کلید را از https://aistudio.google.com/apikey بساز (نه کلید قدیمی با محدودیت HTTP Referrer).',
+      '۲) در Google Cloud → Credentials، محدودیت Application را روی None بگذار یا فقط Generative Language API را مجاز کن.',
+      '۳) اگر پروژه «denied access» شده، از OpenRouter استفاده کن یا پروژه/کلید جدید بساز.',
+      '۴) اگر از ایران هستی، معمولاً با VPN پایدار باید تست شود.',
+      raw ? `جزئیات: ${raw}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  if (status === 400 && lower.includes('api key')) {
+    return `کلید Gemini نامعتبر است. یک کلید جدید از AI Studio بگیر.\n${raw}`;
+  }
+
+  if (status === 404 || lower.includes('not found') || lower.includes('is not found')) {
+    return `مدل Gemini پیدا نشد. مدل را روی gemini-2.0-flash یا gemini-1.5-flash بگذار.\n${raw}`;
+  }
+
+  if (status === 429) {
+    return `سقف استفاده Gemini پر شده؛ کمی بعد دوباره تلاش کن.\n${raw}`;
+  }
+
+  return raw || `خطای Gemini (${status})`;
+}
+
+async function geminiRequest({ apiKey, model, body }) {
+  const key = cleanKey(apiKey);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: 'application/json',
-      },
-    }),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': key,
+    },
+    body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data?.error?.message || `خطای Gemini (${res.status})`;
-    throw new Error(msg);
+  return { res, data };
+}
+
+async function callGemini({ apiKey, model, prompt }) {
+  const preferred = (model || 'gemini-2.0-flash').trim();
+  const candidates = [preferred, ...GEMINI_FALLBACK_MODELS.filter((m) => m !== preferred)];
+  let lastError = null;
+
+  for (const m of candidates) {
+    const { res, data } = await geminiRequest({
+      apiKey,
+      model: m,
+      body: {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
+      },
+    });
+
+    if (res.ok) {
+      const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+      if (!text) throw new Error('Gemini پاسخی برنگرداند (ممکن است فیلتر ایمنی محتوا را خالی کرده باشد).');
+      return text;
+    }
+
+    const msg = formatGeminiError(res.status, data);
+    lastError = new Error(msg);
+
+    // Don't keep trying other models on auth/permission failures
+    if (res.status === 401 || res.status === 403) throw lastError;
+
+    // Try next model only for not-found / unsupported model
+    const raw = `${data?.error?.message || ''}`.toLowerCase();
+    const modelIssue = res.status === 404 || raw.includes('not found') || raw.includes('not supported');
+    if (!modelIssue) throw lastError;
   }
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-  return text;
+
+  throw lastError || new Error('خطای ناشناخته Gemini');
 }
 
 async function callOpenRouter({ apiKey, model, prompt }) {
@@ -89,7 +168,7 @@ async function callOpenRouter({ apiKey, model, prompt }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${cleanKey(apiKey)}`,
       'HTTP-Referer': 'https://github.com/h00seinzareei25-blip/Hiklknvv',
       'X-Title': 'Nazmyar',
     },
@@ -117,7 +196,7 @@ async function callOpenRouter({ apiKey, model, prompt }) {
 async function callProvider(settings, prompt) {
   const provider = settings.aiProvider;
   if (provider === 'gemini') {
-    if (!settings.geminiKey) throw new Error('کلید Gemini تنظیم نشده است.');
+    if (!cleanKey(settings.geminiKey)) throw new Error('کلید Gemini تنظیم نشده است.');
     return callGemini({
       apiKey: settings.geminiKey,
       model: settings.geminiModel,
@@ -125,7 +204,7 @@ async function callProvider(settings, prompt) {
     });
   }
   if (provider === 'openrouter') {
-    if (!settings.openrouterKey) throw new Error('کلید OpenRouter تنظیم نشده است.');
+    if (!cleanKey(settings.openrouterKey)) throw new Error('کلید OpenRouter تنظیم نشده است.');
     return callOpenRouter({
       apiKey: settings.openrouterKey,
       model: settings.openrouterModel,
@@ -133,6 +212,61 @@ async function callProvider(settings, prompt) {
     });
   }
   throw new Error('ارائه‌دهنده هوش مصنوعی انتخاب نشده است.');
+}
+
+async function testConnection(settings) {
+  const provider = settings?.aiProvider;
+  if (!provider || provider === 'none') {
+    return { ok: false, error: 'اول ارائه‌دهنده را روی Gemini یا OpenRouter بگذار.' };
+  }
+
+  try {
+    if (provider === 'gemini') {
+      const key = cleanKey(settings.geminiKey);
+      if (!key) return { ok: false, error: 'کلید Gemini خالی است.' };
+
+      // Lightweight probe: list models (does not need generateContent)
+      const listRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=5', {
+        headers: { 'x-goog-api-key': key },
+      });
+      const listData = await listRes.json().catch(() => ({}));
+      if (!listRes.ok) {
+        return { ok: false, error: formatGeminiError(listRes.status, listData) };
+      }
+
+      // Then a tiny generateContent check
+      const prompt = 'فقط این JSON را برگردان: {"ok":true}';
+      const text = await callGemini({
+        apiKey: key,
+        model: settings.geminiModel || 'gemini-2.0-flash',
+        prompt,
+      });
+      return {
+        ok: true,
+        provider: 'gemini',
+        detail: `اتصال برقرار شد. نمونه پاسخ: ${String(text).slice(0, 80)}`,
+      };
+    }
+
+    if (provider === 'openrouter') {
+      const key = cleanKey(settings.openrouterKey);
+      if (!key) return { ok: false, error: 'کلید OpenRouter خالی است.' };
+      const text = await callOpenRouter({
+        apiKey: key,
+        model: settings.openrouterModel || 'openai/gpt-4o-mini',
+        prompt: 'Return JSON only: {"ok":true}',
+      });
+      return {
+        ok: true,
+        provider: 'openrouter',
+        detail: `اتصال برقرار شد. نمونه پاسخ: ${String(text).slice(0, 80)}`,
+      };
+    }
+
+    return { ok: false, error: 'ارائه‌دهنده نامعتبر است.' };
+  } catch (err) {
+    return { ok: false, error: err.message || 'تست اتصال ناموفق بود' };
+  }
 }
 
 function mapBatchResults(batch, parsed) {
@@ -192,7 +326,10 @@ async function analyzeFiles(files, settings, onProgress) {
 
 module.exports = {
   analyzeFiles,
+  testConnection,
   sanitizeFileName,
   buildPrompt,
   extractJson,
+  formatGeminiError,
+  cleanKey,
 };

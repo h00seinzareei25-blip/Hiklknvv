@@ -13,12 +13,14 @@
     settings: $('view-settings'),
   };
 
-  function showToast(msg) {
+  function showToast(msg, opts = {}) {
     const el = $('toast');
     el.textContent = msg;
     el.hidden = false;
+    el.classList.toggle('long', !!opts.long || String(msg).length > 80);
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => { el.hidden = true; }, 3200);
+    const ms = opts.long ? 9000 : 3200;
+    showToast._t = setTimeout(() => { el.hidden = true; }, ms);
   }
 
   function switchView(name) {
@@ -250,8 +252,9 @@
       };
       const result = await window.nazmyar.aiAnalyze(payload);
       if (!result.ok) {
-        showToast(result.error || 'خطا در هوش مصنوعی');
-        setAiProgress(false);
+        const err = result.error || 'خطا در هوش مصنوعی';
+        showToast(err, { long: true });
+        setAiProgress(true, err.split('\n')[0], 0);
         return;
       }
 
@@ -361,6 +364,30 @@
     saveSettings._t = setTimeout(() => { msg.hidden = true; }, 2000);
     showToast('تنظیمات ذخیره شد');
     updateActionButtons();
+  });
+
+  $('btnTestAi').addEventListener('click', async () => {
+    saveSettings();
+    const box = $('testResult');
+    box.hidden = false;
+    box.className = 'test-result';
+    box.textContent = 'در حال تست اتصال…';
+    $('btnTestAi').disabled = true;
+    try {
+      const result = await window.nazmyar.aiTest(getSettings());
+      if (result.ok) {
+        box.className = 'test-result ok';
+        box.textContent = result.detail || 'اتصال موفق بود.';
+        showToast('اتصال AI برقرار شد');
+      } else {
+        box.className = 'test-result err';
+        box.textContent = result.error || 'اتصال برقرار نشد.';
+        showToast((result.error || 'اتصال برقرار نشد').split('\n')[0], { long: true });
+      }
+    } finally {
+      $('btnTestAi').disabled = false;
+      updateActionButtons();
+    }
   });
 
   ['aiProvider', 'geminiKey', 'openrouterKey'].forEach((id) => {

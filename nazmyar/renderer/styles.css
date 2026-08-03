@@ -402,6 +402,42 @@ button, input, select { font-family: inherit; }
   background: rgba(240, 163, 94, 0.14);
   color: var(--accent);
 }
+.settings-help {
+  margin: 0.85rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.8;
+}
+.settings-help .ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  color: var(--brand);
+}
+.test-result {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+  white-space: pre-wrap;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  max-height: 220px;
+  overflow: auto;
+}
+.test-result.ok { border-color: rgba(45, 212, 168, 0.35); color: var(--brand); }
+.test-result.err { border-color: rgba(232, 122, 107, 0.45); color: #f0b4ac; }
+.toast.long {
+  max-width: min(560px, 92vw);
+  white-space: pre-wrap;
+  text-align: right;
+  line-height: 1.7;
+  font-size: 0.85rem;
+}
 .filters input,
 .filters select,
 .field input,

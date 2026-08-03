@@ -180,12 +180,20 @@
               <input type="checkbox" id="autoAiAfterScan" />
               بعد از اسکن، خودکار با AI تحلیل شود
             </label>
+            <p class="settings-help">
+              اگر Gemini خطای <b>403</b> داد: کلید را از
+              <span class="ltr">aistudio.google.com/apikey</span>
+              بساز و محدودیت HTTP Referrer را بردار. در ایران معمولاً VPN لازم است.
+              جایگزین سریع: OpenRouter.
+            </p>
           </fieldset>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
+            <button type="button" class="btn btn-ghost" id="btnTestAi">تست اتصال AI</button>
             <span class="save-msg" id="saveMsg" hidden>ذخیره شد</span>
           </div>
+          <pre class="test-result" id="testResult" hidden></pre>
         </form>
       </section>
     </main>

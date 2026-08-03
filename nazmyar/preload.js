@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('nazmyar', {
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   scanFolder: (folderPath) => ipcRenderer.invoke('scan-folder', folderPath),
   aiAnalyze: (payload) => ipcRenderer.invoke('ai-analyze', payload),
+  aiTest: (settings) => ipcRenderer.invoke('ai-test', settings),
   onAiProgress: (cb) => {
     const handler = (_e, data) => cb(data);
     ipcRenderer.on('ai-progress', handler);
