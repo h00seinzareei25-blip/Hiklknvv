@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import ir.abnavaz.abyar.widget.MiniWidgetProvider;
 import ir.abnavaz.abyar.widget.WaterWidgetProvider;
 
 public final class BootReceiver extends BroadcastReceiver {
@@ -18,5 +19,6 @@ public final class BootReceiver extends BroadcastReceiver {
         }
         ReminderScheduler.sync(context);
         WaterWidgetProvider.updateAll(context);
+        MiniWidgetProvider.updateAll(context);
     }
 }
