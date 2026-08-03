@@ -170,8 +170,9 @@
   }
 
   function updateFreeModelsVisibility() {
-    const show = $('aiProvider').value === 'openrouter';
-    $('freeModelsBlock').style.display = show ? '' : 'none';
+    const provider = $('aiProvider').value;
+    $('geminiPanel').hidden = provider !== 'gemini';
+    $('openrouterPanel').hidden = provider !== 'openrouter';
   }
 
   function methodLabel(m) {

@@ -142,76 +142,82 @@
 
       <!-- SETTINGS -->
       <section class="view view-settings" id="view-settings">
-        <header class="section-head">
+        <header class="section-head compact">
           <div>
             <h2>تنظیمات</h2>
-            <p class="lede sm">کلیدها فقط روی همین سیستم ذخیره می‌شوند و فقط اسم فایل‌ها برای API فرستاده می‌شود.</p>
+            <p class="lede sm">کلید API محلی است؛ فقط نام/نمونه کوتاه فایل ارسال می‌شود.</p>
           </div>
         </header>
 
         <form class="settings-form" id="settingsForm">
-          <fieldset>
-            <legend>هوش مصنوعی</legend>
-            <label class="field">
-              <span>ارائه‌دهنده فعال</span>
-              <select id="aiProvider">
-                <option value="none">خاموش — فقط تشخیص آفلاین</option>
-                <option value="gemini">Google Gemini</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>کلید Google Gemini</span>
-              <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" />
-            </label>
-            <label class="field">
-              <span>مدل Gemini</span>
-              <input type="text" id="geminiModel" placeholder="gemini-2.0-flash" value="gemini-2.0-flash" />
-            </label>
-            <label class="field">
-              <span>کلید OpenRouter</span>
-              <input type="password" id="openrouterKey" placeholder="sk-or-…" autocomplete="off" />
-            </label>
-            <input type="hidden" id="openrouterModel" value="openrouter/free" />
+          <div class="settings-scroll">
+            <fieldset class="settings-box">
+              <legend>هوش مصنوعی</legend>
 
-            <div class="free-models-block" id="freeModelsBlock">
-              <div class="free-models-head">
-                <div>
-                  <strong>مدل‌های رایگان OpenRouter</strong>
-                  <p class="muted sm">فقط رایگان‌ها — هر کدام را تیک بزن. اولین تیک = مدل اصلی، بقیه جایگزین خودکار.</p>
+              <div class="fields-grid">
+                <label class="field">
+                  <span>ارائه‌دهنده</span>
+                  <select id="aiProvider">
+                    <option value="none">خاموش — فقط آفلاین</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openrouter">OpenRouter</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="provider-panel" id="geminiPanel" hidden>
+                <label class="field">
+                  <span>کلید Gemini</span>
+                  <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span>مدل Gemini</span>
+                  <input type="text" id="geminiModel" placeholder="gemini-2.0-flash" value="gemini-2.0-flash" />
+                </label>
+              </div>
+
+              <div class="provider-panel" id="openrouterPanel" hidden>
+                <label class="field">
+                  <span>کلید OpenRouter</span>
+                  <input type="password" id="openrouterKey" placeholder="sk-or-…" autocomplete="off" />
+                </label>
+                <input type="hidden" id="openrouterModel" value="openrouter/free" />
+
+                <div class="free-models-block" id="freeModelsBlock">
+                  <div class="free-models-head">
+                    <strong>مدل‌های رایگان</strong>
+                    <div class="free-models-toolbar">
+                      <button type="button" class="btn-mini" id="btnRefreshFreeModels">بروزرسانی</button>
+                      <button type="button" class="btn-mini" id="btnSelectAllFree">همه</button>
+                      <button type="button" class="btn-mini" id="btnClearFree">پاک</button>
+                    </div>
+                  </div>
+                  <p class="muted sm" id="freeModelsMeta">اولین تیک = مدل اصلی</p>
+                  <div class="free-models-list" id="freeModelsList">
+                    <div class="muted sm">در حال بارگذاری…</div>
+                  </div>
                 </div>
-                <button type="button" class="btn btn-ghost btn-mini-lg" id="btnRefreshFreeModels">بروزرسانی لیست</button>
               </div>
-              <div class="free-models-toolbar">
-                <button type="button" class="btn-mini" id="btnSelectAllFree">انتخاب همه</button>
-                <button type="button" class="btn-mini" id="btnClearFree">پاک کردن</button>
-                <span class="muted sm" id="freeModelsMeta">—</span>
-              </div>
-              <div class="free-models-list" id="freeModelsList">
-                <div class="muted sm">در حال بارگذاری مدل‌های رایگان…</div>
-              </div>
-            </div>
 
-            <label class="check field-check">
-              <input type="checkbox" id="includeContentSample" checked />
-              ارسال نمونه محتوا به AI (متن/PDF/Word — فقط چند صد کاراکتر اول)
-            </label>
-            <label class="check field-check">
-              <input type="checkbox" id="autoAiAfterScan" />
-              بعد از اسکن، خودکار با AI تحلیل شود
-            </label>
-            <p class="settings-help">
-              نمونه محتوا دقت دسته و نام را بالا می‌برد؛ کل فایل فرستاده نمی‌شود.
-              اگر Gemini خطای <b>403</b> داد از OpenRouter و مدل‌های رایگان استفاده کن.
-            </p>
-          </fieldset>
+              <div class="checks-row">
+                <label class="check">
+                  <input type="checkbox" id="includeContentSample" checked />
+                  نمونه محتوا به AI
+                </label>
+                <label class="check">
+                  <input type="checkbox" id="autoAiAfterScan" />
+                  تحلیل خودکار بعد از اسکن
+                </label>
+              </div>
+            </fieldset>
+            <pre class="test-result" id="testResult" hidden></pre>
+          </div>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
             <button type="button" class="btn btn-ghost" id="btnTestAi">تست اتصال AI</button>
             <span class="save-msg" id="saveMsg" hidden>ذخیره شد</span>
           </div>
-          <pre class="test-result" id="testResult" hidden></pre>
         </form>
       </section>
     </main>
