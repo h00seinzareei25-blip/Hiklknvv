@@ -4,6 +4,7 @@ const fs = require('fs');
 const { scanFolder } = require('./scanner');
 const { analyzeFiles, sanitizeFileName, testConnection } = require('./ai');
 const { listFreeOpenRouterModels } = require('./openrouterFree');
+const { attachContentSamples } = require('./contentSampler');
 
 let mainWindow;
 
@@ -81,14 +82,38 @@ ipcMain.handle('ai-analyze', async (event, payload) => {
   if (!files.length) return { ok: false, error: 'فایلی برای تحلیل نیست.' };
 
   try {
-    const results = await analyzeFiles(files, settings, (progress) => {
-      event.sender.send('ai-progress', progress);
+    const useSamples = settings.includeContentSample !== false;
+    event.sender.send('ai-progress', {
+      done: 0,
+      total: files.length,
+      batchIndex: 0,
+      batchCount: 0,
+      phase: 'sample',
+    });
+
+    const enriched = await attachContentSamples(files, {
+      enabled: useSamples,
+      onProgress: (p) => {
+        event.sender.send('ai-progress', {
+          done: p.done,
+          total: p.total,
+          batchIndex: 0,
+          batchCount: 0,
+          phase: 'sample',
+        });
+      },
+    });
+
+    const sampledCount = enriched.filter((f) => f.contentSample).length;
+    const results = await analyzeFiles(enriched, settings, (progress) => {
+      event.sender.send('ai-progress', { ...progress, phase: 'ai' });
     });
     return {
       ok: true,
       results,
       provider: settings.aiProvider,
       count: results.length,
+      sampledCount,
     };
   } catch (err) {
     return { ok: false, error: err.message || 'خطا در تحلیل هوش مصنوعی' };
@@ -133,5 +158,5 @@ ipcMain.handle('open-path', async (_event, targetPath) => {
 ipcMain.handle('get-app-info', () => ({
   version: app.getVersion(),
   name: 'نظم‌یار',
-  stage: 'نسخه ۰٫۲٫۲ — مدل‌های رایگان OpenRouter',
+  stage: 'نسخه ۰٫۲٫۳ — نمونه محتوا برای AI',
 }));

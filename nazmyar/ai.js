@@ -1,9 +1,10 @@
 /**
  * AI helpers for Nazmyar — Gemini + OpenRouter
- * Only filenames/metadata are sent; never file contents.
+ * Sends filenames + optional short content samples (never full files).
  */
 
-const BATCH_SIZE = 25;
+const BATCH_SIZE = 18;
+const BATCH_SIZE_WITH_CONTENT = 12;
 
 const GEMINI_FALLBACK_MODELS = [
   'gemini-2.0-flash',
@@ -41,17 +42,29 @@ function cleanKey(key) {
 }
 
 function buildPrompt(files) {
-  const list = files.map((f, i) => ({
-    i,
-    name: f.name,
-    ext: f.ext,
-    offlineCategory: f.category || '',
-  }));
+  const hasSamples = files.some((f) => f.contentSample);
+  const list = files.map((f, i) => {
+    const row = {
+      i,
+      name: f.name,
+      ext: f.ext,
+      offlineCategory: f.category || '',
+    };
+    if (f.contentSample) {
+      row.contentSample = f.contentSample;
+      row.contentSource = f.contentSource || 'sample';
+    }
+    return row;
+  });
 
-  return `تو دستیار مرتب‌سازی فایل هستی. فقط بر اساس نام فایل (بدون محتوا) کار کن.
-برای هر آیتم دو چیز بده:
+  const contentHint = hasSamples
+    ? 'برای بعضی فایل‌ها فیلد contentSample آمده (فقط چند صد کاراکتر اول). از آن برای تشخیص دقیق‌تر نوع سند استفاده کن، ولی اطلاعات حساس را در reason تکرار نکن.'
+    : 'فقط بر اساس نام و پسوند فایل کار کن.';
+
+  return `تو دستیار مرتب‌سازی فایل هستی. ${contentHint}
+برای هر آیتم سه چیز بده:
 1) category: دسته مناسب به فارسی، در صورت نیاز با زیرپوشه مثل «نرم‌افزارها/گرافیک» یا «اسناد/فاکتورها»
-2) suggestedName: نام فایل تمیزتر و خواناتر. پسوند اصلی را حفظ کن. از کاراکترهای غیرمجاز ویندوز استفاده نکن. اگر نام فعلی خوب است همان را برگردان.
+2) suggestedName: نام فایل تمیزتر و خواناتر بر اساس محتوا/اسم. پسوند اصلی را حفظ کن. از کاراکترهای غیرمجاز ویندوز استفاده نکن. اگر نام فعلی خوب است همان را برگردان.
 3) reason: یک جمله کوتاه فارسی درباره دلیل دسته/نام
 
 فقط JSON خالص برگردان (بدون markdown)، به این شکل:
@@ -362,9 +375,11 @@ async function analyzeFiles(files, settings, onProgress) {
     throw new Error('هوش مصنوعی در تنظیمات خاموش است.');
   }
 
+  const hasContent = files.some((f) => f.contentSample);
+  const batchSize = hasContent ? BATCH_SIZE_WITH_CONTENT : BATCH_SIZE;
   const batches = [];
-  for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    batches.push(files.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < files.length; i += batchSize) {
+    batches.push(files.slice(i, i + batchSize));
   }
 
   const results = [];

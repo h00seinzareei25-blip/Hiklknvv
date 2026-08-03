@@ -69,6 +69,7 @@
       openrouterKey: ($('openrouterKey').value || '').trim(),
       openrouterModel: primary,
       openrouterFreeSelected: [...state.selectedFreeIds],
+      includeContentSample: !!$('includeContentSample').checked,
       autoAiAfterScan: !!$('autoAiAfterScan').checked,
     };
   }
@@ -83,6 +84,7 @@
       $('geminiModel').value = data.geminiModel || 'gemini-2.0-flash';
       $('openrouterKey').value = data.openrouterKey || '';
       $('autoAiAfterScan').checked = !!data.autoAiAfterScan;
+      $('includeContentSample').checked = data.includeContentSample !== false;
 
       const selected = Array.isArray(data.openrouterFreeSelected) && data.openrouterFreeSelected.length
         ? data.openrouterFreeSelected
@@ -348,10 +350,21 @@
 
     const offProgress = window.nazmyar.onAiProgress((p) => {
       const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+      if (p.phase === 'sample') {
+        setAiProgress(
+          true,
+          `خواندن نمونه محتوا ${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))}`,
+          Math.max(5, Math.round(pct * 0.35)),
+        );
+        return;
+      }
+      const batchPart = p.batchCount
+        ? `دسته ${toFaDigits(String(p.batchIndex))} از ${toFaDigits(String(p.batchCount))} — `
+        : '';
       setAiProgress(
         true,
-        `تحلیل دسته ${toFaDigits(String(p.batchIndex))} از ${toFaDigits(String(p.batchCount))} — ${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))}`,
-        pct,
+        `تحلیل AI · ${batchPart}${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))}`,
+        Math.max(35, Math.round(35 + pct * 0.65)),
       );
     });
 
@@ -361,6 +374,7 @@
         files: state.files.map((f) => ({
           id: f.id,
           name: f.name,
+          path: f.path,
           ext: f.ext,
           category: f.offlineCategory || f.category,
         })),
@@ -392,7 +406,10 @@
       updateHomeStats();
       setAiProgress(true, 'تحلیل هوش مصنوعی تمام شد', 100);
       setTimeout(() => setAiProgress(false), 1200);
-      showToast(`AI برای ${toFaDigits(String(result.count || 0))} فایل پیشنهاد داد`);
+      const sampleNote = result.sampledCount
+        ? ` · نمونه محتوا: ${toFaDigits(String(result.sampledCount))}`
+        : '';
+      showToast(`AI برای ${toFaDigits(String(result.count || 0))} فایل پیشنهاد داد${sampleNote}`);
     } finally {
       offProgress();
       state.aiRunning = false;

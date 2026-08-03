@@ -193,14 +193,16 @@
             </div>
 
             <label class="check field-check">
+              <input type="checkbox" id="includeContentSample" checked />
+              ارسال نمونه محتوا به AI (متن/PDF/Word — فقط چند صد کاراکتر اول)
+            </label>
+            <label class="check field-check">
               <input type="checkbox" id="autoAiAfterScan" />
               بعد از اسکن، خودکار با AI تحلیل شود
             </label>
             <p class="settings-help">
-              اگر Gemini خطای <b>403</b> داد: کلید را از
-              <span class="ltr">aistudio.google.com/apikey</span>
-              بساز و محدودیت HTTP Referrer را بردار. در ایران معمولاً VPN لازم است.
-              جایگزین سریع: OpenRouter.
+              نمونه محتوا دقت دسته و نام را بالا می‌برد؛ کل فایل فرستاده نمی‌شود.
+              اگر Gemini خطای <b>403</b> داد از OpenRouter و مدل‌های رایگان استفاده کن.
             </p>
           </fieldset>
 
