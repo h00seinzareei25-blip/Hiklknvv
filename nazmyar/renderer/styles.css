@@ -402,6 +402,84 @@ button, input, select { font-family: inherit; }
   background: rgba(240, 163, 94, 0.14);
   color: var(--accent);
 }
+.free-models-block {
+  margin: 0.4rem 0 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.free-models-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+.free-models-head strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--accent);
+}
+.muted.sm { font-size: 0.78rem; color: var(--muted); margin: 0; line-height: 1.6; }
+.free-models-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+.btn-mini-lg {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+}
+.free-models-list {
+  max-height: 240px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: 0.15rem;
+}
+.free-model-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: start;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.free-model-item:hover { background: rgba(255,255,255,0.04); }
+.free-model-item.primary {
+  background: rgba(45, 212, 168, 0.08);
+  outline: 1px solid rgba(45, 212, 168, 0.2);
+}
+.free-model-item input { margin-top: 0.2rem; accent-color: var(--brand); }
+.free-model-meta { min-width: 0; }
+.free-model-name {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.free-model-id {
+  display: block;
+  direction: ltr;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.free-model-tag {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--brand);
+}
 .settings-help {
   margin: 0.85rem 0 0;
   padding-top: 0.85rem;
@@ -513,7 +591,7 @@ button, input, select { font-family: inherit; }
 }
 
 .settings-form {
-  max-width: 560px;
+  max-width: 640px;
 }
 fieldset {
   border: 1px solid var(--line);

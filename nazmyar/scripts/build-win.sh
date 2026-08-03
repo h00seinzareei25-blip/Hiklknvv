@@ -16,7 +16,7 @@ if [[ ! -f "$CACHE" ]]; then
 fi
 unzip -q "$CACHE" -d "$OUT"
 
-cp "$ROOT/main.js" "$ROOT/preload.js" "$ROOT/scanner.js" "$ROOT/ai.js" /tmp/nazmyar-app/
+cp "$ROOT/main.js" "$ROOT/preload.js" "$ROOT/scanner.js" "$ROOT/ai.js" "$ROOT/openrouterFree.js" /tmp/nazmyar-app/
 cp -r "$ROOT/renderer" /tmp/nazmyar-app/
 node -e "
 const p=require('$ROOT/package.json');

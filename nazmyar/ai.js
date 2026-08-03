@@ -162,8 +162,20 @@ async function callGemini({ apiKey, model, prompt }) {
   throw lastError || new Error('خطای ناشناخته Gemini');
 }
 
-async function callOpenRouter({ apiKey, model, prompt }) {
-  const m = model || 'openai/gpt-4o-mini';
+async function openRouterOnce({ apiKey, model, prompt, useJsonFormat }) {
+  const body = {
+    model,
+    temperature: 0.2,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a file organizer. Reply with valid JSON only.',
+      },
+      { role: 'user', content: prompt },
+    ],
+  };
+  if (useJsonFormat) body.response_format = { type: 'json_object' };
+
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -172,25 +184,70 @@ async function callOpenRouter({ apiKey, model, prompt }) {
       'HTTP-Referer': 'https://github.com/h00seinzareei25-blip/Hiklknvv',
       'X-Title': 'Nazmyar',
     },
-    body: JSON.stringify({
-      model: m,
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a file organizer. Reply with valid JSON only.',
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data?.error?.message || data?.error || `خطای OpenRouter (${res.status})`;
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+  return { res, data };
+}
+
+function openRouterErrorMessage(status, data) {
+  const msg = data?.error?.message || data?.error || `خطای OpenRouter (${status})`;
+  return typeof msg === 'string' ? msg : JSON.stringify(msg);
+}
+
+async function callOpenRouter({ apiKey, model, prompt, fallbackModels = [] }) {
+  const queue = [];
+  const pushUnique = (id) => {
+    const m = String(id || '').trim();
+    if (m && !queue.includes(m)) queue.push(m);
+  };
+  pushUnique(model);
+  for (const m of fallbackModels) pushUnique(m);
+  if (!queue.length) pushUnique('openrouter/free');
+
+  let lastError = null;
+  for (const m of queue) {
+    // First try with json_object; some free models reject it — retry without.
+    for (const useJsonFormat of [true, false]) {
+      const { res, data } = await openRouterOnce({
+        apiKey,
+        model: m,
+        prompt,
+        useJsonFormat,
+      });
+      if (res.ok) {
+        const text = data?.choices?.[0]?.message?.content || '';
+        if (text) return text;
+        lastError = new Error(`مدل ${m} پاسخ خالی داد`);
+        continue;
+      }
+
+      const errText = openRouterErrorMessage(res.status, data);
+      lastError = new Error(`${m}: ${errText}`);
+      const lower = errText.toLowerCase();
+      const jsonFormatIssue = useJsonFormat && (
+        lower.includes('response_format')
+        || lower.includes('json_object')
+        || lower.includes('not supported')
+      );
+      if (jsonFormatIssue) continue; // retry same model without json format
+      break; // try next model
+    }
   }
-  return data?.choices?.[0]?.message?.content || '';
+  throw lastError || new Error('همه مدل‌های رایگان OpenRouter ناموفق بودند');
+}
+
+function resolveOpenRouterModels(settings) {
+  const selected = Array.isArray(settings.openrouterFreeSelected)
+    ? settings.openrouterFreeSelected.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  const primary = String(settings.openrouterModel || '').trim();
+  const ordered = [];
+  if (primary) ordered.push(primary);
+  for (const id of selected) {
+    if (!ordered.includes(id)) ordered.push(id);
+  }
+  return ordered;
 }
 
 async function callProvider(settings, prompt) {
@@ -205,9 +262,11 @@ async function callProvider(settings, prompt) {
   }
   if (provider === 'openrouter') {
     if (!cleanKey(settings.openrouterKey)) throw new Error('کلید OpenRouter تنظیم نشده است.');
+    const models = resolveOpenRouterModels(settings);
     return callOpenRouter({
       apiKey: settings.openrouterKey,
-      model: settings.openrouterModel,
+      model: models[0],
+      fallbackModels: models.slice(1),
       prompt,
     });
   }
@@ -251,15 +310,18 @@ async function testConnection(settings) {
     if (provider === 'openrouter') {
       const key = cleanKey(settings.openrouterKey);
       if (!key) return { ok: false, error: 'کلید OpenRouter خالی است.' };
+      const models = resolveOpenRouterModels(settings);
+      if (!models.length) return { ok: false, error: 'حداقل یک مدل رایگان را تیک بزن.' };
       const text = await callOpenRouter({
         apiKey: key,
-        model: settings.openrouterModel || 'openai/gpt-4o-mini',
+        model: models[0],
+        fallbackModels: models.slice(1),
         prompt: 'Return JSON only: {"ok":true}',
       });
       return {
         ok: true,
         provider: 'openrouter',
-        detail: `اتصال برقرار شد. نمونه پاسخ: ${String(text).slice(0, 80)}`,
+        detail: `اتصال برقرار شد با ${models[0]}. نمونه: ${String(text).slice(0, 80)}`,
       };
     }
 
@@ -332,4 +394,5 @@ module.exports = {
   extractJson,
   formatGeminiError,
   cleanKey,
+  resolveOpenRouterModels,
 };

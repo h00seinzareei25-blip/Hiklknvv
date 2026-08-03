@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('nazmyar', {
   scanFolder: (folderPath) => ipcRenderer.invoke('scan-folder', folderPath),
   aiAnalyze: (payload) => ipcRenderer.invoke('ai-analyze', payload),
   aiTest: (settings) => ipcRenderer.invoke('ai-test', settings),
+  listFreeOpenRouterModels: () => ipcRenderer.invoke('openrouter-free-models'),
   onAiProgress: (cb) => {
     const handler = (_e, data) => cb(data);
     ipcRenderer.on('ai-progress', handler);

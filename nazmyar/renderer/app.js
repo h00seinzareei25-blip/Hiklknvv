@@ -3,9 +3,13 @@
     folderPath: null,
     files: [],
     aiRunning: false,
+    freeModels: [],
+    freeModelsSource: '',
+    selectedFreeIds: ['openrouter/free'],
   };
 
   const SETTINGS_KEY = 'nazmyar.settings.v1';
+  const DEFAULT_FREE_MODEL = 'openrouter/free';
   const $ = (id) => document.getElementById(id);
   const views = {
     home: $('view-home'),
@@ -36,13 +40,35 @@
     btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 
+  function syncPrimaryModel() {
+    const primary = state.selectedFreeIds[0] || DEFAULT_FREE_MODEL;
+    $('openrouterModel').value = primary;
+    return primary;
+  }
+
+  function getSelectedFreeFromDom() {
+    const boxes = [...document.querySelectorAll('#freeModelsList input[type="checkbox"]')];
+    if (!boxes.length) return [...state.selectedFreeIds];
+    const checkedBoxes = boxes.filter((b) => b.checked);
+    const checked = new Set(checkedBoxes.map((b) => b.value));
+    // Keep previous order when possible, append newly checked at end
+    const ordered = state.selectedFreeIds.filter((id) => checked.has(id));
+    for (const id of checked) {
+      if (!ordered.includes(id)) ordered.push(id);
+    }
+    return ordered.length ? ordered : [boxes[0].value];
+  }
+
   function getSettings() {
+    state.selectedFreeIds = getSelectedFreeFromDom();
+    const primary = syncPrimaryModel();
     return {
       aiProvider: $('aiProvider').value || 'none',
       geminiKey: ($('geminiKey').value || '').trim(),
       geminiModel: ($('geminiModel').value || 'gemini-2.0-flash').trim(),
       openrouterKey: ($('openrouterKey').value || '').trim(),
-      openrouterModel: ($('openrouterModel').value || 'openai/gpt-4o-mini').trim(),
+      openrouterModel: primary,
+      openrouterFreeSelected: [...state.selectedFreeIds],
       autoAiAfterScan: !!$('autoAiAfterScan').checked,
     };
   }
@@ -56,13 +82,94 @@
       $('geminiKey').value = data.geminiKey || '';
       $('geminiModel').value = data.geminiModel || 'gemini-2.0-flash';
       $('openrouterKey').value = data.openrouterKey || '';
-      $('openrouterModel').value = data.openrouterModel || 'openai/gpt-4o-mini';
       $('autoAiAfterScan').checked = !!data.autoAiAfterScan;
+
+      const selected = Array.isArray(data.openrouterFreeSelected) && data.openrouterFreeSelected.length
+        ? data.openrouterFreeSelected
+        : (data.openrouterModel ? [data.openrouterModel] : [DEFAULT_FREE_MODEL]);
+      state.selectedFreeIds = selected.filter(Boolean);
+      // migrate old paid default to free router
+      if (state.selectedFreeIds.length === 1 && state.selectedFreeIds[0] === 'openai/gpt-4o-mini') {
+        state.selectedFreeIds = [DEFAULT_FREE_MODEL];
+      }
+      syncPrimaryModel();
     } catch { /* ignore */ }
   }
 
   function saveSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(getSettings()));
+  }
+
+  function renderFreeModels() {
+    const host = $('freeModelsList');
+    if (!state.freeModels.length) {
+      host.innerHTML = '<div class="muted sm">مدل رایگانی برای نمایش نیست.</div>';
+      return;
+    }
+
+    const selected = new Set(state.selectedFreeIds);
+    host.innerHTML = state.freeModels.map((m) => {
+      const isPrimary = state.selectedFreeIds[0] === m.id;
+      const ctx = m.context ? ` · context ${m.context}` : '';
+      return `
+        <label class="free-model-item ${isPrimary ? 'primary' : ''}">
+          <input type="checkbox" value="${escapeAttr(m.id)}" ${selected.has(m.id) ? 'checked' : ''} />
+          <span class="free-model-meta">
+            <span class="free-model-name">${escapeHtml(m.name)}</span>
+            <span class="free-model-id">${escapeHtml(m.id)}${escapeHtml(ctx)}</span>
+            ${isPrimary ? '<span class="free-model-tag">مدل اصلی</span>' : ''}
+          </span>
+        </label>`;
+    }).join('');
+
+    host.querySelectorAll('input[type="checkbox"]').forEach((box) => {
+      box.addEventListener('change', () => {
+        state.selectedFreeIds = getSelectedFreeFromDom();
+        if (!state.selectedFreeIds.length) {
+          // keep at least one
+          box.checked = true;
+          state.selectedFreeIds = [box.value];
+          showToast('حداقل یک مدل رایگان باید انتخاب باشد');
+        }
+        syncPrimaryModel();
+        renderFreeModels();
+        updateActionButtons();
+      });
+    });
+
+    const src = state.freeModelsSource === 'live' ? 'آنلاین' : 'ذخیره‌شده';
+    $('freeModelsMeta').textContent = `${toFaDigits(String(state.freeModels.length))} مدل رایگان · منبع: ${src}`;
+  }
+
+  async function loadFreeModels(forceToast = false) {
+    $('freeModelsMeta').textContent = 'در حال دریافت…';
+    try {
+      const result = await window.nazmyar.listFreeOpenRouterModels();
+      if (!result?.ok) {
+        showToast(result?.error || 'خطا در دریافت مدل‌های رایگان');
+        return;
+      }
+      state.freeModels = result.models || [];
+      state.freeModelsSource = result.source || '';
+      // Drop selected ids that no longer exist, but keep unknowns if list is fallback-limited
+      const known = new Set(state.freeModels.map((m) => m.id));
+      const kept = state.selectedFreeIds.filter((id) => known.has(id));
+      state.selectedFreeIds = kept.length ? kept : [state.freeModels[0]?.id || DEFAULT_FREE_MODEL];
+      syncPrimaryModel();
+      renderFreeModels();
+      if (forceToast) {
+        showToast(result.warning || `لیست رایگان بروزرسانی شد (${state.freeModels.length})`);
+      } else if (result.warning) {
+        showToast(result.warning, { long: true });
+      }
+    } catch (err) {
+      showToast(err.message || 'خطا در دریافت مدل‌ها');
+    }
+  }
+
+  function updateFreeModelsVisibility() {
+    const show = $('aiProvider').value === 'openrouter';
+    $('freeModelsBlock').style.display = show ? '' : 'none';
   }
 
   function methodLabel(m) {
@@ -87,15 +194,23 @@
   function updateActionButtons() {
     const hasFiles = state.files.length > 0;
     const settings = getSettings();
+    const orReady = settings.aiProvider === 'openrouter'
+      && settings.openrouterKey
+      && (settings.openrouterFreeSelected || []).length > 0;
     const aiReady = settings.aiProvider !== 'none' && (
       (settings.aiProvider === 'gemini' && settings.geminiKey) ||
-      (settings.aiProvider === 'openrouter' && settings.openrouterKey)
+      orReady
     );
     $('btnAiAnalyze').disabled = !hasFiles || state.aiRunning || !aiReady;
     $('btnApplyRenames').disabled = state.aiRunning || !state.files.some((f) => nameChanged(f));
-    $('previewHint').textContent = aiReady
-      ? 'با دکمه تحلیل AI، دسته دقیق‌تر و نام پیشنهادی می‌گیری.'
-      : 'برای تحلیل هوشمند، از تنظیمات کلید Gemini یا OpenRouter را فعال کن.';
+    if (orReady) {
+      const n = settings.openrouterFreeSelected.length;
+      $('previewHint').textContent = `OpenRouter رایگان فعال · مدل اصلی: ${settings.openrouterModel} · ${n} مدل انتخاب‌شده`;
+    } else {
+      $('previewHint').textContent = aiReady
+        ? 'با دکمه تحلیل AI، دسته دقیق‌تر و نام پیشنهادی می‌گیری.'
+        : 'برای تحلیل هوشمند، از تنظیمات Gemini یا OpenRouter (مدل رایگان) را فعال کن.';
+    }
   }
 
   function renderTable() {
@@ -391,8 +506,25 @@
   });
 
   ['aiProvider', 'geminiKey', 'openrouterKey'].forEach((id) => {
-    $(id).addEventListener('change', updateActionButtons);
+    $(id).addEventListener('change', () => {
+      if (id === 'aiProvider') updateFreeModelsVisibility();
+      updateActionButtons();
+    });
     $(id).addEventListener('input', updateActionButtons);
+  });
+
+  $('btnRefreshFreeModels').addEventListener('click', () => loadFreeModels(true));
+  $('btnSelectAllFree').addEventListener('click', () => {
+    state.selectedFreeIds = state.freeModels.map((m) => m.id);
+    syncPrimaryModel();
+    renderFreeModels();
+    updateActionButtons();
+  });
+  $('btnClearFree').addEventListener('click', () => {
+    state.selectedFreeIds = [state.freeModels[0]?.id || DEFAULT_FREE_MODEL];
+    syncPrimaryModel();
+    renderFreeModels();
+    updateActionButtons();
   });
 
   function escapeHtml(s) {
@@ -410,12 +542,16 @@
 
   async function boot() {
     loadSettings();
+    updateFreeModelsVisibility();
     try {
       const info = await window.nazmyar.getAppInfo();
       if (info?.stage) $('stageLabel').textContent = info.stage;
     } catch { /* browser preview fallback */ }
     updateHomeStats();
     renderTable();
+    updateActionButtons();
+    await loadFreeModels(false);
+    updateFreeModelsVisibility();
     updateActionButtons();
   }
 

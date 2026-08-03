@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { scanFolder } = require('./scanner');
 const { analyzeFiles, sanitizeFileName, testConnection } = require('./ai');
+const { listFreeOpenRouterModels } = require('./openrouterFree');
 
 let mainWindow;
 
@@ -66,6 +67,14 @@ ipcMain.handle('ai-test', async (_event, settings) => {
   }
 });
 
+ipcMain.handle('openrouter-free-models', async () => {
+  try {
+    return await listFreeOpenRouterModels();
+  } catch (err) {
+    return { ok: false, error: err.message || 'خطا در دریافت مدل‌های رایگان' };
+  }
+});
+
 ipcMain.handle('ai-analyze', async (event, payload) => {
   const files = payload?.files || [];
   const settings = payload?.settings || {};
@@ -124,5 +133,5 @@ ipcMain.handle('open-path', async (_event, targetPath) => {
 ipcMain.handle('get-app-info', () => ({
   version: app.getVersion(),
   name: 'نظم‌یار',
-  stage: 'نسخه ۰٫۲٫۱ — رفع خطای Gemini 403',
+  stage: 'نسخه ۰٫۲٫۲ — مدل‌های رایگان OpenRouter',
 }));
