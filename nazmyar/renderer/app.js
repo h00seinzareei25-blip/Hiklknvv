@@ -71,6 +71,7 @@
       openrouterFreeSelected: [...state.selectedFreeIds],
       includeContentSample: !!$('includeContentSample').checked,
       autoAiAfterScan: !!$('autoAiAfterScan').checked,
+      multiModelVote: !!$('multiModelVote').checked,
     };
   }
 
@@ -85,6 +86,7 @@
       $('openrouterKey').value = data.openrouterKey || '';
       $('autoAiAfterScan').checked = !!data.autoAiAfterScan;
       $('includeContentSample').checked = data.includeContentSample !== false;
+      $('multiModelVote').checked = data.multiModelVote !== false;
 
       const selected = Array.isArray(data.openrouterFreeSelected) && data.openrouterFreeSelected.length
         ? data.openrouterFreeSelected
@@ -140,7 +142,12 @@
     });
 
     const src = state.freeModelsSource === 'live' ? 'آنلاین' : 'ذخیره‌شده';
-    $('freeModelsMeta').textContent = `${toFaDigits(String(state.freeModels.length))} مدل رایگان · منبع: ${src}`;
+    const selectedCount = state.selectedFreeIds.length;
+    const voteOn = $('multiModelVote').checked && selectedCount >= 2;
+    const mode = voteOn
+      ? `رأی‌گیری فعال · ${toFaDigits(String(Math.min(selectedCount, 5)))} مدل`
+      : (selectedCount > 1 ? 'حالت جایگزین (اولی اصلی)' : 'تک‌مدل');
+    $('freeModelsMeta').textContent = `${toFaDigits(String(state.freeModels.length))} رایگان · ${src} · ${mode}`;
   }
 
   async function loadFreeModels(forceToast = false) {
@@ -176,6 +183,7 @@
   }
 
   function methodLabel(m) {
+    if (m === 'ai-vote') return 'رأی چند مدل';
     if (m === 'ai') return 'هوش مصنوعی';
     if (m === 'name') return 'از روی اسم';
     if (m === 'ext') return 'از روی پسوند';
@@ -208,7 +216,10 @@
     $('btnApplyRenames').disabled = state.aiRunning || !state.files.some((f) => nameChanged(f));
     if (orReady) {
       const n = settings.openrouterFreeSelected.length;
-      $('previewHint').textContent = `OpenRouter رایگان فعال · مدل اصلی: ${settings.openrouterModel} · ${n} مدل انتخاب‌شده`;
+      const vote = settings.multiModelVote && n >= 2;
+      $('previewHint').textContent = vote
+        ? `رأی‌گیری فعال با ${n} مدل رایگان (حداکثر ۵ مدل همزمان)`
+        : `OpenRouter · مدل اصلی: ${settings.openrouterModel} · ${n} مدل انتخاب‌شده`;
     } else {
       $('previewHint').textContent = aiReady
         ? 'با دکمه تحلیل AI، دسته دقیق‌تر و نام پیشنهادی می‌گیری.'
@@ -252,8 +263,8 @@
           <div class="${suggestClass}" title="${escapeAttr(f.suggestedName || '')}">${suggestText}</div>
         </td>
         <td>${escapeHtml(f.sizeLabel)}</td>
-        <td><span class="badge ${f.method === 'ai' ? 'ai' : (f.confidence === 'کم' ? 'low' : '')}">${escapeHtml(f.category)}</span></td>
-        <td class="method">${methodLabel(f.method)}${f.aiDone ? '' : ` · ${escapeHtml(f.confidence)}`}</td>
+        <td><span class="badge ${f.method === 'ai' || f.method === 'ai-vote' ? 'ai' : (f.confidence === 'کم' ? 'low' : '')}">${escapeHtml(f.category)}</span></td>
+        <td class="method">${methodLabel(f.method)}${f.aiDone ? ` · ${escapeHtml(f.confidence || '')}` : ` · ${escapeHtml(f.confidence)}`}</td>
         <td>
           <button class="btn-mini btn-rename-one" data-id="${escapeAttr(f.id)}" ${changed ? '' : 'disabled'}>اعمال نام</button>
         </td>
@@ -362,6 +373,17 @@
       const batchPart = p.batchCount
         ? `دسته ${toFaDigits(String(p.batchIndex))} از ${toFaDigits(String(p.batchCount))} — `
         : '';
+      if (p.phase === 'vote') {
+        const voteInfo = p.voteModels
+          ? `رأی ${toFaDigits(String(p.voteOk || p.voteModels))} مدل · `
+          : 'رأی‌گیری · ';
+        setAiProgress(
+          true,
+          `${voteInfo}${batchPart}${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))}`,
+          Math.max(35, Math.round(35 + pct * 0.65)),
+        );
+        return;
+      }
       setAiProgress(
         true,
         `تحلیل AI · ${batchPart}${toFaDigits(String(p.done))}/${toFaDigits(String(p.total))}`,
@@ -541,6 +563,10 @@
   $('btnClearFree').addEventListener('click', () => {
     state.selectedFreeIds = [state.freeModels[0]?.id || DEFAULT_FREE_MODEL];
     syncPrimaryModel();
+    renderFreeModels();
+    updateActionButtons();
+  });
+  $('multiModelVote').addEventListener('change', () => {
     renderFreeModels();
     updateActionButtons();
   });

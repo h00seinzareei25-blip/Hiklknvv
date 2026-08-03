@@ -158,5 +158,5 @@ ipcMain.handle('open-path', async (_event, targetPath) => {
 ipcMain.handle('get-app-info', () => ({
   version: app.getVersion(),
   name: 'نظم‌یار',
-  stage: 'نسخه ۰٫۲٫۴ — تنظیمات جمع‌وجور',
+  stage: 'نسخه ۰٫۲٫۵ — رأی‌گیری چند مدل',
 }));

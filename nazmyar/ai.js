@@ -208,6 +208,36 @@ function openRouterErrorMessage(status, data) {
   return typeof msg === 'string' ? msg : JSON.stringify(msg);
 }
 
+async function callOpenRouterModel(apiKey, model, prompt) {
+  let lastError = null;
+  for (const useJsonFormat of [true, false]) {
+    const { res, data } = await openRouterOnce({
+      apiKey,
+      model,
+      prompt,
+      useJsonFormat,
+    });
+    if (res.ok) {
+      const text = data?.choices?.[0]?.message?.content || '';
+      if (text) return text;
+      lastError = new Error(`مدل ${model} پاسخ خالی داد`);
+      continue;
+    }
+
+    const errText = openRouterErrorMessage(res.status, data);
+    lastError = new Error(`${model}: ${errText}`);
+    const lower = errText.toLowerCase();
+    const jsonFormatIssue = useJsonFormat && (
+      lower.includes('response_format')
+      || lower.includes('json_object')
+      || lower.includes('not supported')
+    );
+    if (jsonFormatIssue) continue;
+    break;
+  }
+  throw lastError || new Error(`مدل ${model} ناموفق بود`);
+}
+
 async function callOpenRouter({ apiKey, model, prompt, fallbackModels = [] }) {
   const queue = [];
   const pushUnique = (id) => {
@@ -220,34 +250,103 @@ async function callOpenRouter({ apiKey, model, prompt, fallbackModels = [] }) {
 
   let lastError = null;
   for (const m of queue) {
-    // First try with json_object; some free models reject it — retry without.
-    for (const useJsonFormat of [true, false]) {
-      const { res, data } = await openRouterOnce({
-        apiKey,
-        model: m,
-        prompt,
-        useJsonFormat,
-      });
-      if (res.ok) {
-        const text = data?.choices?.[0]?.message?.content || '';
-        if (text) return text;
-        lastError = new Error(`مدل ${m} پاسخ خالی داد`);
-        continue;
-      }
-
-      const errText = openRouterErrorMessage(res.status, data);
-      lastError = new Error(`${m}: ${errText}`);
-      const lower = errText.toLowerCase();
-      const jsonFormatIssue = useJsonFormat && (
-        lower.includes('response_format')
-        || lower.includes('json_object')
-        || lower.includes('not supported')
-      );
-      if (jsonFormatIssue) continue; // retry same model without json format
-      break; // try next model
+    try {
+      return await callOpenRouterModel(apiKey, m, prompt);
+    } catch (err) {
+      lastError = err;
     }
   }
   throw lastError || new Error('همه مدل‌های رایگان OpenRouter ناموفق بودند');
+}
+
+/** Call several models in parallel; returns successful {model, text}[] */
+async function callOpenRouterEnsemble(apiKey, models, prompt) {
+  const unique = [];
+  for (const m of models) {
+    const id = String(m || '').trim();
+    if (id && !unique.includes(id)) unique.push(id);
+  }
+  // Keep vote set practical for free-tier rate limits
+  const voteModels = unique.slice(0, 5);
+  const settled = await Promise.allSettled(
+    voteModels.map(async (model) => {
+      const text = await callOpenRouterModel(apiKey, model, prompt);
+      return { model, text };
+    }),
+  );
+
+  const ok = [];
+  const errors = [];
+  for (const item of settled) {
+    if (item.status === 'fulfilled') ok.push(item.value);
+    else errors.push(item.reason?.message || String(item.reason));
+  }
+  if (!ok.length) {
+    throw new Error(errors[0] || 'همه مدل‌ها در رأی‌گیری ناموفق بودند');
+  }
+  return { ok, errors, asked: voteModels.length };
+}
+
+function pickMajority(values) {
+  const counts = new Map();
+  for (const v of values) {
+    const key = String(v || '').trim();
+    if (!key) continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  let best = null;
+  let bestCount = 0;
+  for (const [key, count] of counts) {
+    if (count > bestCount) {
+      best = key;
+      bestCount = count;
+    }
+  }
+  return { value: best, count: bestCount, total: values.filter(Boolean).length };
+}
+
+function mergeVoteResults(batch, modelMapped) {
+  // modelMapped: [{ model, rows: mapped batch results }]
+  return batch.map((file, idx) => {
+    const votes = modelMapped
+      .map((m) => m.rows[idx])
+      .filter(Boolean);
+
+    if (!votes.length) {
+      return {
+        id: file.id,
+        category: file.category || 'متفرقه',
+        suggestedName: file.name,
+        reason: 'رأی‌گیری بدون پاسخ معتبر',
+        method: 'ai-vote',
+        confidence: 'کم',
+      };
+    }
+
+    const catPick = pickMajority(votes.map((v) => v.category));
+    const namePick = pickMajority(votes.map((v) => v.suggestedName));
+    const category = catPick.value || file.category || 'متفرقه';
+    const suggestedName = namePick.value || file.name;
+
+    const winner = votes.find((v) => v.category === category && v.suggestedName === suggestedName)
+      || votes.find((v) => v.category === category)
+      || votes[0];
+
+    const fullAgree = catPick.count === votes.length && namePick.count === votes.length;
+    const majority = catPick.count > votes.length / 2;
+    const confidence = fullAgree ? 'بالا' : (majority ? 'متوسط' : 'کم');
+    const baseReason = (winner?.reason || '').toString().trim();
+    const voteNote = `رأی دسته ${catPick.count}/${votes.length} · نام ${namePick.count}/${votes.length}`;
+
+    return {
+      id: file.id,
+      category,
+      suggestedName,
+      reason: baseReason ? `${baseReason} · ${voteNote}` : voteNote,
+      method: 'ai-vote',
+      confidence,
+    };
+  });
 }
 
 function resolveOpenRouterModels(settings) {
@@ -261,6 +360,12 @@ function resolveOpenRouterModels(settings) {
     if (!ordered.includes(id)) ordered.push(id);
   }
   return ordered;
+}
+
+function shouldUseMultiVote(settings) {
+  if (settings.aiProvider !== 'openrouter') return false;
+  if (settings.multiModelVote === false) return false;
+  return resolveOpenRouterModels(settings).length >= 2;
 }
 
 async function callProvider(settings, prompt) {
@@ -367,7 +472,7 @@ function mapBatchResults(batch, parsed) {
 }
 
 /**
- * Analyze files in batches. onProgress({done, total, batchIndex, batchCount})
+ * Analyze files in batches. onProgress({done, total, batchIndex, batchCount, phase, voteModels})
  */
 async function analyzeFiles(files, settings, onProgress) {
   if (!files?.length) return [];
@@ -382,20 +487,75 @@ async function analyzeFiles(files, settings, onProgress) {
     batches.push(files.slice(i, i + batchSize));
   }
 
+  const voteMode = shouldUseMultiVote(settings);
+  const models = resolveOpenRouterModels(settings);
   const results = [];
+
   for (let b = 0; b < batches.length; b++) {
     const batch = batches[b];
     const prompt = buildPrompt(batch);
-    const raw = await callProvider(settings, prompt);
-    const parsed = extractJson(raw);
-    results.push(...mapBatchResults(batch, parsed));
-    if (typeof onProgress === 'function') {
-      onProgress({
-        done: results.length,
-        total: files.length,
-        batchIndex: b + 1,
-        batchCount: batches.length,
-      });
+
+    if (voteMode) {
+      if (typeof onProgress === 'function') {
+        onProgress({
+          done: results.length,
+          total: files.length,
+          batchIndex: b + 1,
+          batchCount: batches.length,
+          phase: 'vote',
+          voteModels: Math.min(models.length, 5),
+        });
+      }
+
+      const { ok, asked } = await callOpenRouterEnsemble(
+        settings.openrouterKey,
+        models,
+        prompt,
+      );
+
+      const modelMapped = [];
+      for (const item of ok) {
+        try {
+          const parsed = extractJson(item.text);
+          modelMapped.push({
+            model: item.model,
+            rows: mapBatchResults(batch, parsed),
+          });
+        } catch {
+          // ignore unreadable model response; others still vote
+        }
+      }
+      if (!modelMapped.length) {
+        throw new Error('هیچ مدلی پاسخ JSON معتبر برای رأی‌گیری نداد');
+      }
+
+      const merged = mergeVoteResults(batch, modelMapped);
+      results.push(...merged);
+
+      if (typeof onProgress === 'function') {
+        onProgress({
+          done: results.length,
+          total: files.length,
+          batchIndex: b + 1,
+          batchCount: batches.length,
+          phase: 'vote',
+          voteModels: asked,
+          voteOk: modelMapped.length,
+        });
+      }
+    } else {
+      const raw = await callProvider(settings, prompt);
+      const parsed = extractJson(raw);
+      results.push(...mapBatchResults(batch, parsed));
+      if (typeof onProgress === 'function') {
+        onProgress({
+          done: results.length,
+          total: files.length,
+          batchIndex: b + 1,
+          batchCount: batches.length,
+          phase: 'ai',
+        });
+      }
     }
   }
   return results;
@@ -410,4 +570,7 @@ module.exports = {
   formatGeminiError,
   cleanKey,
   resolveOpenRouterModels,
+  shouldUseMultiVote,
+  pickMajority,
+  mergeVoteResults,
 };
