@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a5c45">
+  <meta name="description" content="میز کار جفر — محاسبه اصولی تا مستحصله و پرامپت نطق">
+  <title>میز کار جفر</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1 class="brand">میز کار جفر</h1>
+      <p class="tagline">محاسبه اصولی از سؤال تا مستحصله — پرامپت نطق آماده برای هوش مصنوعی</p>
+      <div class="badge-row">
+        <span class="badge">جفر کبیر کلاسیک</span>
+        <span class="badge">گام‌به‌گام</span>
+        <span class="badge">بدون AI در محاسبه</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="alert" class="alert"></div>
+
+    <section class="card">
+      <h2>صورت مسئله</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="sael">سائل</label>
+          <input id="sael" type="text" placeholder="نام پرسنده" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="taleb">طالب</label>
+          <input id="taleb" type="text" placeholder="جوینده / موضوع‌خواه" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="matloob">مطلوب</label>
+          <input id="matloob" type="text" placeholder="خواسته / شخص یا چیز" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="modda">مدعا</label>
+          <input id="modda" type="text" placeholder="آماج پرسش" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label for="soal">متن سؤال</label>
+        <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>تنظیمات دقت</h2>
+      <div class="opts">
+        <div class="field">
+          <label for="table">جدول ابجد</label>
+          <select id="table">
+            <option value="kabir" selected>ابجد کبیر</option>
+            <option value="saghir">ابجد صغیر</option>
+            <option value="wazie">ابجد وضعی (۱–۲۸)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="bastMode">بسط / بینات</label>
+          <select id="bastMode">
+            <option value="bayyinat" selected>بینات</option>
+            <option value="malfuzi">بسط ملفوظی</option>
+            <option value="zabarBayyinat">زبر و بینات</option>
+            <option value="none">بدون بسط</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="takseer">نوع تکسیر</label>
+          <select id="takseer">
+            <option value="sadr_muakhkhar" selected>صدر و مؤخر تا زمام</option>
+            <option value="muakhkhar_sadr">مؤخر و صدر تا زمام</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="takhlis">تخلیص</label>
+          <select id="takhlis">
+            <option value="odd" selected>حروف فرد</option>
+            <option value="laqt2">لقط گام ۲</option>
+            <option value="none">بدون تخلیص</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="takseerRounds">تعداد دور تکسیر</label>
+          <select id="takseerRounds">
+            <option value="1" selected>۱</option>
+            <option value="2">۲</option>
+            <option value="3">۳</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check">
+            <input id="mazjNazira" type="checkbox" checked>
+            <span>مزج اساس با نظیره</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check">
+            <input id="removeDupAsas" type="checkbox">
+            <span>حذف مکرر از اساس</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check">
+            <input id="isqatEnabled" type="checkbox">
+            <span>اسقاط ۹ در گزارش جمل</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary" id="btnRun" type="button">اجرای محاسبه اصولی</button>
+        <button class="btn btn-ghost" id="btnClear" type="button">پاک کردن</button>
+        <button class="btn btn-ghost" id="btnSample" type="button">نمونه</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+      <h2>نتیجه مستحصله</h2>
+      <div class="summary">
+        <div class="stat"><div class="k">جمع جمل اساس</div><div class="v" id="statJamal">—</div></div>
+        <div class="stat"><div class="k">مدخل</div><div class="v" id="statMadkhal">—</div></div>
+        <div class="stat"><div class="k">تعداد حروف</div><div class="v" id="statCount">—</div></div>
+      </div>
+      <label>مستحصله</label>
+      <div class="letters" id="mustehsilaBox">—</div>
+      <label>بدون تکرار</label>
+      <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
+
+      <div class="actions">
+        <button class="btn btn-accent" id="btnCopyPrompt" type="button">کپی پرامپت نطق</button>
+        <button class="btn btn-ghost" id="btnCopyReport" type="button">کپی گزارش کامل</button>
+        <button class="btn btn-ghost" id="btnCopyMust" type="button">کپی مستحصله</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="stepsCard">
+      <h2>مراحل گام‌به‌گام</h2>
+      <div id="stepsList"></div>
+    </section>
+
+    <section class="card hidden" id="promptCard">
+      <h2>پرامپت نطق (برای هوش مصنوعی)</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">این متن را کپی کنید و به ChatGPT / Claude / Gemini بدهید.</p>
+      <textarea class="prebox" id="promptBox" readonly></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-accent" id="btnCopyPrompt2" type="button">کپی پرامپت</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="reportCard">
+      <h2>گزارش محاسباتی</h2>
+      <textarea class="prebox" id="reportBox" readonly></textarea>
+    </section>
+
+    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. نطق را بیرون از برنامه با AI انجام دهید.</p>
+  </main>
+
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
