@@ -261,6 +261,7 @@
         prompt: pack.prompt || pack.generator,
         generator: pack.generator,
         judge: pack.judge,
+        judgeTemplate: pack.judge,
         stability,
         report,
         meta
@@ -275,6 +276,7 @@
       renderSteps(bundle.results[0].steps);
       $('promptBox').value = pack.generator;
       $('judgeBox').value = pack.judge;
+      if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
       $('reportBox').value = report;
       $('stepsCard').classList.remove('hidden');
       $('promptCard').classList.remove('hidden');
@@ -313,6 +315,7 @@
       prompt: pack.prompt || pack.generator,
       generator: pack.generator,
       judge: pack.judge,
+      judgeTemplate: pack.judge,
       stability,
       report,
       meta
@@ -326,6 +329,7 @@
     renderSteps(result.steps);
     $('promptBox').value = pack.generator;
     $('judgeBox').value = pack.judge;
+    if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
     $('reportBox').value = report;
     $('stepsCard').classList.remove('hidden');
     $('promptCard').classList.remove('hidden');
@@ -340,6 +344,7 @@
     $('extraEnabled').checked = false;
     syncExtraUI();
     lastBundle = null;
+    if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
     ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
     hideAlert();
   }
@@ -389,12 +394,36 @@
   }
   function copyJudge() {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
-    copyText(lastBundle.judge || $('judgeBox').value, 'پرامپت داور کپی شد');
+    const filled = $('judgeBox').value || lastBundle.judge || '';
+    if (!filled.trim()) return showAlert('error', 'پرامپت داور خالی است');
+    copyText(filled, 'پرامپت داور کپی شد');
+  }
+  function buildFilledJudge() {
+    if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
+    const answer = ($('generatorAnswerBox') && $('generatorAnswerBox').value || '').trim();
+    if (!answer) return showAlert('error', 'اول جواب مولّد را در کادر پیست کنید');
+    const template = lastBundle.judgeTemplate || lastBundle.judge || '';
+    const filled = JafrEngine.fillJudgePrompt(template, answer);
+    lastBundle.judge = filled;
+    $('judgeBox').value = filled;
+    showAlert('ok', 'پرامپت داور با جواب مولّد ساخته شد — کپی کن و به AI بده');
+    $('judgeBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   $('btnCopyPrompt').addEventListener('click', copyGenerator);
   $('btnCopyPrompt2').addEventListener('click', copyGenerator);
   $('btnCopyJudge').addEventListener('click', copyJudge);
   $('btnCopyJudgeTop').addEventListener('click', copyJudge);
+  if ($('btnBuildJudge')) $('btnBuildJudge').addEventListener('click', buildFilledJudge);
+  if ($('btnClearGeneratorAnswer')) {
+    $('btnClearGeneratorAnswer').addEventListener('click', () => {
+      if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
+      if (lastBundle && lastBundle.judgeTemplate) {
+        lastBundle.judge = lastBundle.judgeTemplate;
+        $('judgeBox').value = lastBundle.judgeTemplate;
+      }
+      showAlert('info', 'جواب مولّد پاک شد');
+    });
+  }
   $('btnCopyReport').addEventListener('click', () => {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
     copyText(lastBundle.report, 'گزارش کامل کپی شد');

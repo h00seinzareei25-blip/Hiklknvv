@@ -220,13 +220,22 @@
 
     <section class="card hidden" id="promptCard">
       <h2>۱) پرامپت مولّد</h2>
-      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">اول این را به AI بده تا کاندید بسازد. شامل دیکشنری، پایداری، عنصر/مدخل است.</p>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">اول این را به AI بده تا کاندید بسازد.</p>
       <textarea class="prebox" id="promptBox" readonly></textarea>
       <div class="actions" style="margin-top:10px">
         <button class="btn btn-accent" id="btnCopyPrompt2" type="button">کپی مولّد</button>
       </div>
-      <h2 style="margin-top:18px">۲) پرامپت داور</h2>
-      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">بعد پاسخ مولّد را جای <code>PASTE_GENERATOR_ANSWER_HERE</code> بگذار و به AI بده تا فقط رد/قبول کند.</p>
+
+      <h2 style="margin-top:18px">۲) جواب مولّد را اینجا پیست کن</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">پاسخ AI مرحلهٔ قبل را کامل اینجا بگذار؛ اپ خودش پرامپت داور آماده می‌سازد.</p>
+      <textarea class="prebox" id="generatorAnswerBox" placeholder="جواب هوش مصنوعی (مولّد) را اینجا پیست کنید..." style="min-height:140px;background:#10261d;"></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-primary" id="btnBuildJudge" type="button">ساخت پرامپت داور</button>
+        <button class="btn btn-ghost" id="btnClearGeneratorAnswer" type="button">پاک کردن جواب</button>
+      </div>
+
+      <h2 style="margin-top:18px">۳) پرامپت داور (آمادهٔ ارسال)</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">این متن را کپی کن و به AI بده تا فقط رد/قبول کند.</p>
       <textarea class="prebox" id="judgeBox" readonly></textarea>
       <div class="actions" style="margin-top:10px">
         <button class="btn btn-accent" id="btnCopyJudge" type="button">کپی داور</button>

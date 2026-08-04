@@ -1234,7 +1234,11 @@
     return lines;
   }
 
-  function buildJudgePrompt(meta, contextLines) {
+  function buildJudgePrompt(meta, contextLines, generatorAnswer) {
+    const pasted = String(generatorAnswer || '').trim();
+    const answerBlock = pasted
+      ? pasted
+      : '<<<PASTE_GENERATOR_ANSWER_HERE>>>';
     return [
       'تو داور سخت‌گیر نطق جفر هستی.',
       'وظیفه تو فقط رد/قبول کاندیدهای مولّد است. کاندید جدید نساز.',
@@ -1245,8 +1249,8 @@
       '## شواهد محاسباتی و دیکشنری',
       ...contextLines,
       '',
-      '## پاسخ مولّد (این بخش را کاربر بعد از اجرای پرامپت مولّد اینجا می‌چسباند)',
-      '<<<PASTE_GENERATOR_ANSWER_HERE>>>',
+      '## پاسخ مولّد',
+      answerBlock,
       '',
       '## قواعد داوری (اجباری)',
       '1) فقط روی کاندیدهایی که مولّد نوشته داوری کن.',
@@ -1267,6 +1271,24 @@
       '- خوانش غالب نهایی:',
       '- سطح اطمینان: کم/متوسط/زیاد'
     ].join('\n');
+  }
+
+  function fillJudgePrompt(judgeTemplate, generatorAnswer) {
+    const pasted = String(generatorAnswer || '').trim();
+    if (!judgeTemplate) return '';
+    if (!pasted) return judgeTemplate;
+    if (judgeTemplate.includes('<<<PASTE_GENERATOR_ANSWER_HERE>>>')) {
+      return judgeTemplate.replace('<<<PASTE_GENERATOR_ANSWER_HERE>>>', pasted);
+    }
+    // If template already has an answer section, replace from "## پاسخ مولّد" until next ## rules
+    const startMark = '## پاسخ مولّد';
+    const endMark = '## قواعد داوری';
+    const i = judgeTemplate.indexOf(startMark);
+    const j = judgeTemplate.indexOf(endMark);
+    if (i >= 0 && j > i) {
+      return judgeTemplate.slice(0, i) + startMark + '\n' + pasted + '\n\n' + judgeTemplate.slice(j);
+    }
+    return judgeTemplate + '\n\n## پاسخ مولّد (الصاق‌شده)\n' + pasted;
   }
 
   function buildNatqPrompt(result, meta, extras) {
@@ -1403,7 +1425,7 @@
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, letterElement, elementProfile,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
-    analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt,
+    analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat
