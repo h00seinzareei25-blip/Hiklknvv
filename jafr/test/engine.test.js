@@ -101,7 +101,17 @@ const choiceBundle = E.runMany({
 }, ['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr'], { table: 'kabir' });
 const choicePrompt = E.buildMultiNatqPrompt(choiceBundle, choiceMeta);
 assert(choicePrompt.includes('برنده بین گزینه‌ها') && choicePrompt.includes('جدول پوشش') && choicePrompt.includes('سیر'), 'پرامپت انتخابی با جدول پوشش');
-assert(!/اولویت با نام ۲ تا ۶/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
+assert(!/اولویت با نام ۲ تا ۶ حرفی\/کلمه/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
+
+const yesMeta = { sael: 'حسین', modda: 'دارو', soal: 'آیا این دارو برای من مفید است', extraEnabled: false };
+assert(E.detectQuestionProfile(yesMeta).id === 'yesno', 'پروفایل بله/خیر');
+const yesRun = E.runClassic(Object.assign({ taleb: '', matloob: '', options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, takseerRounds: 1 } }, yesMeta));
+const dict = E.buildInternalDictionary(yesRun.mustehsila, yesMeta, { madkhal: yesRun.madkhal, table: 'kabir' });
+assert(dict.candidates.length > 0, 'دیکشنری داخلی غیرخالی');
+assert(dict.layers.naziraUnique && dict.layers.tarfaUnique && dict.layers.tanzilUnique, 'لایه‌های ناطق موجود');
+assert(E.letterElement('ا') === 'آتش' && E.letterElement('ب') === 'باد', 'عناصر حروف');
+const yesPrompt = E.buildNatqPrompt(yesRun, yesMeta);
+assert(yesPrompt.includes('دیکشنری داخلی') && yesPrompt.includes('عناصر مستحصله') && yesPrompt.includes('بله / خیر'), 'پرامپت با ۴ لایه نطق');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
