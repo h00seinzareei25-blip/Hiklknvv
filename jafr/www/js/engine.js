@@ -644,9 +644,120 @@
   }
 
   /** تشخیص موضوع برای بانک واژگانی نطق */
+  function extractChoiceOptions(soal) {
+    const s = String(soal || '').trim();
+    if (!s || !/بین/.test(s) || !/کدام|کدامین|کدوم/.test(s)) return [];
+    const m = s.match(/بین\s+(.+?)\s+کدام/);
+    if (!m) return [];
+    let mid = m[1].replace(/مورد/g, ' ').replace(/\s+/g, ' ').trim();
+    let parts = [];
+    if (/،/.test(mid)) {
+      parts = mid.split(/\s*،\s*|\s+و\s+/);
+    } else {
+      const byVa = mid.split(/\s+و\s+/).map((x) => x.trim()).filter(Boolean);
+      if (byVa.length >= 3) {
+        parts = byVa;
+      } else if (byVa.length === 2) {
+        const leftTokens = byVa[0].split(/\s+/).filter(Boolean);
+        if (leftTokens.length >= 2) parts = leftTokens.concat([byVa[1]]);
+        else parts = byVa;
+      } else {
+        parts = mid.split(/\s+/);
+      }
+    }
+    return parts
+      .map((p) => p.replace(/[؟?؟!.,،]/g, '').trim())
+      .filter((p) => p.length >= 2)
+      .filter((p, i, arr) => arr.indexOf(p) === i)
+      .slice(0, 8);
+  }
+
+  function buildLetterBagFromString(str) {
+    const bag = {};
+    for (const ch of String(str || '')) bag[ch] = (bag[ch] || 0) + 1;
+    return bag;
+  }
+
+  function coverageAgainst(option, sourceStr) {
+    const norm = normalizeText(option);
+    const bag = buildLetterBagFromString(sourceStr);
+    const used = {};
+    const missing = [];
+    for (const ch of norm) {
+      const have = bag[ch] || 0;
+      const u = used[ch] || 0;
+      if (u >= have) missing.push(ch);
+      else used[ch] = u + 1;
+    }
+    const needed = norm.length;
+    const okCount = needed - missing.length;
+    return {
+      option,
+      norm,
+      missing: removeDuplicatesKeepOrder(missing.join('')),
+      ratio: needed ? okCount / needed : 0,
+      complete: missing.length === 0,
+      okCount,
+      needed
+    };
+  }
+
+  function scoreChoiceOptions(options, results, sharedUnique) {
+    return (options || []).map((opt) => {
+      const shared = coverageAgainst(opt, sharedUnique || '');
+      const perMethod = (results || []).map((r, i) => {
+        const c = coverageAgainst(opt, r.mustehsila || '');
+        return {
+          methodIndex: i + 1,
+          method: r.method,
+          ratio: c.ratio,
+          complete: c.complete,
+          missing: c.missing,
+          norm: c.norm
+        };
+      });
+      const avg = perMethod.length
+        ? perMethod.reduce((a, x) => a + x.ratio, 0) / perMethod.length
+        : 0;
+      const completeCount = perMethod.filter((x) => x.complete).length;
+      const score = Math.round(100 * (0.35 * shared.ratio + 0.65 * avg) + 8 * completeCount);
+      return {
+        option: opt,
+        norm: shared.norm,
+        shared,
+        perMethod,
+        avgRatio: avg,
+        completeCount,
+        score: Math.max(0, Math.min(100, score))
+      };
+    }).sort((a, b) => b.score - a.score);
+  }
+
   function detectTopic(meta) {
     const text = [meta.modda, meta.soal].filter(Boolean).join(' ');
     const t = text.replace(/\s+/g, '');
+    const choices = extractChoiceOptions(meta.soal || '');
+
+    if (choices.length >= 2) {
+      return {
+        id: 'choice',
+        title: 'انتخاب بین گزینه‌های خود سؤال',
+        bank: choices,
+        choices,
+        isChoice: true
+      };
+    }
+
+    if (/چربی|تری\s*گلیس|کلسترول|قند خون/.test(t)) {
+      return {
+        id: 'herbal_lipid',
+        title: 'گیاه مؤثر بر چربی/قند خون',
+        bank: ['سیر', 'شنبلیله', 'سماق', 'زعفران', 'دارچین', 'زنجبیل', 'سیاه دانه', 'آویشن', 'هل'],
+        choices: [],
+        isChoice: false
+      };
+    }
+
     if (/دارو|گیاه|دمنوش|اعصاب|آرام|ارام|طب|علاج|درمان/.test(t)) {
       return {
         id: 'herbal',
@@ -654,42 +765,55 @@
         bank: [
           'به لیمو', 'گل گاوزبان', 'اسطوخودوس', 'بابونه', 'بادرنجبویه', 'سنبل الطیب',
           'چای سبز', 'نعناع', 'آویشن', 'گل محمدی', 'خاکشیر', 'شیرین بیان',
-          'زعفران', 'هل', 'دارچین', 'سیاه دانه', 'اسپند', 'گل بنفشه'
-        ]
+          'زعفران', 'هل', 'دارچین', 'سیاه دانه', 'اسپند', 'گل بنفشه',
+          'سیر', 'شنبلیله', 'سماق'
+        ],
+        choices: [],
+        isChoice: false
       };
     }
     if (/ازدواج|همسر|زن|شوهر|نامزد|عقد/.test(t)) {
       return {
         id: 'marriage',
         title: 'وضعیت ازدواج / نتیجه پیوند',
-        bank: ['صلح', 'وصول', 'تاخیر', 'موانع', 'میسر', 'ناممکن', 'خیر', 'شر']
+        bank: ['صلح', 'وصول', 'تاخیر', 'موانع', 'میسر', 'ناممکن', 'خیر', 'شر'],
+        choices: [],
+        isChoice: false
       };
     }
     if (/سفر|رفتن|مقصد|مسافرت/.test(t)) {
       return {
         id: 'travel',
         title: 'نتیجه سفر / مقصد',
-        bank: ['رفتن', 'نرفتن', 'تاخیر', 'خیر', 'خطر', 'امن', 'بازگشت']
+        bank: ['رفتن', 'نرفتن', 'تاخیر', 'خیر', 'خطر', 'امن', 'بازگشت'],
+        choices: [],
+        isChoice: false
       };
     }
     if (/کار|شغل|استخدام|پول|سود|معامله|خرید|فروش/.test(t)) {
       return {
         id: 'work',
         title: 'نتیجه کار / معامله',
-        bank: ['سود', 'زیان', 'تاخیر', 'موفق', 'ناموفق', 'صبر', 'حرکت']
+        bank: ['سود', 'زیان', 'تاخیر', 'موفق', 'ناموفق', 'صبر', 'حرکت'],
+        choices: [],
+        isChoice: false
       };
     }
     if (/اسم|نام|کیست|چه کسی/.test(t)) {
       return {
         id: 'name',
         title: 'استخراج نام',
-        bank: []
+        bank: [],
+        choices: [],
+        isChoice: false
       };
     }
     return {
       id: 'general',
       title: 'پاسخ کوتاه و مشخص',
-      bank: ['خیر', 'آری', 'تاخیر', 'صبر', 'موانع', 'میسر', 'مبهم']
+      bank: ['خیر', 'آری', 'تاخیر', 'صبر', 'موانع', 'میسر', 'مبهم'],
+      choices: [],
+      isChoice: false
     };
   }
 
@@ -701,58 +825,111 @@
     return Object.keys(bag).sort().map((ch) => `${ch}:${bag[ch]}`).join(' ');
   }
 
+  function formatChoiceScoreTable(ranked) {
+    if (!ranked || !ranked.length) return [];
+    const lines = ['## جدول پوشش از پیش‌محاسبه‌شده گزینه‌های سؤال (اصلی‌ترین معیار)'];
+    ranked.forEach((row, idx) => {
+      const methodBits = row.perMethod.map((m) =>
+        `روش${m.methodIndex}:${Math.round(m.ratio * 100)}%${m.complete ? '✓' : (' کم=' + (m.missing || '—'))}`
+      ).join(' | ');
+      lines.push(
+        `${idx + 1}) ${row.option} (نرمال:${row.norm || '—'}) | امتیازکل:${row.score} | مشترک:${Math.round(row.shared.ratio * 100)}%${row.shared.complete ? '✓' : (' کم=' + (row.shared.missing || '—'))} | میانگین‌روش‌ها:${Math.round(row.avgRatio * 100)}% | کامل در ${row.completeCount} روش`
+      );
+      lines.push(`   جزئیات: ${methodBits}`);
+    });
+    lines.push('برندهٔ پوشش حروف را بر اساس همین جدول انتخاب کن؛ واژه‌سازی آزاد از حروف مشترک ممنوع است مگر هیچ گزینه‌ای پوشش قابل‌قبول نداشته باشد.');
+    return lines;
+  }
+
   function natqRulesBlock(meta, opts) {
     const topic = detectTopic(meta);
-    const isNameQuest = topic.id === 'herbal' || topic.id === 'name' || /اسم|نام/.test((meta.soal || '') + (meta.modda || ''));
+    const isChoice = !!topic.isChoice;
+    const isNameQuest = !isChoice && (topic.id === 'herbal' || topic.id === 'herbal_lipid' || topic.id === 'name' || /اسم|نام/.test((meta.soal || '') + (meta.modda || '')));
     const lines = [
       '## قواعد سخت نطق (اجباری)',
       '1) فقط از حروف مجاز همان بخش استفاده کن؛ هیچ حرف جدیدی اضافه نکن.',
       '2) اولویت با پوشش حروف است، نه زیبایی جمله.',
-      '3) مدعا فقط قطب‌نمای موضوع است؛ خودِ کلمهٔ مدعا/عین سؤال را بازتاب نده مگر حروف مجبور کند.',
+      '3) مدعا فقط قطب‌نمای موضوع است؛ خودِ کلمهٔ مدعا را بازتاب نده مگر حروف مجبور کند.',
       '4) برای هر کاندید «نطق معکوس» انجام بده: حروف کاندید را با حروف مجاز چک کن و بگو کدام هست/نیست.',
-      '5) اگر پوشش ناقص بود، آن کاندید را حذف یا با برچسب «نامعتبر» بیاور.',
+      '5) اگر پوشش ناقص بود، آن را با درصد پوشش گزارش کن؛ حذف کامل فقط وقتی پوشش خیلی ضعیف است.',
       '6) چند خوانش با امتیاز بده؛ ادعای قطعی نکن.',
       '7) خروجی فارسی باشد.'
     ];
-    if (isNameQuest) {
+
+    if (isChoice) {
+      lines.push('8) این سؤال «انتخاب بین گزینه‌ها» است. بانک اصلی فقط همین گزینه‌های سؤال است.');
+      lines.push('9) ساخت واژه‌های بی‌ربط از حروف مشترک (مثل نیل/لوفا/نفل) به‌عنوان جواب اصلی ممنوع است.');
+      lines.push('10) برای هر گزینه بگو در هر روش پوشش کامل/ناقص چقدر است؛ سپس یک گزینه را به‌عنوان «محتمل‌ترین بین گزینه‌ها» انتخاب کن.');
+      lines.push('11) اگر هیچ‌کدام در حروف مشترک کامل نبود، از میانگین پوشش روی روش‌ها برنده را مشخص کن و صریح بگو «در لایه مشترک کامل نیست».');
+      lines.push('12) قالب نهایی: «برنده بین گزینه‌ها: X» یا «بین گزینه‌ها برندهٔ قطعی نیست / مبهم».');
+    } else if (isNameQuest) {
       lines.push('8) چون سؤال نام‌محور است: اولویت با نام ۲ تا ۶ حرفی/کلمهٔ مشخص؛ عبارت‌های کلی مثل «این دوا مفید» امتیاز کم بگیرند.');
       lines.push('9) قالب نهایی ترجیحی: «نام مشخص» یا «نام استخراج نشد» یا «مبهم».');
     }
-    if (opts && opts.multi) {
+
+    if (opts && opts.multi && !isChoice) {
       lines.push('10) اول از حروف مشترک نطق لایه A بساز؛ بعد برای هر روش نطق لایه B. کاندید قوی فقط وقتی است که با لایه A هم‌راستا باشد.');
       lines.push('11) کاندیدی که فقط در یک روش ظاهر شود = «کاندید ضعیف»، مگر پوشش حروفی بسیار کامل داشته باشد.');
     }
+    if (opts && opts.multi && isChoice) {
+      lines.push('13) در چندروش برای سؤال انتخابی، همگرایی یعنی «کدام گزینه در روش‌های بیشتری پوشش بهتر دارد»، نه واژه‌سازی از اشتراک حروف.');
+    }
+
     lines.push('');
     lines.push(`## موضوع تشخیص‌داده‌شده: ${topic.title}`);
     if (topic.bank.length) {
-      lines.push('## بانک واژگانی پیشنهادی (اولویت با همین فهرست)');
+      lines.push(isChoice
+        ? '## گزینه‌های خود سؤال (تنها بانک اصلی)'
+        : '## بانک واژگانی پیشنهادی (اولویت با همین فهرست)');
       lines.push(topic.bank.join('، '));
-      lines.push('اگر موردی خارج از فهرست پیشنهاد شد، برچسب «خارج از فهرست» بزن و فقط در صورت پوشش کامل حروف نگه دار.');
+      if (!isChoice) {
+        lines.push('اگر موردی خارج از فهرست پیشنهاد شد، برچسب «خارج از فهرست» بزن و فقط در صورت پوشش کامل حروف نگه دار.');
+      }
     } else {
       lines.push('بانک ثابت ندارید؛ فقط واژه‌های قاموسی کوتاه و مشخص از روی حروف بساز.');
     }
     lines.push('');
     lines.push('## فرمت خروجی اجباری');
-    lines.push('برای هر کاندید یک سطر/بلوک با این فیلدها:');
-    lines.push('- کاندید:');
-    lines.push('- نوع: (نام / عبارت / خارج‌از‌فهرست)');
-    lines.push('- حروف استفاده‌شده:');
-    lines.push('- پوشش حروف: کامل / ناقص (و حروف کم‌آمده)');
-    lines.push('- منبع: مشترک / روش N');
-    lines.push('- امتیاز: 0 تا 100');
-    lines.push('- اطمینان: کم / متوسط / زیاد');
-    lines.push('در پایان:');
-    lines.push('- بهترین کاندید معتبر');
-    lines.push('- اگر نام مشخص استخراج نشد صریح بگو');
-    return { topic, lines };
+    if (isChoice) {
+      lines.push('برای هر گزینه سؤال:');
+      lines.push('- گزینه:');
+      lines.push('- پوشش در حروف مشترک: کامل/ناقص + درصد + حروف کم‌آمده');
+      lines.push('- پوشش در هر روش: درصد/کامل/کم‌آمده');
+      lines.push('- امتیاز:');
+      lines.push('در پایان:');
+      lines.push('- برنده بین گزینه‌ها:');
+      lines.push('- آیا قطعی است یا فقط محتمل‌تر:');
+      lines.push('- اگر خارج از گزینه‌ها چیزی گفتی فقط در بخش فرعی با برچسب خارج‌از‌گزینه');
+    } else {
+      lines.push('برای هر کاندید یک سطر/بلوک با این فیلدها:');
+      lines.push('- کاندید:');
+      lines.push('- نوع: (نام / عبارت / خارج‌از‌فهرست)');
+      lines.push('- حروف استفاده‌شده:');
+      lines.push('- پوشش حروف: کامل / ناقص (و حروف کم‌آمده)');
+      lines.push('- منبع: مشترک / روش N');
+      lines.push('- امتیاز: 0 تا 100');
+      lines.push('- اطمینان: کم / متوسط / زیاد');
+      lines.push('در پایان:');
+      lines.push('- بهترین کاندید معتبر');
+      lines.push('- اگر نام مشخص استخراج نشد صریح بگو');
+    }
+    return { topic, lines, isChoice };
   }
 
   function buildNatqPrompt(result, meta) {
     if (!result.ok) return result.error;
     const rules = natqRulesBlock(meta, { multi: false });
+    const ranked = rules.isChoice
+      ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, [result], result.mustehsilaUnique)
+      : [];
+    const choiceLines = formatChoiceScoreTable(ranked);
     return [
-      'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر).',
-      'هدف: رسیدن به جواب مشخص‌تر با حداقل اشتباه حروفی.',
+      rules.isChoice
+        ? 'تو یک متخصص نطق دقیق در علم جفر هستی (حالت انتخاب بین گزینه‌ها).'
+        : 'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر).',
+      rules.isChoice
+        ? 'هدف: بین گزینه‌های خود سؤال، محتمل‌ترین را با پوشش حروف مشخص کن.'
+        : 'هدف: رسیدن به جواب مشخص‌تر با حداقل اشتباه حروفی.',
       '',
       '## صورت مسئله',
       ...metaLines(meta),
@@ -773,13 +950,23 @@
       `- شمارش حروف مستحصله: ${letterBag(result.mustehsila)}`,
       `- حروف بدون تکرار: ${result.mustehsilaUnique}`,
       '',
+      ...choiceLines,
       ...rules.lines,
       '',
       '## درخواست',
-      '1) ۳ تا ۶ کاندید از روی مستحصله بساز؛ اول موارد بانک موضوعی را چک کن.',
-      '2) هر کاندید را با نطق معکوس اعتبارسنجی کن.',
-      '3) کاندیدهای ناقص/بازتاب‌سؤال را پایین امتیاز بده یا حذف کن.',
-      '4) یک «بهترین خوانش» بده؛ اگر نام مشخص نبود بنویس «نام استخراج نشد».'
+      ...(rules.isChoice
+        ? [
+          '1) فقط گزینه‌های سؤال را مقایسه کن.',
+          '2) بر اساس جدول پوشش، برنده را مشخص کن.',
+          '3) واژه‌سازی آزاد از حروف را به‌عنوان جواب اصلی ننویس.',
+          '4) اگر اختلاف امتیاز کم بود بگو مبهم/نزدیک.'
+        ]
+        : [
+          '1) ۳ تا ۶ کاندید از روی مستحصله بساز؛ اول موارد بانک موضوعی را چک کن.',
+          '2) هر کاندید را با نطق معکوس اعتبارسنجی کن.',
+          '3) کاندیدهای ناقص/بازتاب‌سؤال را پایین امتیاز بده یا حذف کن.',
+          '4) یک «بهترین خوانش» بده؛ اگر نام مشخص نبود بنویس «نام استخراج نشد».'
+        ])
     ].join('\n');
   }
 
@@ -851,6 +1038,10 @@
   function buildMultiNatqPrompt(bundle, meta) {
     if (!bundle.ok) return bundle.error;
     const rules = natqRulesBlock(meta, { multi: true });
+    const ranked = rules.isChoice
+      ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, bundle.results, bundle.sharedUnique)
+      : [];
+    const choiceLines = formatChoiceScoreTable(ranked);
     const blocks = bundle.results.map((r, i) => [
       `### روش ${i + 1}: ${r.method}`,
       `- جدول: ${r.options.table}`,
@@ -862,8 +1053,12 @@
     ].join('\n'));
 
     return [
-      'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر چندروش).',
-      'چند روش روی یک صورت مسئله اجرا شده‌اند. اول همگرایی، بعد نام‌های اختصاصی.',
+      rules.isChoice
+        ? 'تو یک متخصص نطق دقیق در علم جفر هستی (حالت انتخاب بین گزینه‌ها · چندروش).'
+        : 'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر چندروش).',
+      rules.isChoice
+        ? 'چند روش اجرا شده‌اند. فقط گزینه‌های خود سؤال را با پوشش حروف مقایسه کن؛ واژه‌سازی آزاد ممنوع است.'
+        : 'چند روش روی یک صورت مسئله اجرا شده‌اند. اول همگرایی، بعد نام‌های اختصاصی.',
       '',
       '## صورت مسئله',
       ...metaLines(meta),
@@ -874,16 +1069,30 @@
       '## لایه A — حروف مشترک همه روش‌ها',
       `- حروف مشترک: ${bundle.sharedUnique || '—'}`,
       `- شمارش (هر حرف حداکثر ۱ چون unique اشتراکی است): ${letterBag(bundle.sharedUnique || '')}`,
+      ...(bundle.results.length >= 6
+        ? ['نکته: تعداد روش‌ها زیاد است؛ اشتراک حروف تنگ می‌شود. برای سؤال انتخابی معیار اصلی میانگین پوشش گزینه‌ها روی روش‌هاست نه الزام تکمیل در لایه مشترک.']
+        : []),
       '',
+      ...choiceLines,
       ...rules.lines,
       '',
       '## درخواست مرحله‌بندی‌شده',
-      '1) لایه A: ۲ تا ۴ کاندید فقط از حروف مشترک بساز و اعتبارسنجی معکوس کن.',
-      '2) لایه B: برای هر روش ۲ کاندید از مستحصله همان روش بساز (اول بانک موضوعی).',
-      '3) جدول مقایسه بده: کاندید | منبع | پوشش | امتیاز | مشترک؟',
-      '4) رأی‌گیری: کاندیدهایی که بین روش‌ها تکرار شده یا با لایه A هم‌راستا هستند اولویت دارند.',
-      '5) خوانش غالب را مشخص کن؛ کاندید تک‌روشی را «ضعیف» بنام مگر دلیل قوی داشته باشد.',
-      '6) اگر نام مشخص استخراج نشد، صریح بنویس «نام استخراج نشد» و بهترین عبارت کوتاه معتبر را جدا بگو.'
+      ...(rules.isChoice
+        ? [
+          '1) جدول پوشش گزینه‌ها را مبنا بگیر و برنده را اعلام کن.',
+          '2) برای هر گزینه بگو در چند روش پوشش بهتر/کامل دارد.',
+          '3) واژه‌های خارج از گزینه‌ها (نیل/لوفا/...) را جواب اصلی نکن.',
+          '4) اگر امتیازها نزدیک بود بگو مبهم.',
+          '5) خروجی نهایی: «برنده بین گزینه‌ها: ...»'
+        ]
+        : [
+          '1) لایه A: ۲ تا ۴ کاندید فقط از حروف مشترک بساز و اعتبارسنجی معکوس کن.',
+          '2) لایه B: برای هر روش ۲ کاندید از مستحصله همان روش بساز (اول بانک موضوعی).',
+          '3) جدول مقایسه بده: کاندید | منبع | پوشش | امتیاز | مشترک؟',
+          '4) رأی‌گیری: کاندیدهایی که بین روش‌ها تکرار شده یا با لایه A هم‌راستا هستند اولویت دارند.',
+          '5) خوانش غالب را مشخص کن؛ کاندید تک‌روشی را «ضعیف» بنام مگر دلیل قوی داشته باشد.',
+          '6) اگر نام مشخص استخراج نشد، صریح بنویس «نام استخراج نشد» و بهترین عبارت کوتاه معتبر را جدا بگو.'
+        ])
     ].join('\n');
   }
 
@@ -895,6 +1104,9 @@
     normalizeText,
     normalizeDateTimeField,
     expandDigitsToWords,
+    extractChoiceOptions,
+    coverageAgainst,
+    scoreChoiceOptions,
     detectTopic,
     runClassic,
     runMany,

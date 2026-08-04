@@ -88,5 +88,20 @@ assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاه�
 const herbPrompt = E.buildMultiNatqPrompt(multi, herbMeta);
 assert(herbPrompt.includes('به لیمو') && herbPrompt.includes('نطق معکوس') && herbPrompt.includes('بانک واژگانی'), 'پرامپت سخت‌گیر گیاهی');
 
+const choiceSoal = 'بین سیر شنبلیله و سماق کدام مورد برای پایین اوردن چربی خون مفید است';
+assert(JSON.stringify(E.extractChoiceOptions(choiceSoal)) === JSON.stringify(['سیر', 'شنبلیله', 'سماق']), 'استخراج گزینه‌های بین/کدام');
+const choiceMeta = {
+  sael: 'حسین', taleb: '', matloob: '', modda: 'دارو گیاهی', soal: choiceSoal,
+  extraEnabled: true, saelFamily: 'زارعی', questionDate: '1404/05/13', questionTime: '12:47'
+};
+assert(E.detectTopic(choiceMeta).id === 'choice', 'تشخیص سؤال انتخابی');
+const choiceBundle = E.runMany({
+  sael: 'حسین', taleb: '', matloob: '', modda: 'دارو گیاهی', soal: choiceSoal,
+  extraEnabled: true, saelFamily: 'زارعی', questionDate: '1404/05/13', questionTime: '12:47'
+}, ['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr'], { table: 'kabir' });
+const choicePrompt = E.buildMultiNatqPrompt(choiceBundle, choiceMeta);
+assert(choicePrompt.includes('برنده بین گزینه‌ها') && choicePrompt.includes('جدول پوشش') && choicePrompt.includes('سیر'), 'پرامپت انتخابی با جدول پوشش');
+assert(!/اولویت با نام ۲ تا ۶/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
