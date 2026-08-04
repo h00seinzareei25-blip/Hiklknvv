@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>میزان — مصاحبه و محاسبهٔ رمل (MIZAN-AI-ONLY-v3.3)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161c26; --panel2:#1c2431; --line:#2b3648;
+    --gold:#d4a94b; --gold2:#f0cf8a; --txt:#e8e3d5; --dim:#9aa4b2;
+    --ok:#4cc38a; --bad:#e5604c; --mid:#e0b64f; --link:#7db3e8; --agent:#243044;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:"Vazirmatn","Segoe UI",Tahoma,Arial,sans-serif;
+    line-height:1.9; font-size:15px;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:24px 16px 80px}
+  header{
+    text-align:center; padding:28px 12px 18px;
+    border-bottom:1px solid var(--line); margin-bottom:22px;
+  }
+  header h1{margin:0; font-size:30px; color:var(--gold2); letter-spacing:1px}
+  header p{margin:6px 0 0; color:var(--dim); font-size:13px}
+  .badge{
+    display:inline-block; margin-top:10px; padding:3px 14px; border-radius:20px;
+    font-size:12px; border:1px solid var(--line); background:var(--panel);
+  }
+  .badge.ok{color:var(--ok); border-color:var(--ok)}
+  .badge.bad{color:var(--bad); border-color:var(--bad)}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; margin-bottom:18px;
+  }
+  .card h2{
+    margin:0 0 14px; font-size:18px; color:var(--gold);
+    border-bottom:1px dashed var(--line); padding-bottom:8px;
+  }
+  .card h3{margin:18px 0 8px; font-size:15px; color:var(--gold2)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px}
+  label{display:block; font-size:13px; color:var(--dim); margin-bottom:4px}
+  input[type=text],textarea,select{
+    width:100%; background:var(--panel2); color:var(--txt);
+    border:1px solid var(--line); border-radius:8px; padding:9px 12px;
+    font-family:inherit; font-size:14px;
+  }
+  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--gold)}
+  textarea{resize:vertical}
+  .btn{
+    background:linear-gradient(135deg,var(--gold),#b8892f); color:#1a1408;
+    border:none; border-radius:10px; padding:11px 30px; font-family:inherit;
+    font-size:15px; font-weight:700; cursor:pointer; margin-top:14px;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{
+    background:transparent; color:var(--gold); border:1px solid var(--gold);
+    font-weight:400; padding:7px 18px; font-size:13px; margin-top:8px; margin-left:6px;
+  }
+  .btn.sm{padding:8px 16px; font-size:13px; margin:4px 4px 0 0}
+  .note{
+    background:var(--panel2); border-right:3px solid var(--gold); border-radius:8px;
+    padding:10px 14px; font-size:13px; color:var(--dim); margin:10px 0;
+  }
+  .warn{border-right-color:var(--bad); color:#e8b0a6}
+  .mono{
+    font-family:"Consolas","Courier New",monospace; direction:ltr; text-align:left;
+    background:#10151d; border:1px solid var(--line); border-radius:8px;
+    padding:10px 14px; overflow-x:auto; font-size:13px; white-space:pre; line-height:1.7;
+  }
+  table{border-collapse:collapse; width:100%; font-size:13px; margin:8px 0}
+  th,td{border:1px solid var(--line); padding:6px 10px; text-align:center}
+  th{background:var(--panel2); color:var(--gold2); font-weight:600}
+  .houses{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
+  .house{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 8px; text-align:center;
+  }
+  .house.key{border-color:var(--gold)}
+  .house .hn{font-size:11px; color:var(--dim)}
+  .house .fig{font-size:17px; line-height:1.5; margin:6px 0; letter-spacing:2px; color:var(--gold2)}
+  .house .nm{font-size:13px; font-weight:700}
+  .house .sig{font-size:11px; color:var(--dim)}
+  .q1{color:var(--ok)} .qm1{color:var(--bad)} .q0{color:var(--mid)}
+  ul.checks{list-style:none; padding:0; margin:0}
+  ul.checks li{padding:3px 0; font-size:13px}
+  ul.checks li::before{content:"✔ "; color:var(--ok)}
+  ul.checks li.fail::before{content:"✘ "; color:var(--bad)}
+  .verdict{
+    font-size:17px; font-weight:700; padding:14px; border-radius:10px;
+    background:var(--panel2); border:1px solid var(--line); text-align:center; margin:10px 0;
+  }
+  .hidden{display:none}
+  .tag{
+    display:inline-block; background:var(--panel2); border:1px solid var(--line);
+    border-radius:6px; padding:1px 10px; font-size:12px; margin:2px;
+  }
+  .steps{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px}
+  .step-pill{
+    font-size:12px; padding:4px 12px; border-radius:20px;
+    border:1px solid var(--line); color:var(--dim); background:var(--panel2);
+  }
+  .step-pill.on{border-color:var(--gold); color:var(--gold2)}
+  .step-pill.done{border-color:var(--ok); color:var(--ok)}
+  .chat{display:flex; flex-direction:column; gap:10px; max-height:420px; overflow-y:auto;
+    padding:8px; background:#0f141c; border-radius:10px; border:1px solid var(--line)}
+  .bubble{
+    max-width:92%; padding:10px 14px; border-radius:12px; font-size:14px; white-space:pre-wrap;
+  }
+  .bubble.agent{align-self:flex-start; background:var(--agent); border:1px solid var(--line)}
+  .bubble.user{align-self:flex-end; background:#2a2418; border:1px solid #5a4a28; color:var(--gold2)}
+  .choice-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+  .choice{
+    background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:10px; padding:8px 14px; cursor:pointer; font-family:inherit; font-size:13px;
+  }
+  .choice:hover{border-color:var(--gold); color:var(--gold2)}
+  .coin-board{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0}
+  .coin-chip{
+    width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
+    background:var(--panel2); color:var(--dim); display:flex; align-items:center;
+    justify-content:center; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .coin-chip.on-h{background:#3a2e14; border-color:var(--gold); color:var(--gold2)}
+  .coin-chip.on-t{background:#1a2a3a; border-color:var(--link); color:var(--link)}
+  .mode-tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .mode-tab{
+    border:1px solid var(--line); background:var(--panel2); color:var(--dim);
+    border-radius:10px; padding:8px 16px; cursor:pointer; font-family:inherit; font-size:13px;
+  }
+  .mode-tab.on{border-color:var(--gold); color:var(--gold2)}
+  .model-list{
+    max-height:280px; overflow-y:auto; border:1px solid var(--line); border-radius:10px;
+    padding:8px 10px; background:#0f141c; margin:10px 0;
+  }
+  .model-item{
+    display:flex; align-items:flex-start; gap:10px; padding:8px 6px;
+    border-bottom:1px dashed var(--line); font-size:13px;
+  }
+  .model-item:last-child{border-bottom:none}
+  .model-item input{margin-top:4px; accent-color:var(--gold); width:18px; height:18px}
+  .model-item .mid{flex:1}
+  .model-item .mid .id{direction:ltr; text-align:left; color:var(--dim); font-size:11px; font-family:Consolas,monospace}
+  .ai-out{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; margin:10px 0; font-size:14px; white-space:pre-wrap;
+  }
+  .ai-out h4{margin:0 0 8px; color:var(--gold2); font-size:14px}
+  footer{text-align:center; color:var(--dim); font-size:12px; margin-top:30px}
+  @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>⚖️ میزان</h1>
+  <p>مصاحبهٔ مرحله‌ای + محاسبهٔ رمل — پروتکل MIZAN-AI-ONLY-v3.3 — بدون سرور و بدون هوش مصنوعی</p>
+  <span class="badge" id="selftestBadge">در حال اجرای بردار کنترل…</span>
+</header>
+
+<div class="card">
+  <h2>این ابزار چه می‌کند؟</h2>
+  <p style="font-size:14px">
+    <b>بدون هوش مصنوعی</b> می‌تواند سؤال بپرسد (مصاحبهٔ قالبی)، ورودی را قفل کند، زایچه بسازد،
+    صحت را کنترل کند و حکم قاعده‌مند بدهد. تفسیر آزادِ خیلی طبیعی مثل یک مدل زبانی نیست،
+    اما برای محاسبه و جریان پروتکل کافی است.
+  </p>
+  <div class="note warn">
+    رمل سنت نمادین است؛ واقعیت، آینده یا ذهن اشخاص را اثبات نمی‌کند. برای پزشکی، حقوقی، مالی و ایمنی به متخصص مراجعه کنید.
+  </div>
+</div>
+
+<div class="card">
+  <div class="mode-tabs">
+    <button type="button" class="mode-tab on" id="tabInterview" data-mode="interview">مصاحبه با میزان</button>
+    <button type="button" class="mode-tab" id="tabForm" data-mode="form">فرم مستقیم (پیشرفته)</button>
+  </div>
+
+  <!-- ===== حالت مصاحبه ===== -->
+  <div id="interviewMode">
+    <h2>مصاحبهٔ اصولی</h2>
+    <div class="steps" id="stepPills"></div>
+    <div class="chat" id="chatBox"></div>
+    <div id="interviewPanel" style="margin-top:12px"></div>
+  </div>
+
+  <!-- ===== حالت فرم مستقیم ===== -->
+  <div id="formMode" class="hidden">
+    <h2>فرم قفل سؤال</h2>
+    <div class="grid">
+      <div><label>نام سائل *</label><input type="text" id="fName" placeholder="مثال: حسین"></div>
+      <div><label>نام والد (اختیاری)</label><input type="text" id="fParent" placeholder="اختیاری"></div>
+      <div><label>تاریخ سؤال * (مثل 1405/04/23)</label><input type="text" id="fDate" placeholder="1405/04/23"></div>
+      <div><label>ساعت (برای روش دیجیتال الزامی)</label><input type="text" id="fTime" placeholder="10:30"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label>سؤال دقیق و قابل‌سنجش *</label>
+      <textarea id="fQuestion" rows="2" placeholder="رویداد مشاهده‌پذیر + مهلت"></textarea>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><label>معیار موفقیت *</label><input type="text" id="fCriterion"></div>
+      <div><label>مهلت نتیجه *</label><input type="text" id="fDeadline"></div>
+      <div><label>منبع تعیین نتیجهٔ واقعی</label><input type="text" id="fSource"></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><label>بیت اصلی *</label><select id="fBayt"></select></div>
+      <div>
+        <label>روش تولید *</label>
+        <select id="fMethod">
+          <option value="trad">سنتی ۱۶ ردیفی (پیشنهادی)</option>
+          <option value="coin">سکه‌ای ۱۶ پرتاب</option>
+          <option value="digital">دیجیتال MZ-16 v1</option>
+          <option value="v2r">دیجیتال پژوهشی MZ-16 v2R</option>
+        </select>
+      </div>
+    </div>
+    <div id="tradInputBox" style="margin-top:12px">
+      <label>۱۶ عدد صحیح مثبت *</label>
+      <textarea id="fNumbers" rows="2" placeholder="23, 48, 17, 62, ..."></textarea>
+    </div>
+    <div id="coinInputBox" class="hidden" style="margin-top:12px">
+      <label>۱۶ پرتاب سکه (شیر=● / خط=▬) — خودتان پرتاب کنید؛ صفحه حدس نمی‌زند</label>
+      <div class="coin-board" id="coinBoard"></div>
+      <div style="font-size:13px;color:var(--dim)" id="coinCount">۰ از ۱۶</div>
+    </div>
+    <button class="btn" id="btnCast">🔒 قفل کن و زایچه بساز</button>
+    <div id="formError" class="note warn hidden"></div>
+  </div>
+</div>
+
+<div id="results" class="hidden">
+  <div class="card" id="sourceCard">
+    <h2>منبع تولید (قفل‌شده)</h2>
+    <div id="sourceBody"></div>
+  </div>
+  <div class="card">
+    <h2>زایچهٔ ۱۶ خانه</h2>
+    <div class="houses" id="housesBox"></div>
+  </div>
+  <div class="card">
+    <h2>آزمون‌های اجباری صحت</h2>
+    <ul class="checks" id="checksBox"></ul>
+    <div id="checksVerdict" class="verdict"></div>
+  </div>
+  <div class="card" id="analysisCard">
+    <h2>تحلیل قاعده‌مند</h2>
+    <div id="analysisBody"></div>
+  </div>
+
+  <div class="card hidden" id="aiCard">
+    <h2>تفسیر طبیعی با OpenRouter (مدل‌های رایگان)</h2>
+    <div class="note">
+      کلید API فقط روی همین دستگاه در localStorage ذخیره می‌شود و مستقیم به OpenRouter ارسال می‌گردد.
+      مدل‌های <b>:free</b> و روتر <b>openrouter/free</b> رایگان‌اند؛ محدودیت نرخ دارند و همیشه در دسترس نیستند.
+      خروجی هوش مصنوعی فقط تفسیر نمادین است و جایگزین شواهد واقعی نیست.
+    </div>
+    <div class="grid">
+      <div>
+        <label>کلید OpenRouter API *</label>
+        <input type="password" id="orKey" placeholder="sk-or-v1-..." autocomplete="off">
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn sm" id="btnLoadModels">بارگذاری مدل‌های رایگان</button>
+        <button type="button" class="btn sm ghost" id="btnSelectAllModels">انتخاب همه</button>
+        <button type="button" class="btn sm ghost" id="btnClearModels">پاک‌کردن انتخاب</button>
+      </div>
+    </div>
+    <div id="orModelsStatus" style="font-size:13px;color:var(--dim);margin-top:8px">هنوز فهرستی بارگذاری نشده.</div>
+    <div class="model-list hidden" id="orModelList"></div>
+    <button type="button" class="btn" id="btnInterpret" disabled>✨ تفسیر طبیعی با مدل‌های تیک‌خورده</button>
+    <div id="orError" class="note warn hidden"></div>
+    <div id="orResults"></div>
+  </div>
+
+  <div class="card" id="recordCard">
+    <h2>رکورد متنی نتیجه</h2>
+    <p style="font-size:13px;color:var(--dim)">این بلوک را نگه دارید. این صفحه حافظه ندارد.</p>
+    <textarea id="recordBox" rows="18" class="mono" style="width:100%" readonly></textarea>
+    <button class="btn ghost" id="btnCopy">کپی رکورد</button>
+    <button class="btn ghost" id="btnRestart">شروع مصاحبهٔ جدید</button>
+  </div>
+</div>
+
+<footer>
+  MIZAN-AI-ONLY-v3.3 / CORE-32 — خوانش نمادین است، نه واقعیت و نه احتمال آماری.
+</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   هستهٔ محاسباتی
+   ============================================================ */
+
+const FIGURES = {
+  "1222": {fa:"لحیان",        la:"Laetitia",       q:+1, m:"شادی و گشایش"},
+  "2122": {fa:"حمره",         la:"Rubeus",         q:-1, m:"تندی، آشفتگی و تنش"},
+  "1122": {fa:"نصرةالخارج",   la:"Fortuna Minor",  q:+1, m:"پیروزی کوتاه و وابسته"},
+  "2212": {fa:"بیاض",         la:"Albus",          q:+1, m:"آرامش، صلح و روشنی"},
+  "1212": {fa:"قبض‌الخارج",   la:"Amissio",        q:-1, m:"خروج، کاهش یا واگذاری"},
+  "2112": {fa:"اجتماع",       la:"Conjunctio",     q: 0, m:"پیوند، تقاطع و گردهم‌آیی"},
+  "1112": {fa:"عتبةالخارج",   la:"Cauda Draconis", q:-1, m:"پایان، خروج و جدایی"},
+  "2221": {fa:"انکیس",        la:"Tristitia",      q:-1, m:"فرود، سنگینی و اندوه"},
+  "1221": {fa:"عقله",         la:"Carcer",         q:-1, m:"گره، حبس، ثبات یا تأخیر"},
+  "2121": {fa:"قبض‌الداخل",   la:"Acquisitio",     q:+1, m:"کسب و افزایش"},
+  "1121": {fa:"جودله",        la:"Puer",           q: 0, m:"اقدام، رقابت و بی‌قراری"},
+  "2211": {fa:"نصرةالداخل",   la:"Fortuna Major",  q:+1, m:"پیروزی پایدار"},
+  "1211": {fa:"نقی‌الخد",     la:"Puella",         q:+1, m:"سازگاری، آرامش و زیبایی"},
+  "2111": {fa:"عتبةالداخل",   la:"Caput Draconis", q:+1, m:"آغاز و ورود"},
+  "1111": {fa:"طریق",         la:"Via",            q: 0, m:"حرکت و تغییر"},
+  "2222": {fa:"جماعت",        la:"Populus",        q: 0, m:"جمع، تراکم و ثبات"}
+};
+
+const JUDGE_ALLOWED = new Set(["1111","2222","2112","1221","1212","2121","1122","2211"]);
+const MOBILE_SIGS   = new Set(["1212","1222","1122","2122","1121","1112","2112","1111"]);
+
+const BAYTS = [
+  [1,"خود سائل، تن، آغاز و تصمیم شخصی"],
+  [2,"پول، دارایی، درآمد و ارزش مالی"],
+  [3,"پیام، تماس، خبر، خویشان و سفر کوتاه"],
+  [4,"خانه، زمین، ملک، پدر و سرانجام"],
+  [5,"کشش، عشق، قرار عاشقانه، لذت و فرزند"],
+  [6,"کار روزانه و بیماری در متون سنتی"],
+  [7,"طرف مقابل، رابطه، ازدواج، شراکت، قرارداد و دعوا"],
+  [8,"مال مشترک، وام، میراث، ترس و بحران"],
+  [9,"دانش، دین، دانشگاه، مهاجرت و سفر دور"],
+  [10,"شغل، مقام، رئیس، شهرت و مادر"],
+  [11,"آرزو، دوست، گروه، حامی و هدف بلندمدت"],
+  [12,"امر پنهان، انزوا و گمشده در متون سنتی"]
+];
+
+const HOUSE_LABELS = ["","بیت۱","بیت۲","بیت۳","بیت۴","بیت۵","بیت۶","بیت۷","بیت۸",
+  "نتیجه۹","نتیجه۱۰","نتیجه۱۱","نتیجه۱۲","شاهد اول ۱۳","شاهد دوم ۱۴","قاضی ۱۵","جامع ۱۶"];
+
+const TRIADS = [
+  {n:1, r:1, l:2,  c:9,  role:"سائل و شرایط آغازین"},
+  {n:2, r:3, l:4,  c:10, role:"موضوع و بخت/وضعیت آن"},
+  {n:3, r:5, l:6,  c:11, role:"محیط، مکان و فعالیت‌های پیرامون"},
+  {n:4, r:7, l:8,  c:12, role:"اشخاص دیگر، دوستان و روابط اجتماعی"}
+];
+
+const TOPIC_BAYT = {
+  relation:7, message:3, money:2, job:10, home:4, love:5, travel:9, wish:11, self:1, study:9
+};
+
+const TOPIC_LABELS = {
+  relation:"رابطه / طرف مقابل / شراکت",
+  message:"پیام / تماس / خبر",
+  money:"پول / دارایی / درآمد",
+  job:"شغل / مقام / کار",
+  home:"خانه / ملک / سرانجام",
+  love:"کشش عاطفی / قرار",
+  travel:"سفر دور / مهاجرت / تحصیل",
+  wish:"آرزو / دوست / هدف بلندمدت",
+  self:"تصمیم شخصی / آغاز",
+  study:"دانش / دانشگاه"
+};
+
+const BIT1_LETTERS = new Set([..."اجهزطکمسفقشثذظچژگ"]);
+const BIT0_LETTERS = new Set([..."بدوحیلنعصرتخضغپ"]);
+const LATIN1 = new Set([..."ACEGIKMOQSUWY"]);
+const LATIN0 = new Set([..."BDFHJLNPRTVXZ"]);
+
+function normalizeText(s){
+  if(!s) return "";
+  let t = String(s);
+  const map = {"ي":"ی","ى":"ی","ك":"ک","ة":"ه","ۀ":"ه","ؤ":"و","إ":"ا","أ":"ا","ٱ":"ا","آ":"ا"};
+  t = t.replace(/[يىكةۀؤإأٱآ]/g, ch => map[ch]);
+  t = t.replace(/[۰-۹]/g, ch => String(ch.charCodeAt(0) - 0x06F0));
+  t = t.replace(/[٠-٩]/g, ch => String(ch.charCodeAt(0) - 0x0660));
+  t = t.replace(/[\u064B-\u065F\u0670\u0640\u200C\u200D\s]/g,"");
+  t = t.replace(/[.,;:!?؟،؛"'«»()\[\]{}\/\\\-_+=*&%$#@~^|<>]/g,"");
+  return t;
+}
+function extractDigits(s){ return normalizeText(s).replace(/[^0-9]/g,""); }
+function charToBit(ch){
+  if(BIT1_LETTERS.has(ch)) return 1;
+  if(BIT0_LETTERS.has(ch)) return 0;
+  if(/[0-9]/.test(ch)) return (Number(ch) % 2 === 0) ? 1 : 0;
+  const up = ch.toUpperCase();
+  if(LATIN1.has(up)) return 1;
+  if(LATIN0.has(up)) return 0;
+  return null;
+}
+
+function mixC(B, D){
+  const C = new Array(16);
+  for(let i = 0; i < 16; i++) C[i] = B[i] ^ B[(i - 1 + 16) % 16] ^ D[i];
+  return C;
+}
+function mixCv2(B, D){
+  const C = new Array(16);
+  for(let i = 0; i < 16; i++)
+    C[i] = B[i] ^ B[(i - 1 + 16) % 16] ^ B[(i - 5 + 16) % 16] ^ D[i];
+  return C;
+}
+function mixF(C){
+  const F = new Array(16);
+  for(let i = 0; i < 16; i++)
+    F[i] = C[i] ^ C[(i - 3 + 16) % 16] ^ C[(i - 7 + 16) % 16];
+  return F;
+}
+
+function mz16(name, parent, dateDigits, timeDigits, question, deadline, version){
+  const S = normalizeText(name) + normalizeText(parent) + dateDigits + timeDigits +
+            normalizeText(question) + normalizeText(deadline);
+  const P = [];
+  for(const ch of S){
+    const b = charToBit(ch);
+    if(b === null) return {error:"نویسهٔ پشتیبانی‌نشده: «" + ch + "»"};
+    P.push(b);
+  }
+  if(!P.length) return {error:"رشتهٔ کانونی S خالی است."};
+  let Pfull = P.slice(), repeated = false;
+  while(Pfull.length < 16){ Pfull = Pfull.concat(P); repeated = true; }
+  const B = new Array(16).fill(0);
+  Pfull.forEach((b,i) => { B[i % 16] ^= b; });
+  const dt = dateDigits + timeDigits;
+  const D = new Array(16);
+  for(let i = 0; i < 16; i++) D[i] = (Number(dt[i % dt.length]) % 2 === 0) ? 1 : 0;
+  const mix = version === "v2r" ? mixCv2 : mixC;
+  const C = mix(B, D);
+  const F = mixF(C);
+  const C2 = mix(B.slice(), D.slice());
+  const F2 = mixF(C2);
+  return {S, P, B, D, C, F, repeated, verified: C.join("")===C2.join("") && F.join("")===F2.join(""), version};
+}
+function mz16v1(a,b,c,d,e,f){ return mz16(a,b,c,d,e,f,"v1"); }
+
+function combineFigs(a, b){ return a.map((r,i) => (r === b[i]) ? 2 : 1); }
+function sigOf(f){ return f.join(""); }
+function buildChart(mothers){
+  const H = new Array(17);
+  H[1]=mothers[0]; H[2]=mothers[1]; H[3]=mothers[2]; H[4]=mothers[3];
+  for(let row=0; row<4; row++) H[5+row] = [mothers[0][row], mothers[1][row], mothers[2][row], mothers[3][row]];
+  H[9]=combineFigs(H[1],H[2]); H[10]=combineFigs(H[3],H[4]);
+  H[11]=combineFigs(H[5],H[6]); H[12]=combineFigs(H[7],H[8]);
+  H[13]=combineFigs(H[9],H[10]); H[14]=combineFigs(H[11],H[12]);
+  H[15]=combineFigs(H[13],H[14]); H[16]=combineFigs(H[15],H[1]);
+  return H;
+}
+function mothersFromBits(bits16){
+  const rows = bits16.map(b => b === 1 ? 1 : 2);
+  return [rows.slice(0,4), rows.slice(4,8), rows.slice(8,12), rows.slice(12,16)];
+}
+function mothersFromNumbers(nums16){
+  const rows = nums16.map(n => (n % 2 === 1) ? 1 : 2);
+  return [rows.slice(0,4), rows.slice(4,8), rows.slice(8,12), rows.slice(12,16)];
+}
+function mothersFromCoins(coins){ // 'H'→1, 'T'→2
+  const rows = coins.map(c => c === "H" ? 1 : 2);
+  return [rows.slice(0,4), rows.slice(4,8), rows.slice(8,12), rows.slice(12,16)];
+}
+function dotCount(f){ return f.filter(r => r === 1).length; }
+
+function runChecks(H, digital){
+  const checks = [];
+  const add = (name, pass) => checks.push({name, pass});
+  add("۱۶ خانه و امضاهای معتبر", H.slice(1).every(f => f && f.length===4 && FIGURES[sigOf(f)]));
+  let banat = true;
+  for(let row=0; row<4; row++) for(let m=0; m<4; m++) if(H[5+row][m] !== H[1+m][row]) banat = false;
+  add("بنات = انتقال سطرهای امهات", banat);
+  const derivOk =
+    sigOf(H[9])===sigOf(combineFigs(H[1],H[2])) && sigOf(H[10])===sigOf(combineFigs(H[3],H[4])) &&
+    sigOf(H[11])===sigOf(combineFigs(H[5],H[6])) && sigOf(H[12])===sigOf(combineFigs(H[7],H[8])) &&
+    sigOf(H[13])===sigOf(combineFigs(H[9],H[10])) && sigOf(H[14])===sigOf(combineFigs(H[11],H[12])) &&
+    sigOf(H[15])===sigOf(combineFigs(H[13],H[14])) && sigOf(H[16])===sigOf(combineFigs(H[15],H[1]));
+  add("بازمحاسبهٔ خانه‌های ۹ تا ۱۶", derivOk);
+  const d14=[1,2,3,4].reduce((s,i)=>s+dotCount(H[i]),0);
+  const d58=[5,6,7,8].reduce((s,i)=>s+dotCount(H[i]),0);
+  add("تعادل امهات/بنات", d14===d58);
+  const jd = dotCount(H[15]);
+  add("زوجیت قاضی (نقاط="+jd+")", jd%2===0);
+  add("قاضی در فهرست هشت‌گانه", JUDGE_ALLOWED.has(sigOf(H[15])));
+  add("وجود امضای تکراری", new Set(H.slice(1).map(sigOf)).size < 16);
+  add("هم‌پاریتی شاهدان", dotCount(H[13])%2 === dotCount(H[14])%2);
+  let direct = H[1];
+  for(let i=2;i<=8;i++) direct = combineFigs(direct, H[i]);
+  add("قاضی = XOR خانه‌های ۱..۸", sigOf(direct)===sigOf(H[15]));
+  add("بازگشت جامع", sigOf(combineFigs(H[16],H[1]))===sigOf(H[15]));
+  if(digital){
+    add("طول S = طول P"+(digital.repeated?" (تکرار P)":""), [...digital.S].length===digital.P.length);
+    add("B/D/C/F هر کدام ۱۶ بیت", [digital.B,digital.D,digital.C,digital.F].every(a=>a.length===16));
+    add("بازمحاسبهٔ مستقل C/F", digital.verified===true);
+  }
+  return checks;
+}
+
+function ringNeighbors(h){ return [h===1?12:h-1, h===12?1:h+1]; }
+
+function analyze(H, bayt){
+  const sig = i => sigOf(H[i]);
+  const talibSig = sig(1), matlubSig = sig(bayt);
+  const pos = s => { const p=[]; for(let i=1;i<=12;i++) if(sig(i)===s) p.push(i); return p; };
+  const modes = [];
+  let E;
+  if(bayt === 1){
+    E = "نامشخص (بیت سؤال ۱ است؛ طالب و مطلوب یکی‌اند)";
+  } else {
+    if(talibSig === matlubSig) modes.push("اشغال (Occupation)");
+    const nbT = ringNeighbors(bayt), nb1 = ringNeighbors(1);
+    if(nbT.some(h => sig(h)===talibSig) || nb1.some(h => sig(h)===matlubSig))
+      modes.push("اقتران (Conjunction)");
+    let mutation = false;
+    for(const a of pos(talibSig)){
+      if(a===1) continue;
+      for(const b of pos(matlubSig)){
+        if(b===bayt) continue;
+        if(ringNeighbors(a).includes(b)) mutation = true;
+      }
+    }
+    if(mutation) modes.push("انتقال/مبادله (Mutation)");
+    let translation = false;
+    for(const s of Object.keys(FIGURES)){
+      if(s===talibSig || s===matlubSig) continue;
+      const p = pos(s);
+      const in1 = p.filter(h => nb1.includes(h));
+      const inT = p.filter(h => nbT.includes(h));
+      if(in1.some(a => inT.some(b => a!==b))) translation = true;
+    }
+    if(translation) modes.push("ترجمه/نقل (Translation)");
+    E = modes.length ? "پیوند موجود" : "انکار کمال / پیوند یافت نشد";
+  }
+  let L, Lnote;
+  if(bayt===1){ L=0; Lnote="بیت سؤال ۱ است."; }
+  else if(modes.includes("اشغال (Occupation)")){ L=1; Lnote="اشغال."; }
+  else if(modes.includes("اقتران (Conjunction)")){ L=1; Lnote="اقتران."; }
+  else { L=-1; Lnote="عدم حصول."; }
+  const T = FIGURES[matlubSig].q, J = FIGURES[sig(15)].q;
+  const balance = T + L + J;
+  let verdict;
+  if(J===0 && T*L<0) verdict="نامشخص / دوپهلو";
+  else if(balance>=3) verdict="مثبت همسو";
+  else if(balance>=1) verdict="مثبت مشروط";
+  else if(balance===0) verdict="نامشخص / دوپهلو";
+  else if(balance>=-2) verdict="منفی مشروط";
+  else verdict="منفی همسو";
+  const outBin = verdict.startsWith("مثبت")?"yes":verdict.startsWith("منفی")?"no":"unknown";
+  const QT=T, QJ=J, Qtotal=QT+QJ;
+  const Qlabel = Qtotal>=2?"مساعد همسو":Qtotal===1?"مساعد مشروط":Qtotal===0?"مختلط/نامشخص":Qtotal===-1?"نامساعد مشروط":"نامساعد همسو";
+  const jm=MOBILE_SIGS.has(sig(15)), tm=MOBILE_SIGS.has(matlubSig);
+  const status = (jm&&tm)?"حرکت/تغییر":(!jm&&!tm)?"توقف/ماندگاری":"مختلط";
+  const companies=[];
+  for(const [a,b] of [[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]])
+    if(sig(a)===sig(b)) companies.push("جفت ("+a+"،"+b+"): "+FIGURES[sig(a)].fa+" — "+sig(a));
+  return {talibSig, matlubSig, E, modes, T, L, Lnote, J, balance, verdict, outBin, QT, QJ, Qtotal, Qlabel, status, companies};
+}
+
+/* راه نقطه — فقط سطر آتش فعال (FIRE-ACTIVE) */
+function viaPuncti(H){
+  const fire = f => f[0];
+  const parentsOf = {
+    15:[13,14], 14:[11,12], 13:[9,10],
+    12:[7,8], 11:[5,6], 10:[3,4], 9:[1,2]
+  };
+  const jFire = fire(H[15]);
+  if(jFire !== 1) return {mode:"passive-or-line", paths:["سطر آتش قاضی خط است؛ در حالت FIRE-ACTIVE مسیر ادامه نمی‌یابد."]};
+  const paths = [];
+  function walk(node, path){
+    const ps = parentsOf[node];
+    if(!ps){ paths.push(path.slice()); return; }
+    const cont = ps.filter(p => fire(H[p]) === 1);
+    if(!cont.length){ paths.push(path.slice()); return; }
+    cont.forEach(p => walk(p, path.concat([p])));
+  }
+  walk(15, [15]);
+  return {mode:"FIRE-ACTIVE", paths};
+}
+
+function selfTest(){
+  const r = mz16("اب","","14050423","1030","جد","","v1");
+  if(r.error) return {ok:false, detail:r.error};
+  const exp = {S:"اب140504231030جد",P:"1001101110010110",B:"1001101110010110",D:"0110111001010110",C:"1011100000001011",F:"1101100001111010"};
+  const got = {S:r.S,P:r.P.join(""),B:r.B.join(""),D:r.D.join(""),C:r.C.join(""),F:r.F.join("")};
+  for(const k of Object.keys(exp)) if(got[k]!==exp[k]) return {ok:false, detail:k+": "+got[k]};
+  const r2 = mz16("اب","","14050423","1030","جد","","v2r");
+  if(r2.C.join("")!=="0000110011010111" || r2.F.join("")!=="0100001101010100")
+    return {ok:false, detail:"بردار v2R رد شد"};
+  return {ok:true};
+}
+
+/* ============================================================
+   مصاحبهٔ مرحله‌ای
+   ============================================================ */
+
+const STEPS = [
+  {id:"type", label:"نوع درخواست"},
+  {id:"profile", label:"مشخصات"},
+  {id:"topic", label:"موضوع"},
+  {id:"question", label:"سؤال قابل‌سنجش"},
+  {id:"lock", label:"قفل"},
+  {id:"method", label:"روش و ریختن"}
+];
+
+const state = {
+  step:0,
+  type:null,
+  name:"", parent:"", date:"", time:"",
+  topic:null,
+  event:"", deadline:"", criterion:"", source:"",
+  question:"", bayt:7,
+  method:"trad",
+  numbers:"", coins:Array(16).fill(null)
+};
+
+let lastChartContext = null;
+let freeModelsCache = [];
+const SKIP_FREE_IDS = new Set([
+  "google/lyria-3-pro-preview",
+  "google/lyria-3-clip-preview",
+  "nvidia/nemotron-3.5-content-safety:free"
+]);
+
+const $ = id => document.getElementById(id);
+const faDigits = s => String(s).replace(/[0-9]/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
+function qClass(q){ return q>0?"q1":q<0?"qm1":"q0"; }
+function qStr(q){ return q>0?"+۱":q<0?"−۱":"۰"; }
+function figGlyph(f){ return f.map(r => r===1?"●":"▬ ▬").join("<br>"); }
+
+function todayJalaliGuess(){
+  // تقریب ساده برای placeholder؛ کاربر می‌تواند اصلاح کند
+  try{
+    const fmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian",{year:"numeric",month:"2-digit",day:"2-digit"});
+    const parts = fmt.formatToParts(new Date());
+    const y = parts.find(p=>p.type==="year").value.replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x06F0));
+    const m = parts.find(p=>p.type==="month").value.replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x06F0));
+    const d = parts.find(p=>p.type==="day").value.replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x06F0));
+    return y+"/"+m.padStart(2,"0")+"/"+d.padStart(2,"0");
+  }catch(e){ return "1405/04/23"; }
+}
+
+function setMode(mode){
+  $("tabInterview").classList.toggle("on", mode==="interview");
+  $("tabForm").classList.toggle("on", mode==="form");
+  $("interviewMode").classList.toggle("hidden", mode!=="interview");
+  $("formMode").classList.toggle("hidden", mode!=="form");
+}
+
+function renderPills(){
+  const box = $("stepPills"); box.innerHTML = "";
+  STEPS.forEach((s,i) => {
+    const sp = document.createElement("span");
+    sp.className = "step-pill" + (i===state.step?" on":"") + (i<state.step?" done":"");
+    sp.textContent = faDigits(i+1) + ". " + s.label;
+    box.appendChild(sp);
+  });
+}
+
+function agentSay(text){
+  const b = document.createElement("div");
+  b.className = "bubble agent";
+  b.textContent = text;
+  $("chatBox").appendChild(b);
+  $("chatBox").scrollTop = $("chatBox").scrollHeight;
+}
+function userSay(text){
+  const b = document.createElement("div");
+  b.className = "bubble user";
+  b.textContent = text;
+  $("chatBox").appendChild(b);
+  $("chatBox").scrollTop = $("chatBox").scrollHeight;
+}
+
+function panelHTML(html){ $("interviewPanel").innerHTML = html; }
+
+function choices(items, onPick){
+  const row = document.createElement("div");
+  row.className = "choice-row";
+  items.forEach(([label, val]) => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "choice"; btn.textContent = label;
+    btn.addEventListener("click", () => onPick(val, label));
+    row.appendChild(btn);
+  });
+  $("interviewPanel").appendChild(row);
+}
+
+function goStep(n){
+  state.step = n;
+  renderPills();
+  $("interviewPanel").innerHTML = "";
+  if(n===0) stepType();
+  else if(n===1) stepProfile();
+  else if(n===2) stepTopic();
+  else if(n===3) stepQuestion();
+  else if(n===4) stepLock();
+  else if(n===5) stepMethod();
+}
+
+function stepType(){
+  agentSay("سلام، من میزان هستم. ابتدا نوع درخواستت را مشخص کن تا ببینیم رمل لازم است یا نه.");
+  choices([
+    ["واقعیتِ اکنون معلوم (مثل پایتخت ایران)", "fact"],
+    ["رویداد آیندهٔ قابل‌سنجش", "future"],
+    ["ذهن / نیت / اتهام شخص دیگر", "mind"],
+    ["تصمیم پرخطر (پزشکی/حقوقی/مالی/ایمنی)", "risk"]
+  ], (val, label) => {
+    userSay(label);
+    state.type = val;
+    if(val === "fact"){
+      agentSay("[واقعیت] برای سؤال‌های با پاسخ معلوم، رمل لازم نیست. مستقیم از منبع معتبر پاسخ بگیر. اگر فقط خوانش نمادین می‌خواهی، نوع را به «آیندهٔ قابل‌سنجش» تغییر بده.");
+      panelHTML('<button type="button" class="btn ghost" id="btnAgain">شروع دوباره</button>');
+      $("btnAgain").onclick = restartInterview;
+      return;
+    }
+    if(val === "mind"){
+      agentSay("ذهن و نیت شخص واقعی قابل کشف نیست. موضوع را به رفتار مشاهده‌پذیر بازنویسی می‌کنیم؛ مثلاً به‌جای «چه فکری دارد؟» بگو «آیا تا تاریخ مشخص اقدام روشن و داوطلبانه‌ای انجام می‌دهد؟»");
+    }
+    if(val === "risk"){
+      agentSay("برای پزشکی، حقوقی، مالی و ایمنی حکم قطعی رملی نمی‌دهم. شواهد و متخصص مقدم‌اند. اگر فقط خوانش نمادین می‌خواهی، ادامه می‌دهیم با همین مرزبندی.");
+    }
+    goStep(1);
+  });
+}
+
+function stepProfile(){
+  agentSay("نامت، تاریخ امروز (هشت رقم شمسی) و اگر روش دیجیتال می‌خواهی ساعت دقیق را بگو. نام والد اختیاری است.");
+  panelHTML(`
+    <div class="grid">
+      <div><label>نام سائل *</label><input id="iName" type="text" value="${state.name}"></div>
+      <div><label>نام والد</label><input id="iParent" type="text" value="${state.parent}"></div>
+      <div><label>تاریخ *</label><input id="iDate" type="text" value="${state.date || todayJalaliGuess()}"></div>
+      <div><label>ساعت (اختیاری)</label><input id="iTime" type="text" value="${state.time}" placeholder="10:30"></div>
+    </div>
+    <button type="button" class="btn sm" id="iNext1">ادامه</button>`);
+  $("iNext1").onclick = () => {
+    const name = $("iName").value.trim();
+    const date = $("iDate").value.trim();
+    if(!name){ agentSay("نام سائل لازم است."); return; }
+    if(extractDigits(date).length !== 8){ agentSay("تاریخ باید ۸ رقم باشد؛ مثل 1405/04/23."); return; }
+    state.name = name; state.parent = $("iParent").value.trim();
+    state.date = date; state.time = $("iTime").value.trim();
+    userSay(name + " | " + date + (state.time ? " | " + state.time : ""));
+    goStep(2);
+  };
+}
+
+function stepTopic(){
+  agentSay("موضوع کلی چیست؟ (حداکثر یک موضوع انتخاب کن تا بیت سؤال پیشنهاد شود.)");
+  choices(Object.keys(TOPIC_LABELS).map(k => [TOPIC_LABELS[k], k]), (val, label) => {
+    userSay(label);
+    state.topic = val;
+    state.bayt = TOPIC_BAYT[val];
+    agentSay("پیشنهاد بیت اصلی: بیت " + faDigits(state.bayt) + " — " + BAYTS.find(b=>b[0]===state.bayt)[1] +
+             "\nاگر پیام/تماس است بیت۳، اگر طرف مقابل/رابطه بیت۷، اگر کشش عاطفی بیت۵ مناسب‌تر است.");
+    goStep(3);
+  });
+}
+
+function stepQuestion(){
+  agentSay("حالا سه چیز را بنویس:\n۱) دقیقاً چه اتفاق قابل مشاهده‌ای باید رخ دهد؟\n۲) تا چه تاریخی؟\n۳) معیار موفقیت چیست؟\n\nنمونه: «آیا او تا پایان ماه برای ادامه رابطه تماس روشن و داوطلبانه‌ای می‌گیرد؟»");
+  if(state.type === "mind"){
+    agentSay("یادت باشد: به‌جای فکر/احساس، فقط رفتار بیرونی.");
+  }
+  panelHTML(`
+    <div><label>رویداد مشاهده‌پذیر *</label><input id="iEvent" type="text" value="${state.event}" placeholder="مثلاً تماس داوطلبانهٔ او"></div>
+    <div class="grid" style="margin-top:8px">
+      <div><label>مهلت *</label><input id="iDeadline" type="text" value="${state.deadline}" placeholder="تا ۱۴۰۵/۰۵/۳۱"></div>
+      <div><label>معیار موفقیت *</label><input id="iCriterion" type="text" value="${state.criterion}" placeholder="دریافت تماس یا پیام صریح"></div>
+      <div><label>منبع تعیین واقعیت</label><input id="iSource" type="text" value="${state.source}" placeholder="پیام، قرارداد، مشاهده…"></div>
+    </div>
+    <div style="margin-top:8px"><label>بیت اصلی (قابل تغییر)</label><select id="iBayt"></select></div>
+    <button type="button" class="btn sm" id="iNext3">ساخت سؤال قفل‌شونده</button>`);
+  const sel = $("iBayt");
+  BAYTS.forEach(([n,t]) => {
+    const o = document.createElement("option");
+    o.value = n; o.textContent = "بیت "+faDigits(n)+" — "+t;
+    if(n === state.bayt) o.selected = true;
+    sel.appendChild(o);
+  });
+  $("iNext3").onclick = () => {
+    const event = $("iEvent").value.trim();
+    const deadline = $("iDeadline").value.trim();
+    const criterion = $("iCriterion").value.trim();
+    if(!event || !deadline || !criterion){ agentSay("هر سه فیلد رویداد، مهلت و معیار لازم‌اند."); return; }
+    const vague = /شاید|حس خوب|انرژی|دوست دارد|چه فکری|آینده رابطه|خوب است/.test(event+criterion);
+    if(vague){
+      agentSay("متن هنوز مبهم است (حس/فکر/آینده کلی). آن را به رفتار یا نتیجهٔ بیرونی تبدیل کن.");
+      return;
+    }
+    state.event = event; state.deadline = deadline; state.criterion = criterion;
+    state.source = $("iSource").value.trim();
+    state.bayt = Number($("iBayt").value);
+    state.question = "آیا " + event + " تا " + deadline + " رخ می‌دهد؟ (معیار: " + criterion + ")";
+    userSay(state.question);
+    goStep(4);
+  };
+}
+
+function stepLock(){
+  agentSay("این فرم را تأیید کن. بعد از تأیید، متن سؤال، معیار، مهلت، بیت و روش تغییر نمی‌کنند.");
+  panelHTML(`
+    <div class="mono" style="direction:rtl;text-align:right;white-space:pre-wrap">نام سائل: ${state.name}
+نام والد: ${state.parent || "اختیاری / خالی"}
+تاریخ و ساعت سؤال: ${state.date}${state.time ? " " + state.time : ""}
+موضوع: ${TOPIC_LABELS[state.topic] || "—"}
+سؤال دقیق و قفل‌شده: ${state.question}
+معیار موفقیت: ${state.criterion}
+مهلت نتیجه: ${state.deadline}
+منبع تعیین نتیجه واقعی: ${state.source || "ثبت نشده"}
+بیت اصلی: ${state.bayt}
+روش: هنوز انتخاب نشده</div>
+    <button type="button" class="btn sm" id="iConfirm">تأیید و قفل سؤال</button>
+    <button type="button" class="btn ghost" id="iBackQ">ویرایش سؤال</button>`);
+  $("iConfirm").onclick = () => {
+    userSay("سؤال قفل شد.");
+    agentSay("سؤال قفل شد. حالا روش تولید را انتخاب کن.");
+    goStep(5);
+  };
+  $("iBackQ").onclick = () => goStep(3);
+}
+
+function stepMethod(){
+  agentSay("روش پیشنهادی: سنتی ۱۶ ردیفی. دیجیتال دقیق‌تر نیست؛ فقط بازتولیدپذیر است. سکه‌ای ورودی فیزیکی مستقل می‌سازد.");
+  panelHTML(`
+    <div class="choice-row" id="methodChoices"></div>
+    <div id="methodExtra" style="margin-top:10px"></div>`);
+  const mc = $("methodChoices");
+  [["سنتی ۱۶ ردیفی (پیشنهادی)","trad"],["سکه‌ای ۱۶ پرتاب","coin"],["دیجیتال MZ-16 v1","digital"],["دیجیتال پژوهشی v2R","v2r"]]
+    .forEach(([label,val]) => {
+      const b = document.createElement("button");
+      b.type="button"; b.className="choice"; b.textContent=label;
+      b.onclick = () => {
+        state.method = val; userSay(label);
+        showMethodExtra();
+      };
+      mc.appendChild(b);
+    });
+}
+
+function showMethodExtra(){
+  const box = $("methodExtra");
+  if(state.method === "trad"){
+    agentSay("۱۶ عدد صحیح مثبت را بدون فکرکردن به زوج/فرد، در یک خط بنویس. عددها را تکرار یا اصلاح نکن.");
+    box.innerHTML = `<textarea id="iNumbers" rows="2" placeholder="23, 48, 17, 62, ...">${state.numbers}</textarea>
+      <button type="button" class="btn" id="iCast">🔒 قفل کن و زایچه بساز</button>
+      <div id="iErr" class="note warn hidden"></div>`;
+    $("iCast").onclick = () => {
+      state.numbers = $("iNumbers").value.trim();
+      syncFormFromState();
+      castFromState($("iErr"));
+    };
+  } else if(state.method === "coin"){
+    agentSay("سکه را دقیقاً ۱۶ بار پرتاب کن و نتیجه را اینجا ثبت کن. من پرتاب‌ها را حدس نمی‌زنم.");
+    state.coins = Array(16).fill(null);
+    box.innerHTML = `<div class="coin-board" id="iCoinBoard"></div>
+      <div id="iCoinCount" style="font-size:13px;color:var(--dim)">۰ از ۱۶</div>
+      <button type="button" class="btn" id="iCast">🔒 قفل کن و زایچه بساز</button>
+      <div id="iErr" class="note warn hidden"></div>`;
+    buildCoinBoard($("iCoinBoard"), state.coins, () => {
+      $("iCoinCount").textContent = faDigits(state.coins.filter(Boolean).length) + " از ۱۶";
+    });
+    $("iCast").onclick = () => { syncFormFromState(); castFromState($("iErr")); };
+  } else {
+    if(extractDigits(state.time).length !== 4){
+      agentSay("برای روش دیجیتال، ساعت دقیق HH:MM لازم است.");
+      box.innerHTML = `<label>ساعت *</label><input id="iTime2" type="text" value="${state.time}" placeholder="10:30">
+        <button type="button" class="btn sm" id="iSetTime">ثبت ساعت و ادامه</button>`;
+      $("iSetTime").onclick = () => {
+        state.time = $("iTime2").value.trim();
+        if(extractDigits(state.time).length!==4){ agentSay("ساعت نامعتبر است."); return; }
+        userSay("ساعت: "+state.time); showMethodExtra();
+      };
+      return;
+    }
+    agentSay("روش دیجیتال از نام، تاریخ، ساعت، متن سؤال و مهلت دنبالهٔ ۱۶بیتی می‌سازد. بعد از دیدن نتیجه تغییر ورودی ممنوع است.");
+    box.innerHTML = `<button type="button" class="btn" id="iCast">🔒 قفل کن و زایچه بساز</button>
+      <div id="iErr" class="note warn hidden"></div>`;
+    $("iCast").onclick = () => { syncFormFromState(); castFromState($("iErr")); };
+  }
+}
+
+function buildCoinBoard(el, arr, onChange){
+  el.innerHTML = "";
+  for(let i=0;i<16;i++){
+    const btn = document.createElement("button");
+    btn.type="button"; btn.className="coin-chip";
+    btn.textContent = faDigits(i+1);
+    const paint = () => {
+      btn.className = "coin-chip" + (arr[i]==="H"?" on-h":arr[i]==="T"?" on-t":"");
+      btn.textContent = arr[i]==="H"?"شیر":arr[i]==="T"?"خط":faDigits(i+1);
+    };
+    paint();
+    btn.onclick = () => {
+      arr[i] = arr[i]===null?"H":arr[i]==="H"?"T":null;
+      paint(); onChange();
+    };
+    el.appendChild(btn);
+  }
+}
+
+function syncFormFromState(){
+  $("fName").value = state.name;
+  $("fParent").value = state.parent;
+  $("fDate").value = state.date;
+  $("fTime").value = state.time;
+  $("fQuestion").value = state.question;
+  $("fCriterion").value = state.criterion;
+  $("fDeadline").value = state.deadline;
+  $("fSource").value = state.source;
+  $("fBayt").value = String(state.bayt);
+  $("fMethod").value = state.method;
+  $("fNumbers").value = state.numbers;
+  updateMethodBoxes();
+}
+
+function restartInterview(){
+  Object.assign(state, {
+    step:0, type:null, name:"", parent:"", date:"", time:"",
+    topic:null, event:"", deadline:"", criterion:"", source:"",
+    question:"", bayt:7, method:"trad", numbers:"", coins:Array(16).fill(null)
+  });
+  lastChartContext = null;
+  $("chatBox").innerHTML = "";
+  $("results").classList.add("hidden");
+  $("aiCard").classList.add("hidden");
+  setMode("interview");
+  goStep(0);
+}
+
+/* ============================================================
+   ریختن و نمایش
+   ============================================================ */
+
+function updateMethodBoxes(){
+  const m = $("fMethod").value;
+  $("tradInputBox").classList.toggle("hidden", m !== "trad");
+  $("coinInputBox").classList.toggle("hidden", m !== "coin");
+}
+
+function showError(el, msg){
+  el.textContent = msg; el.classList.remove("hidden");
+  $("results").classList.add("hidden");
+}
+
+function cast(){ castFromState($("formError")); }
+
+function castFromState(errEl){
+  errEl.classList.add("hidden");
+  const name = $("fName").value.trim() || state.name;
+  const parent = $("fParent").value.trim() || state.parent;
+  const dateDigits = extractDigits($("fDate").value || state.date);
+  const timeDigits = extractDigits($("fTime").value || state.time);
+  const question = ($("fQuestion").value.trim() || state.question);
+  const criterion = ($("fCriterion").value.trim() || state.criterion);
+  const deadline = ($("fDeadline").value.trim() || state.deadline);
+  const source = ($("fSource").value.trim() || state.source);
+  const bayt = Number($("fBayt").value || state.bayt);
+  const method = $("fMethod").value || state.method;
+
+  if(!name) return showError(errEl, "نام سائل الزامی است.");
+  if(dateDigits.length !== 8) return showError(errEl, "تاریخ باید ۸ رقم باشد.");
+  if(!question) return showError(errEl, "متن سؤال الزامی است.");
+  if(!criterion) return showError(errEl, "معیار موفقیت الزامی است.");
+  if(!deadline) return showError(errEl, "مهلت الزامی است.");
+
+  let mothers, digital=null, sourceHTML="", rawLock="";
+
+  if(method==="digital" || method==="v2r"){
+    if(timeDigits.length!==4) return showError(errEl, "در روش دیجیتال ساعت HH:MM الزامی است.");
+    const st = selfTest();
+    if(!st.ok) return showError(errEl, "بردار کنترل رد شد: "+st.detail);
+    digital = mz16(name,parent,dateDigits,timeDigits,question,deadline, method==="v2r"?"v2r":"v1");
+    if(digital.error) return showError(errEl, digital.error);
+    if(!digital.verified) return showError(errEl, "راستی‌آزمایی C/F رد شد.");
+    mothers = mothersFromBits(digital.F);
+    sourceHTML = renderDigitalSource(digital);
+    rawLock = "S="+digital.S+" | F="+digital.F.join("");
+  } else if(method==="coin"){
+    const coins = state.coins;
+    if(coins.some(c => !c)) return showError(errEl, "هر ۱۶ پرتاب باید ثبت شود (شیر یا خط). صفحه پرتاب را حدس نمی‌زند.");
+    mothers = mothersFromCoins(coins);
+    sourceHTML = renderCoinSource(coins);
+    rawLock = "پرتاب‌ها: "+coins.map(c=>c==="H"?"شیر":"خط").join(",");
+  } else {
+    const raw = ($("fNumbers").value || state.numbers).trim();
+    const parts = raw.replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-0x06F0)).split(/[\s,،;]+/).filter(x=>x.length);
+    if(parts.length!==16) return showError(errEl, "دقیقاً ۱۶ عدد لازم است؛ شما "+faDigits(parts.length)+" مورد وارد کرده‌اید.");
+    const nums = parts.map(Number);
+    if(nums.some(n => !Number.isInteger(n) || n<=0)) return showError(errEl, "همه باید عدد صحیح مثبت باشند.");
+    mothers = mothersFromNumbers(nums);
+    sourceHTML = renderTradSource(nums);
+    rawLock = "اعداد خام: "+nums.join(", ");
+  }
+
+  const H = buildChart(mothers);
+  const checks = runChecks(H, digital);
+  const allOk = checks.every(c => c.pass);
+  const an = allOk ? analyze(H, bayt) : null;
+  const via = allOk ? viaPuncti(H) : null;
+
+  $("sourceBody").innerHTML = sourceHTML;
+  renderHouses(H, bayt);
+  renderChecks(checks, allOk);
+
+  if(allOk){
+    $("analysisCard").classList.remove("hidden");
+    $("recordCard").classList.remove("hidden");
+    $("aiCard").classList.remove("hidden");
+    renderAnalysis(H, bayt, an, via);
+    renderRecord({name,dateDigits,timeDigits,question,criterion,deadline,source,bayt,method,digital,H,an,rawLock});
+    lastChartContext = buildAiContext({name,dateDigits,timeDigits,question,criterion,deadline,source,bayt,method,H,an,via,rawLock});
+    $("orResults").innerHTML = "";
+    agentSay("زایچه ساخته و صحت‌سنجی شد. حکم قاعده‌مند در پایین صفحه است. برای تفسیر طبیعی می‌توانی مدل‌های رایگان OpenRouter را تیک بزنی.");
+  } else {
+    $("analysisCard").classList.add("hidden");
+    $("recordCard").classList.add("hidden");
+    $("aiCard").classList.add("hidden");
+    lastChartContext = null;
+    agentSay("محاسبه نامعتبر است؛ تفسیر ممنوع.");
+  }
+  $("results").classList.remove("hidden");
+  $("results").scrollIntoView({behavior:"smooth"});
+}
+
+function renderDigitalSource(d){
+  const idx = Array.from({length:16},(_,i)=>String(i+1).padStart(2,"0")).join(" ");
+  const spread = a => a.map(x=>" "+x).join(" ");
+  const ver = d.version==="v2r" ? "MZ-16 v2R" : "MZ-16 v1";
+  return `<p style="font-size:13px">روش: <b>دیجیتال ${ver}</b> — بازتولیدپذیر؛ ادعای پیش‌بینی اثبات‌شده ندارد.</p>
+    <div class="mono">S (طول ${[...d.S].length}) = ${d.S}
+P = ${d.P.join("")}${d.repeated?"   (تکرار شد)":""}</div>
+    <h3>دفتر محاسبه</h3>
+    <div class="mono">idx:    ${idx}
+B:      ${spread(d.B)}
+D:      ${spread(d.D)}
+C:      ${spread(d.C)}
+F:      ${spread(d.F)}</div>
+    <p style="font-size:13px">🔒 منبع قفل‌شده: <span class="mono" style="display:inline;padding:2px 8px">F = ${d.F.join("")}</span> — راستی‌آزمایی: ${d.verified?"✔":"✘"}</p>`;
+}
+function renderTradSource(nums){
+  const rows = nums.map((n,i)=>"r"+(i+1)+"="+n+(n%2?" (فرد → ●)":" (زوج → ▬)"));
+  return `<p style="font-size:13px">روش: <b>سنتی ۱۶ ردیفی</b></p>
+    <div class="mono">${rows.join("\n")}</div>
+    <p style="font-size:13px">🔒 منبع قفل‌شده: ${nums.join(", ")}</p>`;
+}
+function renderCoinSource(coins){
+  const rows = coins.map((c,i)=>(i+1)+": "+(c==="H"?"شیر → ●":"خط → ▬"));
+  return `<p style="font-size:13px">روش: <b>سکه‌ای ۱۶ پرتاب</b> — ورودی فیزیکی مستقل از متن سؤال.</p>
+    <div class="mono">${rows.join("\n")}</div>`;
+}
+
+function renderHouses(H, bayt){
+  const box = $("housesBox"); box.innerHTML="";
+  for(let i=1;i<=16;i++){
+    const f=H[i], info=FIGURES[sigOf(f)];
+    const div=document.createElement("div");
+    div.className="house"+((i===1||i===bayt||i===15)?" key":"");
+    let tag=""; if(i===1) tag=" (طالب)"; if(i===bayt) tag+=" (مطلوب)";
+    div.innerHTML=`<div class="hn">${HOUSE_LABELS[i]}${tag}</div>
+      <div class="fig">${figGlyph(f)}</div>
+      <div class="nm">${info.fa}</div>
+      <div class="sig">${info.la} — ${faDigits(sigOf(f))} — <span class="${qClass(info.q)}">${qStr(info.q)}</span></div>`;
+    box.appendChild(div);
+  }
+}
+function renderChecks(checks, allOk){
+  const ul=$("checksBox"); ul.innerHTML="";
+  checks.forEach(c=>{ const li=document.createElement("li"); li.textContent=c.name; if(!c.pass) li.className="fail"; ul.appendChild(li); });
+  const v=$("checksVerdict");
+  v.textContent = allOk ? "✔ همهٔ آزمون‌ها پذیرفته شدند؛ تفسیر مجاز است." : "✘ محاسبه نامعتبر است؛ تفسیر ممنوع است.";
+  v.style.color = allOk ? "var(--ok)" : "var(--bad)";
+}
+
+function renderAnalysis(H, bayt, an, via){
+  const figT=FIGURES[an.matlubSig], figJ=FIGURES[sigOf(H[15])];
+  const fig1=FIGURES[an.talibSig];
+  const fig13=FIGURES[sigOf(H[13])], fig14=FIGURES[sigOf(H[14])], fig16=FIGURES[sigOf(H[16])];
+  const baytTopic=BAYTS.find(b=>b[0]===bayt)[1];
+  const balanceFa=(an.balance>0?"+":"")+faDigits(an.balance);
+
+  const triadHTML = TRIADS.map(t => {
+    const R=FIGURES[sigOf(H[t.r])], L=FIGURES[sigOf(H[t.l])], C=FIGURES[sigOf(H[t.c])];
+    return `<tr><td>${faDigits(t.n)}</td><td>${R.fa} (${t.r})</td><td>${L.fa} (${t.l})</td><td>${C.fa} (${t.c})</td><td>${t.role}</td></tr>`;
+  }).join("");
+
+  const viaHTML = via.paths.map(p => {
+    if(typeof p === "string") return p;
+    return p.map(h => HOUSE_LABELS[h]+"/"+FIGURES[sigOf(H[h])].fa).join(" ← ");
+  }).map(s => `<div class="tag">${s}</div>`).join(" ");
+
+  $("analysisBody").innerHTML = `
+    <h3>سیگنال‌های سه‌گانه T/L/J</h3>
+    <table>
+      <tr><th>سیگنال</th><th>منبع</th><th>مقدار</th><th>توضیح</th></tr>
+      <tr><td>T موضوع</td><td>${figT.fa} در بیت ${faDigits(bayt)}</td><td class="${qClass(an.T)}">${qStr(an.T)}</td><td>${figT.m}</td></tr>
+      <tr><td>L پیوند</td><td>${fig1.fa} / ${figT.fa}</td><td class="${qClass(an.L)}">${qStr(an.L)}</td><td>${an.Lnote}</td></tr>
+      <tr><td>J حکم</td><td>قاضی ${figJ.fa}</td><td class="${qClass(an.J)}">${qStr(an.J)}</td><td>${figJ.m}</td></tr>
+    </table>
+    <div class="verdict">تراز = ${balanceFa} → <b>${an.verdict}</b><br>
+      <span style="font-size:13px;color:var(--dim)">وضعیت: ${an.status} — احتمال آماری نیست.</span></div>
+
+    <h3>دو محور E / Q</h3>
+    <p style="font-size:14px">
+      <b>وقوع E:</b> ${an.E}<br>
+      <b>کمال:</b> ${an.modes.length?an.modes.map(m=>`<span class="tag">${m}</span>`).join(" "):"هیچ‌کدام"}<br>
+      <b>کیفیت Q:</b> QT=${qStr(an.QT)} QJ=${qStr(an.QJ)} مجموع=${(an.Qtotal>0?"+":"")+faDigits(an.Qtotal)} → ${an.Qlabel}
+    </p>
+
+    <h3>دادگاه (بدون امتیاز مستقل)</h3>
+    <p style="font-size:14px">شاهد۱۳: <b>${fig13.fa}</b>؛ شاهد۱۴: <b>${fig14.fa}</b>؛ جامع۱۶: <b>${fig16.fa}</b>.</p>
+
+    <h3>چهار تثلیث (شرح بدون امتیاز)</h3>
+    <table><tr><th>#</th><th>والد راست</th><th>والد چپ</th><th>فرزند</th><th>کارکرد</th></tr>${triadHTML}</table>
+
+    <h3>راه نقطه (FIRE-ACTIVE)</h3>
+    <p style="font-size:13px;color:var(--dim)">فقط سطر آتش؛ تغییر‌دهندهٔ E/Q نیست.</p>
+    <div>${viaHTML}</div>
+
+    ${an.companies.length?`<h3>شرکت ساده</h3><p style="font-size:14px">${an.companies.join("<br>")}</p>`:""}
+
+    <h3>خوانش نمادین [تفسیر قاعده‌مند]</h3>
+    <p style="font-size:14px">
+      بیت ${faDigits(bayt)} (${baytTopic}) با شکل <b>${figT.fa}</b> (${figT.m}).
+      قاضی <b>${figJ.fa}</b> (${figJ.m}). جمع‌بندی: <b>${an.verdict}</b> / ${an.status}.
+      واقعیت فقط با شواهد بیرونی معلوم می‌شود.
+    </p>
+    <h3>توصیهٔ عملی</h3>
+    <p style="font-size:14px">${adviceText(an)}</p>`;
+}
+
+function adviceText(an){
+  if(an.outBin==="yes") return "مسیر نمادین همسو دیده می‌شود؛ اقدام داخل معیار و مهلت را خودت انجام بده و نتیجهٔ واقعی را در رکورد ثبت کن.";
+  if(an.outBin==="no") return "خوانش همسو نیست؛ به‌جای ریختن دوباره، روی رفتار قابل کنترل خودت تمرکز کن و نتیجهٔ واقعی را تا مهلت ثبت کن.";
+  return "خروجی نامشخص است و نباید به‌زور بله/خیر شود. شواهد بیرونی جمع کن و نتیجه را ثبت کن.";
+}
+
+/* ============================================================
+   OpenRouter — مدل‌های رایگان برای تفسیر طبیعی
+   ============================================================ */
+
+function buildAiContext(o){
+  const sig = i => sigOf(o.H[i]);
+  const houses = [];
+  for(let i=1;i<=16;i++){
+    const info = FIGURES[sig(i)];
+    houses.push(i+": "+info.fa+"/"+info.la+" "+sig(i)+" ("+info.m+")");
+  }
+  return {
+    protocol: "MIZAN-AI-ONLY-v3.3 / CORE-32",
+    name: o.name,
+    question: o.question,
+    criterion: o.criterion,
+    deadline: o.deadline,
+    bayt: o.bayt,
+    method: o.method,
+    sourceLock: o.rawLock,
+    houses: houses.join("\n"),
+    judge: FIGURES[sig(15)].fa,
+    witness1: FIGURES[sig(13)].fa,
+    witness2: FIGURES[sig(14)].fa,
+    reconciler: FIGURES[sig(16)].fa,
+    T: o.an.T, L: o.an.L, J: o.an.J,
+    balance: o.an.balance,
+    verdict: o.an.verdict,
+    status: o.an.status,
+    E: o.an.E,
+    modes: o.an.modes.join("، ") || "هیچ‌کدام",
+    Qlabel: o.an.Qlabel,
+    outBin: o.an.outBin,
+    via: (o.via && o.via.paths) ? o.via.paths.map(p => Array.isArray(p)?p.join("←"):p).join(" | ") : ""
+  };
+}
+
+function isFreeModel(m){
+  if(SKIP_FREE_IDS.has(m.id)) return false;
+  if(m.id === "openrouter/free" || m.id.endsWith(":free")) return true;
+  const p = m.pricing || {};
+  const prompt = Number(p.prompt || 0);
+  const completion = Number(p.completion || 0);
+  // فقط متن‌خروجی؛ مدل‌های موسیقی/ایمنی را کنار بگذار
+  const outs = (m.architecture && m.architecture.output_modalities) || [];
+  if(outs.length && !outs.includes("text")) return false;
+  return prompt === 0 && completion === 0 && (m.id.includes("instruct") || m.id.includes("nemotron") || m.id.includes("gemma") || m.id.includes("gpt-oss") || m.id.includes("laguna") || m.id.includes("ling") || m.id.includes("north"));
+}
+
+async function loadFreeModels(){
+  const status = $("orModelsStatus");
+  const err = $("orError");
+  err.classList.add("hidden");
+  status.textContent = "در حال دریافت فهرست مدل‌ها از OpenRouter…";
+  try{
+    const res = await fetch("https://openrouter.ai/api/v1/models", {
+      headers: { "Accept": "application/json" }
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    freeModelsCache = (data.data || []).filter(isFreeModel)
+      .sort((a,b) => a.id.localeCompare(b.id));
+    // همیشه روتر رایگان را اول بگذار اگر هست
+    freeModelsCache.sort((a,b) => (a.id==="openrouter/free"?-1:0) - (b.id==="openrouter/free"?-1:0));
+    renderModelList(freeModelsCache);
+    status.textContent = faDigits(freeModelsCache.length) + " مدل رایگان یافت شد. تیک بزن و تفسیر بگیر.";
+    $("btnInterpret").disabled = false;
+    localStorage.setItem("mizan_or_models_ts", String(Date.now()));
+  }catch(e){
+    status.textContent = "بارگذاری ناموفق بود.";
+    err.textContent = "خطا در دریافت مدل‌ها: " + e.message + " — اتصال اینترنت و دسترسی به openrouter.ai را بررسی کن.";
+    err.classList.remove("hidden");
+  }
+}
+
+function renderModelList(models){
+  const box = $("orModelList");
+  box.classList.remove("hidden");
+  const saved = new Set(JSON.parse(localStorage.getItem("mizan_or_selected") || "[]"));
+  box.innerHTML = models.map(m => {
+    const checked = saved.has(m.id) ? "checked" : (m.id==="openrouter/free" && !saved.size ? "checked" : "");
+    return `<label class="model-item">
+      <input type="checkbox" class="or-model-cb" value="${m.id}" ${checked}>
+      <span class="mid"><b>${m.name || m.id}</b><div class="id">${m.id}</div></span>
+    </label>`;
+  }).join("");
+  box.querySelectorAll(".or-model-cb").forEach(cb => {
+    cb.addEventListener("change", persistSelectedModels);
+  });
+  persistSelectedModels();
+}
+
+function persistSelectedModels(){
+  const ids = [...document.querySelectorAll(".or-model-cb:checked")].map(cb => cb.value);
+  localStorage.setItem("mizan_or_selected", JSON.stringify(ids));
+}
+
+function selectedModels(){
+  return [...document.querySelectorAll(".or-model-cb:checked")].map(cb => cb.value);
+}
+
+function systemPromptForMizan(){
+  return `تو مفسر نمادین رمل بر پایهٔ پروتکل میزان (MIZAN-AI-ONLY-v3.3) هستی.
+قواعد اجباری:
+- خروجی فقط خوانش نمادین است؛ واقعیت، آینده یا ذهن اشخاص را اثبات نکن.
+- درصد موفقیت، «۹۰٪» یا قطعیت جعل نکن.
+- درباره پزشکی، حقوقی، مالی و ایمنی حکم عملی نده؛ به متخصص ارجاع بده.
+- T/L/J و E/Q و قاضی را عوض نکن؛ فقط به زبان طبیعی و مسئولانه توضیح بده.
+- شاهدان و جامع را رأی مستقل نشمار.
+- پاسخ را به فارسی روان، کوتاه (حداکثر حدود ۳۵۰ کلمه) و با این ساختار بنویس:
+  ۱) جمع‌بندی نمادین
+  ۲) شرایط و موانع
+  ۳) توصیهٔ عملی متمرکز بر رفتار قابل کنترل سائل
+  ۴) یادآوری محدودیت رمل`;
+}
+
+function userPromptFromContext(ctx){
+  return `سؤال قفل‌شده: ${ctx.question}
+معیار: ${ctx.criterion}
+مهلت: ${ctx.deadline}
+بیت موضوع: ${ctx.bayt}
+روش: ${ctx.method}
+
+زایچه:
+${ctx.houses}
+
+قاضی: ${ctx.judge}
+شاهدان: ${ctx.witness1} / ${ctx.witness2}
+جامع: ${ctx.reconciler}
+T=${ctx.T} L=${ctx.L} J=${ctx.J} تراز=${ctx.balance} → ${ctx.verdict}
+وضعیت: ${ctx.status}
+وقوع E: ${ctx.E} | کمال: ${ctx.modes}
+کیفیت Q: ${ctx.Qlabel}
+پیش‌بینی قاعده‌مند: ${ctx.outBin}
+راه نقطه: ${ctx.via || "—"}
+
+با رعایت پروتکل، تفسیر طبیعی و مسئولانه بنویس.`;
+}
+
+async function callOpenRouter(model, apiKey, ctx){
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + apiKey,
+      "Content-Type": "application/json",
+      "HTTP-Referer": (typeof location !== "undefined" ? location.origin : "https://mizan.local"),
+      "X-Title": "Mizan Raml"
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: systemPromptForMizan() },
+        { role: "user", content: userPromptFromContext(ctx) }
+      ]
+    })
+  });
+  const raw = await res.text();
+  let data;
+  try { data = JSON.parse(raw); } catch(_) { throw new Error("پاسخ غیرJSON از OpenRouter"); }
+  if(!res.ok){
+    const msg = (data && data.error && data.error.message) || raw.slice(0,200);
+    throw new Error(msg);
+  }
+  const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if(!text) throw new Error("متن خالی از مدل");
+  return { text, used: (data.model || model) };
+}
+
+async function runInterpretations(){
+  const err = $("orError");
+  err.classList.add("hidden");
+  const key = ($("orKey").value || "").trim();
+  if(!key){ err.textContent = "کلید OpenRouter را وارد کن (از https://openrouter.ai/keys)."; err.classList.remove("hidden"); return; }
+  localStorage.setItem("mizan_or_key", key);
+  if(!lastChartContext){ err.textContent = "ابتدا زایچهٔ معتبر بساز."; err.classList.remove("hidden"); return; }
+  const models = selectedModels();
+  if(!models.length){ err.textContent = "حداقل یک مدل رایگان را تیک بزن."; err.classList.remove("hidden"); return; }
+
+  const box = $("orResults");
+  box.innerHTML = "";
+  $("btnInterpret").disabled = true;
+  $("btnInterpret").textContent = "در حال تفسیر…";
+
+  for(const model of models){
+    const card = document.createElement("div");
+    card.className = "ai-out";
+    card.innerHTML = `<h4>${model}</h4><div class="dim">در انتظار پاسخ…</div>`;
+    box.appendChild(card);
+    try{
+      const r = await callOpenRouter(model, key, lastChartContext);
+      card.innerHTML = `<h4>${r.used}</h4><div>${escapeHtml(r.text)}</div>`;
+    }catch(e){
+      card.innerHTML = `<h4>${model}</h4><div style="color:var(--bad)">خطا: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+  $("btnInterpret").disabled = false;
+  $("btnInterpret").textContent = "✨ تفسیر طبیعی با مدل‌های تیک‌خورده";
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+function renderRecord(o){
+  const sig=i=>sigOf(o.H[i]); const fa=s=>FIGURES[s].fa;
+  const dateFmt=o.dateDigits.replace(/(\d{4})(\d{2})(\d{2})/,"$1/$2/$3");
+  const methodName={trad:"سنتی ۱۶ ردیفی",coin:"سکه‌ای ۱۶ پرتاب",digital:"دیجیتال MZ-16 v1",v2r:"دیجیتال MZ-16 v2R"}[o.method];
+  const now=new Date().toISOString().slice(0,16).replace("T"," ");
+  $("recordBox").value =
+`رکورد میزان
+نسخه پروتکل: MIZAN-AI-ONLY-v3.3
+شناسه متنی: ${o.name}|${dateFmt}|${o.question}|${o.criterion}|${o.deadline}
+روش: ${methodName}
+پروفایل مکتب: CORE-32
+بیت قفل‌شده: ${o.bayt}
+منبع قفل‌شده: ${o.rawLock}
+معیار موفقیت: ${o.criterion}
+منبع تعیین واقعیت: ${o.source||"ثبت نشده"}
+قاضی: ${fa(sig(15))} (${sig(15)})
+جامع: ${fa(sig(16))} (${sig(16)})
+T/L/J و تراز: T=${o.an.T} L=${o.an.L} J=${o.an.J} | تراز=${o.an.balance} (${o.an.verdict})
+محور وقوع E: ${o.an.E}
+حالت یا حالت‌های کمال: ${o.an.modes.length?o.an.modes.join("، "):"هیچ‌کدام"}
+QT/QJ/Qtotal: ${o.an.QT}/${o.an.QJ}/${o.an.Qtotal} (${o.an.Qlabel})
+پیش‌بینی: ${o.an.outBin}
+زمان قفل پیش‌بینی: ${now}
+مهلت بررسی: ${o.deadline}
+نتیجه واقعی: ثبت نشده
+مدرک یا شرح نتیجه: ثبت نشده
+وضعیت: در انتظار`;
+}
+
+function init(){
+  const sel=$("fBayt");
+  BAYTS.forEach(([n,t])=>{
+    const o=document.createElement("option"); o.value=n; o.textContent="بیت "+faDigits(n)+" — "+t;
+    if(n===7) o.selected=true; sel.appendChild(o);
+  });
+  const st=selfTest();
+  const badge=$("selftestBadge");
+  if(st.ok){ badge.textContent="✔ بردار کنترل v1 و v2R تأیید شد (F_v1=1101100001111010)"; badge.className="badge ok"; }
+  else { badge.textContent="✘ بردار کنترل رد شد: "+st.detail; badge.className="badge bad"; }
+
+  $("tabInterview").onclick=()=>setMode("interview");
+  $("tabForm").onclick=()=>setMode("form");
+  $("fMethod").addEventListener("change", updateMethodBoxes);
+  buildCoinBoard($("coinBoard"), state.coins, ()=>{
+    $("coinCount").textContent = faDigits(state.coins.filter(Boolean).length)+" از ۱۶";
+  });
+  $("btnCast").addEventListener("click", cast);
+  $("btnCopy").addEventListener("click", ()=>{
+    $("recordBox").select();
+    try{navigator.clipboard.writeText($("recordBox").value);}catch(e){document.execCommand("copy");}
+    $("btnCopy").textContent="کپی شد ✔";
+    setTimeout(()=>$("btnCopy").textContent="کپی رکورد",1500);
+  });
+  $("btnRestart").addEventListener("click", restartInterview);
+
+  // OpenRouter UI
+  const savedKey = localStorage.getItem("mizan_or_key") || "";
+  if(savedKey) $("orKey").value = savedKey;
+  $("btnLoadModels").addEventListener("click", loadFreeModels);
+  $("btnInterpret").addEventListener("click", runInterpretations);
+  $("btnSelectAllModels").addEventListener("click", () => {
+    document.querySelectorAll(".or-model-cb").forEach(cb => { cb.checked = true; });
+    persistSelectedModels();
+  });
+  $("btnClearModels").addEventListener("click", () => {
+    document.querySelectorAll(".or-model-cb").forEach(cb => { cb.checked = false; });
+    persistSelectedModels();
+  });
+  $("orKey").addEventListener("change", () => {
+    localStorage.setItem("mizan_or_key", $("orKey").value.trim());
+  });
+
+  goStep(0);
+}
+
+if(typeof document!=="undefined" && document.getElementById("btnCast")) init();
+</script>
+</body>
+</html>
