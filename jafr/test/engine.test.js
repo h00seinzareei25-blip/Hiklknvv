@@ -84,6 +84,35 @@ const multiPromptPack = E.buildMultiNatqPrompt(multi, {
 const multiPrompt = multiPromptPack.generator || multiPromptPack.prompt || multiPromptPack;
 assert(multiPrompt.includes('لایه A') && multiPrompt.includes('مولّد'), 'پرامپت تجمیعی چندروش پیشرفته');
 assert(E.METHOD_PRESETS.length >= 6, 'حداقل ۶ پیش‌فرض روش');
+assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt3'), 'پیش‌فرض لقط۳');
+assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt4'), 'پیش‌فرض لقط۴');
+assert(E.METHOD_PRESETS.some((p) => p.id === 'fifteen_line'), 'پیش‌فرض ۱۵ سطری');
+
+assert(E.takhlisLaqt('ابجدهوزحطی', 3) === 'ادزی', 'لقط گام ۳');
+assert(E.takhlisLaqt('ابجدهوزحطیکل', 4) === 'اهط', 'لقط گام ۴');
+
+const laqt3Run = E.runClassic({
+  sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'بین الف و ب کدام',
+  options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt3', mazjNazira: true, takseerRounds: 1 }
+});
+assert(laqt3Run.ok && laqt3Run.mustehsila.length > 0, 'اجرای لقط۳');
+
+const laqt4Run = E.runClassic({
+  sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'بین الف و ب کدام',
+  options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt4', mazjNazira: true, takseerRounds: 1 }
+});
+assert(laqt4Run.ok && laqt4Run.mustehsila.length > 0, 'اجرای لقط۴');
+assert(laqt4Run.mustehsila.length <= laqt3Run.mustehsila.length, 'لقط۴ معمولاً کوتاه‌تر/مساوی لقط۳');
+
+const fifteen = E.runClassic({
+  sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج',
+  soal: 'بین الف و ب کدام بهتر است',
+  options: { pipeline: 'fifteen', table: 'kabir', methodId: 'fifteen_line' }
+});
+assert(fifteen.ok && fifteen.mustehsila.length > 0, 'اجرای ۱۵ سطری');
+assert((fifteen.steps || []).filter((s) => String(s.id || '').startsWith('l')).length === 15, '۱۵ سطر برچسب‌دار');
+assert(fifteen.fifteenLines && fifteen.fifteenLines[15] === fifteen.mustehsila, 'مستحصله = سطر ۱۵');
+assert(E.describeOptions({ pipeline: 'fifteen' }) === 'جفر ۱۵ سطری', 'توضیح ۱۵ سطری');
 
 const herbMeta = { sael: 'حسین', taleb: 'حسین', matloob: 'حسین', modda: 'دارو', soal: 'اسم دارو گیاهی برای ارامش اعصاب من', extraEnabled: false };
 assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاهی');

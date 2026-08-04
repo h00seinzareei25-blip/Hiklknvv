@@ -270,6 +270,55 @@
     return out;
   }
 
+  /** استنطاق کبیر: عدد → حروف ابجد */
+  function istintaqKabir(n) {
+    let x = Math.abs(n | 0);
+    if (x === 0) return 'ا';
+    const entries = Object.keys(ABJAD_KABIR)
+      .map((ch) => [ch, ABJAD_KABIR[ch]])
+      .sort((a, b) => b[1] - a[1]);
+    let out = '';
+    let guard = 0;
+    while (x > 0 && guard < 40) {
+      guard++;
+      let placed = false;
+      for (let i = 0; i < entries.length; i++) {
+        const ch = entries[i][0];
+        const v = entries[i][1];
+        if (v <= x) {
+          out += ch;
+          x -= v;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) break;
+    }
+    return out || 'ا';
+  }
+
+  /** حاصل نسبت سطری: برای هر حرف با حرف بعدی جمع ابجد و استنطاق */
+  function nisbatRow(str) {
+    const arr = [...String(str || '')];
+    if (!arr.length) return '';
+    let out = '';
+    for (let i = 0; i < arr.length; i++) {
+      const a = letterValue(arr[i], 'kabir');
+      const b = letterValue(arr[(i + 1) % arr.length], 'kabir');
+      const letters = istintaqKabir(a + b);
+      out += letters.charAt(0) || arr[i];
+    }
+    return out;
+  }
+
+  /** حروف قوا: از هر ۴ حرف یکی + حروف غالب عنصری */
+  function haroofQuwa(str) {
+    const s = String(str || '');
+    let out = '';
+    for (let i = 0; i < s.length; i += 4) out += s[i];
+    return out || s;
+  }
+
   function uniqueLetters(str) {
     return removeDuplicatesKeepOrder(str);
   }
@@ -343,6 +392,21 @@
       options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt2', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
     },
     {
+      id: 'laqt3',
+      label: 'کبیر · بینات · صدر/مؤخر · لقط۳',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt3', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'laqt4',
+      label: 'کبیر · بینات · صدر/مؤخر · لقط۴',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt4', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'fifteen_line',
+      label: 'جفر ۱۵ سطری (اساس→نظیره→نسب→قوا→جواب)',
+      options: { pipeline: 'fifteen', table: 'kabir' }
+    },
+    {
       id: 'dedup_asas',
       label: 'کبیر · بینات · حذف مکرر اساس · فرد',
       options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: true, takseerRounds: 1 }
@@ -355,9 +419,10 @@
   ];
 
   function describeOptions(opts) {
+    if (opts && opts.pipeline === 'fifteen') return 'جفر ۱۵ سطری';
     const bastMap = { bayyinat: 'بینات', malfuzi: 'ملفوظی', zabarBayyinat: 'زبر و بینات', none: 'بدون بسط' };
     const takMap = { sadr_muakhkhar: 'صدر/مؤخر', muakhkhar_sadr: 'مؤخر/صدر' };
-    const takhMap = { odd: 'فرد', laqt2: 'لقط۲', none: 'بدون تخلیص' };
+    const takhMap = { odd: 'فرد', laqt2: 'لقط۲', laqt3: 'لقط۳', laqt4: 'لقط۴', none: 'بدون تخلیص' };
     return [
       bastMap[opts.bastMode] || opts.bastMode,
       takMap[opts.takseer] || opts.takseer,
@@ -484,6 +549,84 @@
       detail: jamal.detail
     });
 
+    // --- زنجیره جفر ۱۵ سطری ---
+    if (opts.pipeline === 'fifteen') {
+      const L = [];
+      L[1] = asas;
+      steps.push({ id: 'l01', title: 'سطر ۱ · اساس', input: asasInputNote.join(' | '), output: L[1], note: 'سطر پایه' });
+
+      L[2] = mapNazira(L[1]);
+      steps.push({ id: 'l02', title: 'سطر ۲ · نظیره اساس', input: L[1], output: L[2], note: 'نظیره ابجدی ۲×۱۴' });
+
+      L[3] = nisbatRow(L[1]);
+      steps.push({ id: 'l03', title: 'سطر ۳ · حاصل نسبت اساس', input: L[1], output: L[3], note: 'جمع ابجد هر حرف با بعدی + استنطاق' });
+
+      L[4] = nisbatRow(L[2]);
+      steps.push({ id: 'l04', title: 'سطر ۴ · حاصل نسبت نظیره', input: L[2], output: L[4], note: 'نسبت روی سطر نظیره' });
+
+      L[5] = mazj(L[1], L[2]);
+      steps.push({ id: 'l05', title: 'سطر ۵ · تتمه اولی (مزج اساس و نظیره)', input: L[1] + ' + ' + L[2], output: L[5], note: 'مزج حرف‌به‌حرف' });
+
+      L[6] = mapNazira(L[5]);
+      steps.push({ id: 'l06', title: 'سطر ۶ · نظیره تتمه اولی', input: L[5], output: L[6], note: 'نظیره سطر ۵' });
+
+      L[7] = nisbatRow(L[5]);
+      steps.push({ id: 'l07', title: 'سطر ۷ · حاصل نسبت اساس و نظیره', input: L[5], output: L[7], note: 'نسبت روی تتمه اولی' });
+
+      L[8] = nisbatRow(L[7]);
+      steps.push({ id: 'l08', title: 'سطر ۸ · حاصل نسبت دوم', input: L[7], output: L[8], note: 'نسبت مجدد' });
+
+      L[9] = mapLetters(L[5], mapTarfa);
+      steps.push({ id: 'l09', title: 'سطر ۹ · سر تتمه ثانیه (ترفع)', input: L[5], output: L[9], note: 'ترفع یک پله از تتمه اولی' });
+
+      L[10] = mapLetters(L[5], mapTanzil);
+      steps.push({ id: 'l10', title: 'سطر ۱۰ · تتمه ثانیه (تنزل)', input: L[5], output: L[10], note: 'تنزل یک پله از تتمه اولی' });
+
+      L[11] = haroofQuwa(L[7] + L[8]);
+      steps.push({ id: 'l11', title: 'سطر ۱۱ · حروف قوا', input: L[7] + ' | ' + L[8], output: L[11], note: 'لقط ۴تایی از نسبت‌ها' });
+
+      L[12] = mapNazira(L[11]);
+      steps.push({ id: 'l12', title: 'سطر ۱۲ · نظیره قوا', input: L[11], output: L[12], note: 'نظیره حروف قوا' });
+
+      L[13] = takseerSadrMuakhkhar(mazj(L[11], L[12]));
+      steps.push({ id: 'l13', title: 'سطر ۱۳ · تکسیر قوا', input: mazj(L[11], L[12]), output: L[13], note: 'مزج قوا+نظیره سپس صدر/مؤخر' });
+
+      L[14] = takhlisOdd(L[13]);
+      steps.push({ id: 'l14', title: 'سطر ۱۴ · تخلیص', input: L[13], output: L[14], note: 'حروف فرد' });
+
+      L[15] = takhlisLaqt(L[14], 2);
+      steps.push({
+        id: 'l15',
+        title: 'سطر ۱۵ · جواب / مستحصله',
+        input: L[14],
+        output: L[15],
+        note: 'لقط گام ۲ روی تخلیص؛ سطر نهایی جواب. این زنجیره ۱۵ سطری تقریب کاربردی قابل‌ممیزی است.'
+      });
+
+      const mustehsila = L[15] || L[14] || L[13] || '';
+      const methodLabel = opts.methodLabel || 'جفر ۱۵ سطری';
+      return {
+        ok: true,
+        method: methodLabel,
+        methodId: opts.methodId || 'fifteen_line',
+        parts,
+        asas,
+        nazira: L[2],
+        jamal: jamal.sum,
+        madkhal: madkhal.value,
+        madkhalSteps: madkhal.steps,
+        mustehsila,
+        mustehsilaUnique: uniqueLetters(mustehsila),
+        letterCount: mustehsila.length,
+        dotCount: countDots(mustehsila),
+        steps,
+        options: opts,
+        normalize: fullNorm,
+        extraEnabled,
+        fifteenLines: L
+      };
+    }
+
     const naz = mapNazira(asas);
     steps.push({
       id: 'nazira',
@@ -556,6 +699,14 @@
       const before = work;
       mustehsila = takhlisLaqt(work, 2);
       steps.push({ id: 'takhlis', title: 'تخلیص (لقط گام ۲)', input: before, output: mustehsila, note: 'لقط منفصل با گام ۲' });
+    } else if (opts.takhlis === 'laqt3') {
+      const before = work;
+      mustehsila = takhlisLaqt(work, 3);
+      steps.push({ id: 'takhlis', title: 'تخلیص (لقط گام ۳)', input: before, output: mustehsila, note: 'لقط منفصل با گام ۳' });
+    } else if (opts.takhlis === 'laqt4') {
+      const before = work;
+      mustehsila = takhlisLaqt(work, 4);
+      steps.push({ id: 'takhlis', title: 'تخلیص (لقط گام ۴)', input: before, output: mustehsila, note: 'لقط منفصل با گام ۴' });
     } else {
       steps.push({ id: 'takhlis', title: 'تخلیص', input: work, output: mustehsila, note: 'بدون تخلیص اضافه؛ رشته پس از تکسیر همان مستحصله است' });
     }
@@ -1427,7 +1578,7 @@
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
-    describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil,
-    takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat
+    describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
+    takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
   };
 })(typeof window !== 'undefined' ? window : globalThis);

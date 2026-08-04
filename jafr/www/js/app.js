@@ -33,6 +33,13 @@
     const multi = isMultiMode();
     $('singleSettings').classList.toggle('hidden', multi);
     $('multiSettings').classList.toggle('hidden', !multi);
+    if (!multi) syncPipelineUI();
+  }
+
+  function syncPipelineUI() {
+    const fifteen = $('pipeline') && $('pipeline').value === 'fifteen';
+    if ($('classicOpts')) $('classicOpts').classList.toggle('hidden', !!fifteen);
+    if ($('fifteenHint')) $('fifteenHint').hidden = !fifteen;
   }
 
   function syncExtraUI() {
@@ -99,7 +106,8 @@
   }
 
   function optionsFromForm() {
-    return {
+    const pipeline = $('pipeline') ? $('pipeline').value : 'classic';
+    const opts = {
       table: $('table').value,
       bastMode: $('bastMode').value,
       takseer: $('takseer').value,
@@ -111,6 +119,12 @@
       isqatBase: 9,
       isqatKeepZero: false
     };
+    if (pipeline === 'fifteen') {
+      opts.pipeline = 'fifteen';
+      opts.methodId = 'fifteen_line';
+      opts.methodLabel = 'جفر ۱۵ سطری';
+    }
+    return opts;
   }
 
   function renderSteps(steps) {
@@ -376,6 +390,7 @@
   $('extraEnabled').addEventListener('change', syncExtraUI);
   $('modeSingle').addEventListener('change', syncModeUI);
   $('modeMulti').addEventListener('change', syncModeUI);
+  if ($('pipeline')) $('pipeline').addEventListener('change', syncPipelineUI);
   $('btnSelectDefault').addEventListener('click', () => {
     setMethodSelection(['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr']);
   });

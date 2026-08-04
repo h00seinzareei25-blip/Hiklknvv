@@ -108,49 +108,61 @@
 
       <div id="singleSettings" class="opts">
         <div class="field">
-          <label for="bastMode">بسط / بینات</label>
-          <select id="bastMode">
-            <option value="bayyinat" selected>بینات</option>
-            <option value="malfuzi">بسط ملفوظی</option>
-            <option value="zabarBayyinat">زبر و بینات</option>
-            <option value="none">بدون بسط</option>
+          <label for="pipeline">زنجیره محاسبه</label>
+          <select id="pipeline">
+            <option value="classic" selected>کلاسیک کبیر (بسط → تکسیر → تخلیص)</option>
+            <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <div class="field">
-          <label for="takseer">نوع تکسیر</label>
-          <select id="takseer">
-            <option value="sadr_muakhkhar" selected>صدر و مؤخر تا زمام</option>
-            <option value="muakhkhar_sadr">مؤخر و صدر تا زمام</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="takhlis">تخلیص</label>
-          <select id="takhlis">
-            <option value="odd" selected>حروف فرد</option>
-            <option value="laqt2">لقط گام ۲</option>
-            <option value="none">بدون تخلیص</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="takseerRounds">تعداد دور تکسیر</label>
-          <select id="takseerRounds">
-            <option value="1" selected>۱</option>
-            <option value="2">۲</option>
-            <option value="3">۳</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="check">
-            <input id="mazjNazira" type="checkbox" checked>
-            <span>مزج اساس با نظیره</span>
+        <p class="hint" id="fifteenHint" hidden>۱۵ سطری: زنجیرهٔ عملیاتی قابل‌ممیزی (اساس، نظیره، نسبت، قوا، جواب). تقریب کاربردی است، نه رونوشت لفظ‌به‌لفظ یک نسخهٔ خطی واحد.</p>
+        <div id="classicOpts">
+          <div class="field">
+            <label for="bastMode">بسط / بینات</label>
+            <select id="bastMode">
+              <option value="bayyinat" selected>بینات</option>
+              <option value="malfuzi">بسط ملفوظی</option>
+              <option value="zabarBayyinat">زبر و بینات</option>
+              <option value="none">بدون بسط</option>
+            </select>
           </div>
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="check">
-            <input id="removeDupAsas" type="checkbox">
-            <span>حذف مکرر از اساس</span>
+          <div class="field">
+            <label for="takseer">نوع تکسیر</label>
+            <select id="takseer">
+              <option value="sadr_muakhkhar" selected>صدر و مؤخر تا زمام</option>
+              <option value="muakhkhar_sadr">مؤخر و صدر تا زمام</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="takhlis">تخلیص</label>
+            <select id="takhlis">
+              <option value="odd" selected>حروف فرد</option>
+              <option value="laqt2">لقط گام ۲</option>
+              <option value="laqt3">لقط گام ۳</option>
+              <option value="laqt4">لقط گام ۴</option>
+              <option value="none">بدون تخلیص</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="takseerRounds">تعداد دور تکسیر</label>
+            <select id="takseerRounds">
+              <option value="1" selected>۱</option>
+              <option value="2">۲</option>
+              <option value="3">۳</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="check">
+              <input id="mazjNazira" type="checkbox" checked>
+              <span>مزج اساس با نظیره</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="check">
+              <input id="removeDupAsas" type="checkbox">
+              <span>حذف مکرر از اساس</span>
+            </div>
           </div>
         </div>
         <div class="field">
@@ -163,7 +175,7 @@
       </div>
 
       <div id="multiSettings" class="hidden">
-        <p class="hint">روش‌های انتخاب‌شده پشت‌سرهم محاسبه می‌شوند و یک پرامپت تجمیعی می‌سازیم. برای سؤال «بین … کدام» ترجیحاً ۳ روش پیش‌فرض کافی است؛ انتخاب همه حروف مشترک را خیلی تنگ می‌کند.</p>
+        <p class="hint">روش‌های انتخاب‌شده پشت‌سرهم محاسبه می‌شوند و یک پرامپت تجمیعی می‌سازیم. برای سؤال «بین … کدام» ترجیحاً ۳ روش پیش‌فرض کافی است؛ انتخاب همه حروف مشترک را خیلی تنگ می‌کند. لقط۳/۴ و جفر ۱۵ سطری هم در فهرست هستند.</p>
         <div id="methodList" class="method-list"></div>
         <div class="actions" style="margin-top:8px">
           <button class="btn btn-ghost" id="btnSelectDefault" type="button">۳ روش پیش‌فرض</button>
@@ -247,7 +259,7 @@
       <textarea class="prebox" id="reportBox" readonly></textarea>
     </section>
 
-    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. نطق را بیرون از برنامه با AI انجام دهید.</p>
+    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. نطق را بیرون از برنامه با AI انجام دهید. جفر ۱۵ سطری تقریب کاربردی قابل‌ممیزی است، نه رونوشت یک نسخهٔ خطی واحد.</p>
   </main>
 
   <script src="js/engine.js"></script>
