@@ -80,8 +80,13 @@ assert(prompt.includes('مستحصله') && prompt.includes(r.mustehsila), 'پر
 const multiPrompt = E.buildMultiNatqPrompt(multi, {
   sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'سوال', extraEnabled: false
 });
-assert(multiPrompt.includes('نتایج چندروش') && multiPrompt.includes('خوانش غالب'), 'پرامپت تجمیعی چندروش');
+assert(multiPrompt.includes('لایه A') && multiPrompt.includes('خوانش غالب'), 'پرامپت تجمیعی چندروش پیشرفته');
 assert(E.METHOD_PRESETS.length >= 6, 'حداقل ۶ پیش‌فرض روش');
+
+const herbMeta = { sael: 'حسین', taleb: 'حسین', matloob: 'حسین', modda: 'دارو', soal: 'اسم دارو گیاهی برای ارامش اعصاب من', extraEnabled: false };
+assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاهی');
+const herbPrompt = E.buildMultiNatqPrompt(multi, herbMeta);
+assert(herbPrompt.includes('به لیمو') && herbPrompt.includes('نطق معکوس') && herbPrompt.includes('بانک واژگانی'), 'پرامپت سخت‌گیر گیاهی');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
