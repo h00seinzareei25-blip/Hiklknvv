@@ -17,7 +17,7 @@
       <p class="tagline">محاسبه اصولی از سؤال تا مستحصله — پرامپت نطق آماده برای هوش مصنوعی</p>
       <div class="badge-row">
         <span class="badge">جفر کبیر کلاسیک</span>
-        <span class="badge">گام‌به‌گام</span>
+        <span class="badge">چندروش</span>
         <span class="badge">بدون AI در محاسبه</span>
       </div>
     </div>
@@ -50,19 +50,63 @@
         <label for="soal">متن سؤال</label>
         <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
       </div>
+
+      <div class="check" style="margin-top:8px">
+        <input id="extraEnabled" type="checkbox">
+        <span>اطلاعات تکمیلی (فامیلی، تاریخ، ساعت)</span>
+      </div>
+
+      <div id="extraFields" class="extra-box hidden">
+        <div class="grid">
+          <div class="field">
+            <label for="saelFamily">فامیلی سائل</label>
+            <input id="saelFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="talebFamily">فامیلی طالب</label>
+            <input id="talebFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="matloobFamily">فامیلی مطلوب</label>
+            <input id="matloobFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="questionDate">تاریخ سؤال</label>
+            <input id="questionDate" type="text" placeholder="مثال: 1404/05/13" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="questionTime">ساعت سؤال</label>
+            <input id="questionTime" type="text" placeholder="مثال: 14:30" autocomplete="off">
+          </div>
+        </div>
+        <p class="hint">اگر فعال باشد، فامیلی‌ها به نام‌ها و تاریخ/ساعت (با تبدیل رقم به واژه) به اساس اضافه می‌شوند.</p>
+      </div>
     </section>
 
     <section class="card">
       <h2>تنظیمات دقت</h2>
-      <div class="opts">
-        <div class="field">
-          <label for="table">جدول ابجد</label>
-          <select id="table">
-            <option value="kabir" selected>ابجد کبیر</option>
-            <option value="saghir">ابجد صغیر</option>
-            <option value="wazie">ابجد وضعی (۱–۲۸)</option>
-          </select>
-        </div>
+
+      <div class="mode-row">
+        <label class="mode-pill">
+          <input type="radio" name="runMode" id="modeSingle" value="single" checked>
+          <span>تک‌روش</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="runMode" id="modeMulti" value="multi">
+          <span>چندروش</span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label for="table">جدول ابجد (مشترک)</label>
+        <select id="table">
+          <option value="kabir" selected>ابجد کبیر</option>
+          <option value="saghir">ابجد صغیر</option>
+          <option value="wazie">ابجد وضعی (۱–۲۸)</option>
+        </select>
+      </div>
+
+      <div id="singleSettings" class="opts">
         <div class="field">
           <label for="bastMode">بسط / بینات</label>
           <select id="bastMode">
@@ -118,6 +162,16 @@
         </div>
       </div>
 
+      <div id="multiSettings" class="hidden">
+        <p class="hint">روش‌های انتخاب‌شده پشت‌سرهم محاسبه می‌شوند و یک پرامپت تجمیعی می‌سازیم.</p>
+        <div id="methodList" class="method-list"></div>
+        <div class="actions" style="margin-top:8px">
+          <button class="btn btn-ghost" id="btnSelectDefault" type="button">۳ روش پیش‌فرض</button>
+          <button class="btn btn-ghost" id="btnSelectAll" type="button">انتخاب همه</button>
+          <button class="btn btn-ghost" id="btnSelectNone" type="button">هیچ‌کدام</button>
+        </div>
+      </div>
+
       <div class="actions" style="margin-top:12px">
         <button class="btn btn-primary" id="btnRun" type="button">اجرای محاسبه اصولی</button>
         <button class="btn btn-ghost" id="btnClear" type="button">پاک کردن</button>
@@ -125,14 +179,21 @@
       </div>
     </section>
 
+    <section class="card hidden" id="compareCard">
+      <h2>مقایسه چندروش</h2>
+      <div id="compareTable"></div>
+      <label style="margin-top:10px;display:block">حروف مشترک</label>
+      <div class="letters" id="sharedBox" style="font-size:18px;background:#1a5c45">—</div>
+    </section>
+
     <section class="card hidden" id="resultCard">
-      <h2>نتیجه مستحصله</h2>
+      <h2 id="resultTitle">نتیجه مستحصله</h2>
       <div class="summary">
         <div class="stat"><div class="k">جمع جمل اساس</div><div class="v" id="statJamal">—</div></div>
         <div class="stat"><div class="k">مدخل</div><div class="v" id="statMadkhal">—</div></div>
         <div class="stat"><div class="k">تعداد حروف</div><div class="v" id="statCount">—</div></div>
       </div>
-      <label>مستحصله</label>
+      <label id="mustLabel">مستحصله (روش اصلی)</label>
       <div class="letters" id="mustehsilaBox">—</div>
       <label>بدون تکرار</label>
       <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
@@ -146,6 +207,7 @@
 
     <section class="card hidden" id="stepsCard">
       <h2>مراحل گام‌به‌گام</h2>
+      <div id="methodTabs" class="method-tabs hidden"></div>
       <div id="stepsList"></div>
     </section>
 

@@ -285,6 +285,89 @@
     return n;
   }
 
+  /** تبدیل ارقام به واژه‌های فارسی تا وارد اساس حرفی شوند */
+  const DIGIT_WORDS = {
+    '0': 'صفر', '1': 'یک', '2': 'دو', '3': 'سه', '4': 'چهار',
+    '5': 'پنج', '6': 'شش', '7': 'هفت', '8': 'هشت', '9': 'نه',
+    '۰': 'صفر', '۱': 'یک', '۲': 'دو', '۳': 'سه', '۴': 'چهار',
+    '۵': 'پنج', '۶': 'شش', '۷': 'هفت', '۸': 'هشت', '۹': 'نه',
+    '٠': 'صفر', '١': 'یک', '٢': 'دو', '٣': 'سه', '٤': 'چهار',
+    '٥': 'پنج', '٦': 'شش', '٧': 'هفت', '٨': 'هشت', '٩': 'نه'
+  };
+
+  function expandDigitsToWords(text) {
+    return String(text || '').replace(/[0-9۰-۹٠-٩]/g, (d) => DIGIT_WORDS[d] || '');
+  }
+
+  function normalizeDateTimeField(text, report) {
+    const expanded = expandDigitsToWords(text);
+    return normalizeText(expanded, report);
+  }
+
+  function joinName(first, family, extraEnabled) {
+    const a = String(first || '').trim();
+    const b = extraEnabled ? String(family || '').trim() : '';
+    return [a, b].filter(Boolean).join(' ');
+  }
+
+  /** پیش‌فرض‌های چندروش */
+  const METHOD_PRESETS = [
+    {
+      id: 'classic_bayyinat',
+      label: 'کبیر · بینات · صدر/مؤخر · فرد',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'classic_malfuzi',
+      label: 'کبیر · ملفوظی · صدر/مؤخر · فرد',
+      options: { bastMode: 'malfuzi', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'zabar_bayyinat',
+      label: 'کبیر · زبر و بینات · صدر/مؤخر · فرد',
+      options: { bastMode: 'zabarBayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'muakhkhar_sadr',
+      label: 'کبیر · بینات · مؤخر/صدر · فرد',
+      options: { bastMode: 'bayyinat', takseer: 'muakhkhar_sadr', takhlis: 'odd', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'no_mazj',
+      label: 'کبیر · بینات · بدون مزج · فرد',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: false, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'laqt2',
+      label: 'کبیر · بینات · صدر/مؤخر · لقط۲',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'laqt2', mazjNazira: true, removeDupAsas: false, takseerRounds: 1 }
+    },
+    {
+      id: 'dedup_asas',
+      label: 'کبیر · بینات · حذف مکرر اساس · فرد',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: true, takseerRounds: 1 }
+    },
+    {
+      id: 'double_takseer',
+      label: 'کبیر · بینات · دو دور تکسیر · فرد',
+      options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, removeDupAsas: false, takseerRounds: 2 }
+    }
+  ];
+
+  function describeOptions(opts) {
+    const bastMap = { bayyinat: 'بینات', malfuzi: 'ملفوظی', zabarBayyinat: 'زبر و بینات', none: 'بدون بسط' };
+    const takMap = { sadr_muakhkhar: 'صدر/مؤخر', muakhkhar_sadr: 'مؤخر/صدر' };
+    const takhMap = { odd: 'فرد', laqt2: 'لقط۲', none: 'بدون تخلیص' };
+    return [
+      bastMap[opts.bastMode] || opts.bastMode,
+      takMap[opts.takseer] || opts.takseer,
+      `×${opts.takseerRounds || 1}`,
+      takhMap[opts.takhlis] || opts.takhlis,
+      opts.mazjNazira ? 'مزج' : 'بدون‌مزج',
+      opts.removeDupAsas ? 'حذف‌مکرر' : null
+    ].filter(Boolean).join(' · ');
+  }
+
   /**
    * اجرای کامل جفر کبیر کلاسیک
    * @param {object} input
@@ -303,19 +386,32 @@
       takseerRounds: 1
     }, input.options || {});
 
+    const extraEnabled = !!input.extraEnabled;
     const steps = [];
-    const normReport = {};
+
+    const saelRaw = joinName(input.sael, input.saelFamily, extraEnabled);
+    const talebRaw = joinName(input.taleb, input.talebFamily, extraEnabled);
+    const matloobRaw = joinName(input.matloob, input.matloobFamily, extraEnabled);
+    const dateRaw = extraEnabled ? String(input.questionDate || '').trim() : '';
+    const timeRaw = extraEnabled ? String(input.questionTime || '').trim() : '';
 
     const parts = {
-      sael: normalizeText(input.sael, {}),
-      taleb: normalizeText(input.taleb, {}),
-      matloob: normalizeText(input.matloob, {}),
+      sael: normalizeText(saelRaw, {}),
+      taleb: normalizeText(talebRaw, {}),
+      matloob: normalizeText(matloobRaw, {}),
       modda: normalizeText(input.modda, {}),
-      soal: normalizeText(input.soal, normReport)
+      soal: normalizeText(input.soal, {}),
+      date: dateRaw ? normalizeDateTimeField(dateRaw, {}) : '',
+      time: timeRaw ? normalizeDateTimeField(timeRaw, {}) : ''
     };
 
     // نرمال‌سازی همه اجزا با گزارش تجمیعی
-    const allRaw = [input.sael, input.taleb, input.matloob, input.modda, input.soal].filter(Boolean).join(' ');
+    const allRawParts = [saelRaw, talebRaw, matloobRaw, input.modda, input.soal];
+    if (extraEnabled) {
+      if (dateRaw) allRawParts.push(expandDigitsToWords(dateRaw));
+      if (timeRaw) allRawParts.push(expandDigitsToWords(timeRaw));
+    }
+    const allRaw = allRawParts.filter(Boolean).join(' ');
     const fullNorm = {};
     normalizeText(allRaw, fullNorm);
 
@@ -325,18 +421,30 @@
       input: allRaw,
       output: fullNorm.after,
       note: [
+        extraEnabled ? 'اطلاعات تکمیلی فعال است' : 'اطلاعات تکمیلی غیرفعال',
         fullNorm.mapped.length ? `تبدیل‌ها: ${fullNorm.mapped.slice(0, 12).join('، ')}${fullNorm.mapped.length > 12 ? '…' : ''}` : 'بدون تبدیل معادل',
         fullNorm.rejected.length ? `حروف ردشده: ${[...new Set(fullNorm.rejected)].join(' ')}` : 'بدون حرف ردشده'
       ].join(' | ')
     });
 
-    let asas = parts.sael + parts.taleb + parts.matloob + parts.modda + parts.soal;
+    let asas = parts.sael + parts.taleb + parts.matloob + parts.modda + parts.soal + parts.date + parts.time;
+    const asasInputNote = [
+      `سائل:${parts.sael}`,
+      `طالب:${parts.taleb}`,
+      `مطلوب:${parts.matloob}`,
+      `مدعا:${parts.modda}`,
+      `سؤال:${parts.soal}`
+    ];
+    if (extraEnabled) {
+      asasInputNote.push(`تاریخ:${parts.date || '—'}`);
+      asasInputNote.push(`ساعت:${parts.time || '—'}`);
+    }
     steps.push({
       id: 'asas_raw',
       title: 'ساخت اساس (سطر پایه)',
-      input: `سائل:${parts.sael} | طالب:${parts.taleb} | مطلوب:${parts.matloob} | مدعا:${parts.modda} | سؤال:${parts.soal}`,
+      input: asasInputNote.join(' | '),
       output: asas,
-      note: `طول اساس: ${asas.length} حرف`
+      note: `طول اساس: ${asas.length} حرف` + (extraEnabled ? ' (با اطلاعات تکمیلی)' : '')
     });
 
     if (!asas.length) {
@@ -460,9 +568,12 @@
       note: `طول: ${mustehsila.length} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)}`
     });
 
+    const methodLabel = opts.methodLabel || ('جفر کبیر · ' + describeOptions(opts));
+
     return {
       ok: true,
-      method: 'جفر کبیر کلاسیک',
+      method: methodLabel,
+      methodId: opts.methodId || 'custom',
       parts,
       asas,
       nazira: naz,
@@ -475,8 +586,27 @@
       dotCount: countDots(mustehsila),
       steps,
       options: opts,
-      normalize: fullNorm
+      normalize: fullNorm,
+      extraEnabled
     };
+  }
+
+  function metaLines(meta) {
+    const lines = [
+      `- سائل: ${meta.sael || '—'}`,
+      `- طالب: ${meta.taleb || '—'}`,
+      `- مطلوب: ${meta.matloob || '—'}`,
+      `- مدعا: ${meta.modda || '—'}`,
+      `- سؤال: ${meta.soal || '—'}`
+    ];
+    if (meta.extraEnabled) {
+      lines.push(`- فامیلی سائل: ${meta.saelFamily || '—'}`);
+      lines.push(`- فامیلی طالب: ${meta.talebFamily || '—'}`);
+      lines.push(`- فامیلی مطلوب: ${meta.matloobFamily || '—'}`);
+      lines.push(`- تاریخ سؤال: ${meta.questionDate || '—'}`);
+      lines.push(`- ساعت سؤال: ${meta.questionTime || '—'}`);
+    }
+    return lines;
   }
 
   function buildReport(result, meta) {
@@ -486,14 +616,10 @@
     lines.push('====================');
     lines.push(`روش: ${result.method}`);
     lines.push(`دایره/جدول: ${result.options.table}`);
-    lines.push(`تاریخ گزارش: ${meta.date || new Date().toLocaleString('fa-IR')}`);
+    lines.push(`تاریخ گزارش: ${meta.reportDate || new Date().toLocaleString('fa-IR')}`);
     lines.push('');
     lines.push('صورت مسئله:');
-    lines.push(`- سائل: ${meta.sael || '—'}`);
-    lines.push(`- طالب: ${meta.taleb || '—'}`);
-    lines.push(`- مطلوب: ${meta.matloob || '—'}`);
-    lines.push(`- مدعا: ${meta.modda || '—'}`);
-    lines.push(`- سؤال: ${meta.soal || '—'}`);
+    lines.push(...metaLines(meta));
     lines.push('');
     lines.push('تنظیمات:');
     lines.push(`- حذف مکرر اساس: ${result.options.removeDupAsas ? 'بله' : 'خیر'}`);
@@ -526,11 +652,7 @@
       'چند خوانش ممکن بده، نه یک ادعای قطعی.',
       '',
       '## صورت مسئله',
-      `- سائل: ${meta.sael || '—'}`,
-      `- طالب: ${meta.taleb || '—'}`,
-      `- مطلوب: ${meta.matloob || '—'}`,
-      `- مدعا: ${meta.modda || '—'}`,
-      `- سؤال: ${meta.soal || '—'}`,
+      ...metaLines(meta),
       '',
       '## روش محاسباتی',
       `- قاعده: ${result.method}`,
@@ -558,14 +680,121 @@
     ].join('\n');
   }
 
+  function sharedLetters(results) {
+    if (!results.length) return '';
+    let set = new Set(results[0].mustehsilaUnique || '');
+    for (let i = 1; i < results.length; i++) {
+      const next = new Set(results[i].mustehsilaUnique || '');
+      set = new Set([...set].filter((ch) => next.has(ch)));
+    }
+    return [...set].join('');
+  }
+
+  function runMany(input, presetIds, baseOptions) {
+    const ids = (presetIds || []).filter(Boolean);
+    const presets = METHOD_PRESETS.filter((p) => ids.includes(p.id));
+    if (!presets.length) {
+      return { ok: false, error: 'حداقل یک روش را انتخاب کنید.', results: [] };
+    }
+    const results = presets.map((p) => {
+      const options = Object.assign({}, baseOptions || {}, p.options, {
+        methodId: p.id,
+        methodLabel: p.label
+      });
+      const r = runClassic(Object.assign({}, input, { options }));
+      return r;
+    });
+    const okResults = results.filter((r) => r.ok);
+    if (!okResults.length) {
+      return { ok: false, error: results[0] && results[0].error ? results[0].error : 'محاسبه ناموفق بود', results };
+    }
+    return {
+      ok: true,
+      multi: true,
+      results: okResults,
+      primary: okResults[0],
+      sharedUnique: sharedLetters(okResults)
+    };
+  }
+
+  function buildMultiReport(bundle, meta) {
+    if (!bundle.ok) return bundle.error;
+    const lines = [];
+    lines.push('گزارش مقایسه‌ای چندروش جفر');
+    lines.push('==============================');
+    lines.push(`تاریخ گزارش: ${meta.reportDate || new Date().toLocaleString('fa-IR')}`);
+    lines.push('');
+    lines.push('صورت مسئله:');
+    lines.push(...metaLines(meta));
+    lines.push('');
+    lines.push('خلاصه مستحصله‌ها:');
+    bundle.results.forEach((r, i) => {
+      lines.push(`${i + 1}) ${r.method}`);
+      lines.push(`   مستحصله: ${r.mustehsila}`);
+      lines.push(`   بدون تکرار: ${r.mustehsilaUnique}`);
+      lines.push(`   جمل: ${r.jamal} | مدخل: ${r.madkhal}`);
+    });
+    lines.push('');
+    lines.push(`حروف مشترک (بدون تکرار): ${bundle.sharedUnique || '—'}`);
+    lines.push('');
+    bundle.results.forEach((r, i) => {
+      lines.push('--------------------------------');
+      lines.push(`جزئیات روش ${i + 1}: ${r.method}`);
+      lines.push(buildReport(r, meta));
+    });
+    return lines.join('\n');
+  }
+
+  function buildMultiNatqPrompt(bundle, meta) {
+    if (!bundle.ok) return bundle.error;
+    const blocks = bundle.results.map((r, i) => [
+      `### روش ${i + 1}: ${r.method}`,
+      `- جدول: ${r.options.table}`,
+      `- اساس: ${r.asas}`,
+      `- جمل: ${r.jamal} | مدخل: ${r.madkhal}`,
+      `- مستحصله: ${r.mustehsila}`,
+      `- بدون تکرار: ${r.mustehsilaUnique}`
+    ].join('\n'));
+
+    return [
+      'تو یک متخصص نطق در علم جفر هستی.',
+      'چند روش محاسباتی روی یک صورت مسئله اجرا شده‌اند.',
+      'برای هر روش فقط از حروف مستحصله همان روش استفاده کن؛ حرف جدید اضافه نکن.',
+      'در پایان روش‌ها را با هم مقایسه کن و خوانش غالب بده.',
+      '',
+      '## صورت مسئله',
+      ...metaLines(meta),
+      '',
+      '## نتایج چندروش',
+      ...blocks,
+      '',
+      `## حروف مشترک بین همه روش‌ها`,
+      bundle.sharedUnique || '—',
+      '',
+      '## درخواست از تو',
+      '1) برای هر روش جداگانه ۲ تا ۳ نطق ممکن بنویس (عبارت + حروف استفاده‌شده + اطمینان)',
+      '2) حروف/مضامین مشترک بین روش‌ها را مشخص کن',
+      '3) اگر نتایج هم‌راستا بودند، یک «خوانش غالب» بده',
+      '4) اگر متناقض بودند، صریح بگو و محتمل‌ترین را با دلیل کوتاه پیشنهاد کن',
+      '5) خروجی را به فارسی بنویس و ادعای قطعی نکن'
+    ].join('\n');
+  }
+
   global.JafrEngine = {
     ABJAD_ORDER,
     ABJAD_KABIR,
     LETTER_NAMES,
+    METHOD_PRESETS,
     normalizeText,
+    normalizeDateTimeField,
+    expandDigitsToWords,
     runClassic,
+    runMany,
     buildReport,
     buildNatqPrompt,
+    buildMultiReport,
+    buildMultiNatqPrompt,
+    describeOptions,
     sumAbjad,
     nazira,
     mapNazira,
