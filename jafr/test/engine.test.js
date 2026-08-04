@@ -74,18 +74,20 @@ assert(multi.ok === true, 'اجرای چندروش');
 assert(multi.results.length === 3, '۳ نتیجه چندروش');
 assert(typeof multi.sharedUnique === 'string', 'حروف مشترک موجود است');
 
-const prompt = E.buildNatqPrompt(r, { sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'سوال' });
+const promptPack = E.buildNatqPrompt(r, { sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'سوال' });
+const prompt = promptPack.generator || promptPack.prompt || promptPack;
 assert(prompt.includes('مستحصله') && prompt.includes(r.mustehsila), 'پرامپت شامل مستحصله');
 
-const multiPrompt = E.buildMultiNatqPrompt(multi, {
+const multiPromptPack = E.buildMultiNatqPrompt(multi, {
   sael: 'حسین', taleb: 'علی', matloob: 'فاطمه', modda: 'ازدواج', soal: 'سوال', extraEnabled: false
 });
-assert(multiPrompt.includes('لایه A') && multiPrompt.includes('خوانش غالب'), 'پرامپت تجمیعی چندروش پیشرفته');
+const multiPrompt = multiPromptPack.generator || multiPromptPack.prompt || multiPromptPack;
+assert(multiPrompt.includes('لایه A') && multiPrompt.includes('مولّد'), 'پرامپت تجمیعی چندروش پیشرفته');
 assert(E.METHOD_PRESETS.length >= 6, 'حداقل ۶ پیش‌فرض روش');
 
 const herbMeta = { sael: 'حسین', taleb: 'حسین', matloob: 'حسین', modda: 'دارو', soal: 'اسم دارو گیاهی برای ارامش اعصاب من', extraEnabled: false };
 assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاهی');
-const herbPrompt = E.buildMultiNatqPrompt(multi, herbMeta);
+const herbPrompt = (E.buildMultiNatqPrompt(multi, herbMeta).generator);
 assert(herbPrompt.includes('به لیمو') && herbPrompt.includes('نطق معکوس') && herbPrompt.includes('بانک واژگانی'), 'پرامپت سخت‌گیر گیاهی');
 
 const choiceSoal = 'بین سیر شنبلیله و سماق کدام مورد برای پایین اوردن چربی خون مفید است';
@@ -99,7 +101,7 @@ const choiceBundle = E.runMany({
   sael: 'حسین', taleb: '', matloob: '', modda: 'دارو گیاهی', soal: choiceSoal,
   extraEnabled: true, saelFamily: 'زارعی', questionDate: '1404/05/13', questionTime: '12:47'
 }, ['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr'], { table: 'kabir' });
-const choicePrompt = E.buildMultiNatqPrompt(choiceBundle, choiceMeta);
+const choicePrompt = E.buildMultiNatqPrompt(choiceBundle, choiceMeta).generator;
 assert(choicePrompt.includes('برنده بین گزینه‌ها') && choicePrompt.includes('جدول پوشش') && choicePrompt.includes('سیر'), 'پرامپت انتخابی با جدول پوشش');
 assert(!/اولویت با نام ۲ تا ۶ حرفی\/کلمه/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
 
@@ -110,8 +112,17 @@ const dict = E.buildInternalDictionary(yesRun.mustehsila, yesMeta, { madkhal: ye
 assert(dict.candidates.length > 0, 'دیکشنری داخلی غیرخالی');
 assert(dict.layers.naziraUnique && dict.layers.tarfaUnique && dict.layers.tanzilUnique, 'لایه‌های ناطق موجود');
 assert(E.letterElement('ا') === 'آتش' && E.letterElement('ب') === 'باد', 'عناصر حروف');
-const yesPrompt = E.buildNatqPrompt(yesRun, yesMeta);
+const yesPrompt = E.buildNatqPrompt(yesRun, yesMeta).generator;
 assert(yesPrompt.includes('دیکشنری داخلی') && yesPrompt.includes('عناصر مستحصله') && yesPrompt.includes('بله / خیر'), 'پرامپت با ۴ لایه نطق');
+
+const st = E.analyzeStabilityForResult({
+  sael: 'حسین', taleb: '', matloob: '', modda: 'دارو', soal: 'آیا دارو مفید است',
+  extraEnabled: true, saelFamily: 'زارعی', questionDate: '1404/05/13', questionTime: '12:00'
+}, { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, takseerRounds: 1 }, { sael: 'حسین', modda: 'دارو', soal: 'آیا دارو مفید است', extraEnabled: true });
+assert(st.applicable && st.ok, 'تحلیل پایداری');
+const pack = E.buildNatqPrompt(yesRun, yesMeta, { stability: st });
+assert(pack.judge.includes('داور') && pack.judge.includes('PASTE_GENERATOR'), 'پرامپت داور');
+assert(pack.generator.includes('پایدار'), 'مولّد شامل پایداری');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

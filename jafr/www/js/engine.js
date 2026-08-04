@@ -1040,7 +1040,236 @@
     return { topic, profile, lines, isChoice, isYesNo };
   }
 
-  function buildNatqPrompt(result, meta) {
+  function stripExtraInput(input) {
+    return Object.assign({}, input, {
+      extraEnabled: false,
+      saelFamily: '',
+      talebFamily: '',
+      matloobFamily: '',
+      questionDate: '',
+      questionTime: ''
+    });
+  }
+
+  function hasExtraData(input) {
+    return !!(input && input.extraEnabled && (
+      input.saelFamily || input.talebFamily || input.matloobFamily || input.questionDate || input.questionTime
+    ));
+  }
+
+  function analyzeStabilityForResult(input, options, meta) {
+    const withExtra = runClassic(Object.assign({}, input, { options: options || {} }));
+    const without = runClassic(Object.assign({}, stripExtraInput(input), { options: options || {} }));
+    if (!withExtra.ok || !without.ok) {
+      return { ok: false, applicable: hasExtraData(input), withExtra, without, stable: [], note: 'پایداری قابل محاسبه نبود' };
+    }
+    const topic = detectTopic(meta || {});
+    if (topic.isChoice) {
+      const a = enhanceChoiceScores(scoreChoiceOptions(topic.choices, [withExtra], withExtra.mustehsilaUnique), [withExtra], meta);
+      const b = enhanceChoiceScores(scoreChoiceOptions(topic.choices, [without], without.mustehsilaUnique), [without], meta);
+      const mapB = {};
+      b.forEach((x) => { mapB[x.norm || normalizeText(x.option)] = x; });
+      const stable = a.map((x) => {
+        const key = x.norm || normalizeText(x.option);
+        const other = mapB[key];
+        return {
+          word: x.option,
+          norm: key,
+          scoreWith: x.score,
+          scoreWithout: other ? other.score : 0,
+          stable: !!(other && other.score >= 40 && x.score >= 40),
+          rankWith: a.indexOf(x) + 1,
+          rankWithout: other ? (b.findIndex((y) => (y.norm || normalizeText(y.option)) === key) + 1) : null
+        };
+      }).filter((x) => x.stable).sort((p, q) => ((q.scoreWith + q.scoreWithout) - (p.scoreWith + p.scoreWithout)));
+      const winnerSame = a[0] && b[0] && normalizeText(a[0].option) === normalizeText(b[0].option);
+      return {
+        ok: true,
+        applicable: hasExtraData(input),
+        mode: 'choice',
+        withExtra,
+        without,
+        rankedWith: a,
+        rankedWithout: b,
+        stable,
+        winnerSame,
+        note: winnerSame ? ('برنده یکسان با/بدون تکمیلی: ' + a[0].option) : 'برنده با/بدون تکمیلی متفاوت است؛ محتاط باش'
+      };
+    }
+
+    const dictA = buildInternalDictionary(withExtra.mustehsila, meta, { madkhal: withExtra.madkhal, table: (options && options.table) || 'kabir' });
+    const dictB = buildInternalDictionary(without.mustehsila, meta, { madkhal: without.madkhal, table: (options && options.table) || 'kabir' });
+    const mapB = {};
+    dictB.candidates.forEach((c) => { mapB[c.norm] = c; });
+    const stable = dictA.candidates.map((c) => {
+      const other = mapB[c.norm];
+      if (!other) return null;
+      return {
+        word: c.word,
+        norm: c.norm,
+        scoreWith: c.score,
+        scoreWithout: other.score,
+        stable: true,
+        layerWith: c.layer,
+        layerWithout: other.layer
+      };
+    }).filter(Boolean).sort((p, q) => ((q.scoreWith + q.scoreWithout) - (p.scoreWith + p.scoreWithout)));
+
+    return {
+      ok: true,
+      applicable: hasExtraData(input),
+      mode: 'dict',
+      withExtra,
+      without,
+      dictWith: dictA,
+      dictWithout: dictB,
+      stable,
+      note: stable.length ? (stable.length + ' کاندید پایدار') : 'کاندید پایدار مشترک یافت نشد'
+    };
+  }
+
+  function analyzeStabilityForMulti(input, presetIds, baseOptions, meta) {
+    const withExtra = runMany(input, presetIds, baseOptions);
+    const without = runMany(stripExtraInput(input), presetIds, baseOptions);
+    if (!withExtra.ok || !without.ok) {
+      return { ok: false, applicable: hasExtraData(input), withExtra, without, stable: [], note: 'پایداری چندروش قابل محاسبه نبود' };
+    }
+    const topic = detectTopic(meta || {});
+    if (topic.isChoice) {
+      const a = enhanceChoiceScores(scoreChoiceOptions(topic.choices, withExtra.results, withExtra.sharedUnique), withExtra.results, meta);
+      const b = enhanceChoiceScores(scoreChoiceOptions(topic.choices, without.results, without.sharedUnique), without.results, meta);
+      const mapB = {};
+      b.forEach((x) => { mapB[x.norm || normalizeText(x.option)] = x; });
+      const stable = a.map((x) => {
+        const key = x.norm || normalizeText(x.option);
+        const other = mapB[key];
+        return {
+          word: x.option,
+          norm: key,
+          scoreWith: x.score,
+          scoreWithout: other ? other.score : 0,
+          stable: !!(other && other.score >= 40 && x.score >= 40),
+          rankWith: a.indexOf(x) + 1,
+          rankWithout: other ? (b.findIndex((y) => (y.norm || normalizeText(y.option)) === key) + 1) : null
+        };
+      }).filter((x) => x.stable).sort((p, q) => ((q.scoreWith + q.scoreWithout) - (p.scoreWith + p.scoreWithout)));
+      const winnerSame = a[0] && b[0] && normalizeText(a[0].option) === normalizeText(b[0].option);
+      return {
+        ok: true,
+        applicable: hasExtraData(input),
+        mode: 'choice',
+        withExtra,
+        without,
+        rankedWith: a,
+        rankedWithout: b,
+        stable,
+        winnerSame,
+        note: winnerSame ? ('برنده پایدار: ' + a[0].option) : 'برنده با/بدون تکمیلی متفاوت است'
+      };
+    }
+
+    const dictA = buildInternalDictionary(withExtra.primary.mustehsila, meta, { madkhal: withExtra.primary.madkhal, table: (baseOptions && baseOptions.table) || 'kabir' });
+    const dictB = buildInternalDictionary(without.primary.mustehsila, meta, { madkhal: without.primary.madkhal, table: (baseOptions && baseOptions.table) || 'kabir' });
+    const sharedA = buildInternalDictionary(withExtra.sharedUnique, meta, { madkhal: withExtra.primary.madkhal, table: (baseOptions && baseOptions.table) || 'kabir' });
+    const sharedB = buildInternalDictionary(without.sharedUnique, meta, { madkhal: without.primary.madkhal, table: (baseOptions && baseOptions.table) || 'kabir' });
+    const setA = {};
+    dictA.candidates.concat(sharedA.candidates).forEach((c) => { setA[c.norm] = c; });
+    const setB = {};
+    dictB.candidates.concat(sharedB.candidates).forEach((c) => { setB[c.norm] = c; });
+    const stable = Object.keys(setA).map((norm) => {
+      if (!setB[norm]) return null;
+      return {
+        word: setA[norm].word,
+        norm,
+        scoreWith: setA[norm].score,
+        scoreWithout: setB[norm].score,
+        stable: true
+      };
+    }).filter(Boolean).sort((p, q) => ((q.scoreWith + q.scoreWithout) - (p.scoreWith + p.scoreWithout)));
+
+    return {
+      ok: true,
+      applicable: hasExtraData(input),
+      mode: 'dict',
+      withExtra,
+      without,
+      stable,
+      note: stable.length ? (stable.length + ' کاندید پایدار چندروش') : 'کاندید پایدار مشترک یافت نشد'
+    };
+  }
+
+  function formatStabilityBlock(stability) {
+    const lines = ['## پایداری با/بدون اطلاعات تکمیلی'];
+    if (!stability) {
+      lines.push('تحلیل پایداری در دسترس نیست.');
+      return lines;
+    }
+    if (!stability.applicable) {
+      lines.push('اطلاعات تکمیلی فعال نیست؛ برای تحلیل پایداری فامیلی/تاریخ/ساعت را روشن کن.');
+      return lines;
+    }
+    if (!stability.ok) {
+      lines.push(stability.note || 'ناموفق');
+      return lines;
+    }
+    lines.push(`- وضعیت: ${stability.note}`);
+    if (stability.withExtra && stability.withExtra.mustehsila) {
+      lines.push(`- مستحصله با تکمیلی: ${stability.withExtra.mustehsilaUnique || uniqueLetters(stability.withExtra.mustehsila)}`);
+      lines.push(`- مستحصله بدون تکمیلی: ${stability.without.mustehsilaUnique || uniqueLetters(stability.without.mustehsila)}`);
+    } else if (stability.withExtra && stability.withExtra.primary) {
+      lines.push(`- مستحصله روش۱ با تکمیلی: ${stability.withExtra.primary.mustehsilaUnique}`);
+      lines.push(`- مستحصله روش۱ بدون تکمیلی: ${stability.without.primary.mustehsilaUnique}`);
+      lines.push(`- حروف مشترک با تکمیلی: ${stability.withExtra.sharedUnique || '—'}`);
+      lines.push(`- حروف مشترک بدون تکمیلی: ${stability.without.sharedUnique || '—'}`);
+    }
+    if (stability.stable && stability.stable.length) {
+      lines.push('- کاندیدهای پایدار (اولویت خیلی بالا):');
+      stability.stable.slice(0, 12).forEach((s, i) => {
+        lines.push(`  ${i + 1}) ${s.word} | با=${s.scoreWith} بدون=${s.scoreWithout}` + (s.rankWith ? ` | رتبه با/بدون=${s.rankWith}/${s.rankWithout}` : ''));
+      });
+    } else {
+      lines.push('- کاندید پایدار مشترک نیست؛ جواب را مبهم/محتاط اعلام کن.');
+    }
+    lines.push('قانون: کاندید ناپایدار را به‌عنوان خوانش غالب انتخاب نکن مگر همه پایدارها ضعیف باشند.');
+    return lines;
+  }
+
+  function buildJudgePrompt(meta, contextLines) {
+    return [
+      'تو داور سخت‌گیر نطق جفر هستی.',
+      'وظیفه تو فقط رد/قبول کاندیدهای مولّد است. کاندید جدید نساز.',
+      '',
+      '## صورت مسئله',
+      ...metaLines(meta),
+      '',
+      '## شواهد محاسباتی و دیکشنری',
+      ...contextLines,
+      '',
+      '## پاسخ مولّد (این بخش را کاربر بعد از اجرای پرامپت مولّد اینجا می‌چسباند)',
+      '<<<PASTE_GENERATOR_ANSWER_HERE>>>',
+      '',
+      '## قواعد داوری (اجباری)',
+      '1) فقط روی کاندیدهایی که مولّد نوشته داوری کن.',
+      '2) هر کاندید: قبول / رد / مشروط',
+      '3) رد کن اگر: حرف اضافه دارد، پوشش ضعیف است، ناپایدار است، بازتاب عین سؤال است، یا خارج از پروفایل سؤال است.',
+      '4) اولویت قبول با کاندیدهای پایدار.',
+      '5) حداکثر ۲ کاندید قبول‌شده نهایی بده.',
+      '6) اگر هیچ‌کدام قبول نشد بگو: نتیجه معتبر استخراج نشد.',
+      '7) ادعای قطعی پزشکی/غیب نکن.',
+      '',
+      '## فرمت خروجی داور',
+      'برای هر کاندید مولّد:',
+      '- کاندید:',
+      '- حکم: قبول/رد/مشروط',
+      '- دلیل کوتاه:',
+      'پایان:',
+      '- کاندیدهای قبول‌شده نهایی:',
+      '- خوانش غالب نهایی:',
+      '- سطح اطمینان: کم/متوسط/زیاد'
+    ].join('\n');
+  }
+
+  function buildNatqPrompt(result, meta, extras) {
     if (!result.ok) return result.error;
     const rules = natqRulesBlock(meta, { multi: false });
     let ranked = rules.isChoice ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, [result], result.mustehsilaUnique) : [];
@@ -1048,20 +1277,35 @@
     const choiceLines = formatChoiceScoreTable(ranked);
     const dict = buildInternalDictionary(result.mustehsila, meta, { madkhal: result.madkhal, table: result.options.table });
     const assist = formatNatiqAssistBlock(dict, result.madkhal);
-    return [
-      rules.isChoice ? 'تو یک متخصص نطق دقیق در علم جفر هستی (حالت انتخاب بین گزینه‌ها).' : (rules.isYesNo ? 'تو یک متخصص نطق دقیق در علم جفر هستی (حالت بله/خیر).' : 'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر + دیکشنری داخلی).'),
-      'از دیکشنری داخلی و لایه‌های ناطق‌سازی پیروی کن؛ کلمهٔ آزاد نساز.',
+    const stability = extras && extras.stability;
+    const stabilityLines = formatStabilityBlock(stability);
+    const generator = [
+      rules.isChoice ? 'تو مولّد نطق جفر هستی (حالت انتخاب بین گزینه‌ها).' : (rules.isYesNo ? 'تو مولّد نطق جفر هستی (حالت بله/خیر).' : 'تو مولّد نطق جفر هستی (سخت‌گیر + دیکشنری داخلی).'),
+      'فقط کاندید بساز و رتبه‌بندی کن. داوری نهایی با پرامپت داور است.',
+      'از دیکشنری داخلی، پایداری، لایه‌های ناطق، عنصر و مدخل پیروی کن؛ کلمهٔ آزاد نساز.',
       '', '## صورت مسئله', ...metaLines(meta), '',
       '## روش محاسباتی',
       `- قاعده: ${result.method}`, `- دایره/جدول: ${result.options.table}`, `- بسط: ${result.options.bastMode}`, `- تکسیر: ${result.options.takseer}`, `- تخلیص: ${result.options.takhlis}`, '',
       '## خروجی محاسبات',
       `- اساس: ${result.asas}`, `- نظیره: ${result.nazira}`, `- جمع جمل اساس: ${result.jamal}`, `- مدخل: ${result.madkhal}`,
       `- مستحصله کامل: ${result.mustehsila}`, `- شمارش حروف: ${letterBag(result.mustehsila)}`, `- حروف بدون تکرار: ${result.mustehsilaUnique}`, '',
-      ...assist, '', ...choiceLines, ...rules.lines, '', '## درخواست',
-      ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل را مبنا بگیر.', '3) واژه‌سازی آزاد ننویس.', '4) برنده یا مبهم را اعلام کن.']
-        : rules.isYesNo ? ['1) بین آری/خیر/مبهم تصمیم بگیر.', '2) از دیکشنری داخلی و مدخل/عنصر دلیل بیاور.', '3) ۲ کاندید پشتیبان از دیکشنری ذکر کن.']
-        : ['1) فقط از دیکشنری داخلی رتبه‌بندی کن.', '2) لایه‌های نظیره/ترفع/تنزل را لحاظ کن.', '3) نطق معکوس + عنصر + مدخل را بنویس.', '4) بهترین کاندید را بده؛ اگر نشد بگو نام استخراج نشد.'])
+      ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
+      ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ کاندید/رتبه بده نه قضاوت نهایی قطعی.', '4) کاندیدهای پایدار را علامت بزن.']
+        : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) از دیکشنری و پایداری دلیل بیاور.', '3) ۲ تا ۴ کاندید پشتیبان ذکر کن.']
+        : ['1) فقط از دیکشنری داخلی رتبه‌بندی کن.', '2) پایدارها را بالاتر بنویس.', '3) نطق معکوس + عنصر + مدخل را بنویس.', '4) ۳ تا ۶ کاندید بده؛ قضاوت نهایی را به داور واگذار کن.'])
     ].join('\n');
+
+    const judgeContext = [
+      ...assist,
+      '',
+      ...stabilityLines,
+      '',
+      `- مستحصله: ${result.mustehsila}`,
+      `- بدون تکرار: ${result.mustehsilaUnique}`,
+      `- مدخل: ${result.madkhal}`
+    ];
+    const judge = buildJudgePrompt(meta, judgeContext);
+    return { generator, judge, prompt: generator, stability, dict, ranked };
   }
 
   function sharedLetters(results) {
@@ -1103,7 +1347,7 @@
     return lines.join('\n');
   }
 
-  function buildMultiNatqPrompt(bundle, meta) {
+  function buildMultiNatqPrompt(bundle, meta, extras) {
     if (!bundle.ok) return bundle.error;
     const rules = natqRulesBlock(meta, { multi: true });
     let ranked = rules.isChoice ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, bundle.results, bundle.sharedUnique) : [];
@@ -1120,22 +1364,37 @@
     });
     merged.candidates = merged.candidates.sort((a, b) => b.score - a.score).slice(0, 28);
     const assist = formatNatiqAssistBlock(merged, bundle.primary.madkhal);
+    const stability = extras && extras.stability;
+    const stabilityLines = formatStabilityBlock(stability);
     const blocks = bundle.results.map((r, i) => [
       `### روش ${i + 1}: ${r.method}`, `- جدول: ${r.options.table}`, `- اساس: ${r.asas}`, `- جمل: ${r.jamal} | مدخل: ${r.madkhal}`,
       `- عناصر: ${elementProfile(r.mustehsila).summary}`, `- مستحصله کامل: ${r.mustehsila}`, `- شمارش حروف: ${letterBag(r.mustehsila)}`, `- بدون تکرار: ${r.mustehsilaUnique}`
     ].join('\n'));
-    return [
-      rules.isChoice ? 'تو یک متخصص نطق دقیق در علم جفر هستی (حالت انتخاب بین گزینه‌ها · چندروش).' : 'تو یک متخصص نطق دقیق در علم جفر هستی (نسخه سخت‌گیر چندروش + دیکشنری داخلی).',
-      'از دیکشنری داخلی، لایه‌های ناطق، عنصر و مدخل پیروی کن.',
+    const generator = [
+      rules.isChoice ? 'تو مولّد نطق جفر هستی (انتخابی · چندروش).' : 'تو مولّد نطق جفر هستی (چندروش + دیکشنری داخلی).',
+      'فقط کاندید بساز. داوری نهایی با پرامپت داور است.',
+      'از دیکشنری داخلی، پایداری، لایه‌های ناطق، عنصر و مدخل پیروی کن.',
       '', '## صورت مسئله', ...metaLines(meta), '', '## نتایج چندروش', ...blocks, '',
       '## لایه A — حروف مشترک همه روش‌ها',
       `- حروف مشترک: ${bundle.sharedUnique || '—'}`, `- شمارش: ${letterBag(bundle.sharedUnique || '')}`, `- عناصر مشترک: ${elementProfile(bundle.sharedUnique || '').summary}`,
       ...(bundle.results.length >= 6 ? ['نکته: تعداد روش‌ها زیاد است؛ برای انتخابی معیار اصلی میانگین پوشش گزینه‌هاست.'] : []),
-      '', ...assist, '', ...choiceLines, ...rules.lines, '', '## درخواست مرحله‌بندی‌شده',
+      '', ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice
-        ? ['1) جدول پوشش+عنصر+مدخل گزینه‌ها را مبنا بگیر.', '2) برنده بین گزینه‌ها را اعلام کن.', '3) واژه‌های خارج از گزینه‌ها را جواب اصلی نکن.', '4) اگر امتیازها نزدیک بود بگو مبهم.']
-        : ['1) از دیکشنری داخلی روی حروف مشترک و روش ۱ شروع کن.', '2) لایه‌های نظیره/ترفع/تنزل را برای همان دیکشنری استفاده کن.', '3) جدول مقایسه با پوشش/عنصر/مدخل/امتیاز بده.', '4) خوانش غالب را فقط از دیکشنری داخلی انتخاب کن.', '5) اگر نام مشخص نبود بنویس نام استخراج نشد.'])
+        ? ['1) جدول پوشش+عنصر+مدخل+پایداری گزینه‌ها را مبنا بگیر.', '2) رتبه‌بندی گزینه‌ها را بده.', '3) واژه‌های خارج از گزینه‌ها را جواب اصلی نکن.', '4) قضاوت نهایی قطعی را به داور واگذار کن.']
+        : ['1) از دیکشنری داخلی و پایدارها شروع کن.', '2) لایه‌های نظیره/ترفع/تنزل را استفاده کن.', '3) جدول کاندید با پوشش/عنصر/مدخل/پایداری بده.', '4) ۳ تا ۶ کاندید بده؛ نهایی‌سازی با داور.'])
     ].join('\n');
+
+    const judgeContext = [
+      ...assist,
+      '',
+      ...stabilityLines,
+      '',
+      `- حروف مشترک: ${bundle.sharedUnique || '—'}`,
+      `- مستحصله روش۱: ${bundle.primary.mustehsilaUnique}`,
+      `- مدخل روش۱: ${bundle.primary.madkhal}`
+    ];
+    const judge = buildJudgePrompt(meta, judgeContext);
+    return { generator, judge, prompt: generator, stability, dict: merged, ranked };
   }
 
   global.JafrEngine = {
@@ -1144,6 +1403,7 @@
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, letterElement, elementProfile,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
+    analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat

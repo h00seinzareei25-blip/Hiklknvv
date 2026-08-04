@@ -152,7 +152,29 @@
     });
   }
 
-  function renderCompare(results, shared) {
+  function renderStability(stability) {
+    const card = $('stabilityCard');
+    const note = $('stabilityNote');
+    const list = $('stabilityList');
+    if (!stability || !stability.applicable) {
+      card.classList.add('hidden');
+      return;
+    }
+    card.classList.remove('hidden');
+    note.textContent = stability.note || '—';
+    if (!stability.ok || !stability.stable || !stability.stable.length) {
+      list.innerHTML = '<div class="hint">کاندید پایدار مشترک یافت نشد.</div>';
+      return;
+    }
+    list.innerHTML = stability.stable.slice(0, 10).map((s, i) =>
+      `<div class="step"><div class="head"><span class="t">${escapeHtml(s.word)}</span><span class="n">${i + 1}</span></div>` +
+      `<div class="io">با تکمیلی: ${s.scoreWith} | بدون تکمیلی: ${s.scoreWithout}` +
+      (s.rankWith ? ` | رتبه ${s.rankWith}/${s.rankWithout || '—'}` : '') +
+      `</div></div>`
+    ).join('');
+  }
+
+    function renderCompare(results, shared) {
     const box = $('compareTable');
     let html = '<table class="compare-table"><thead><tr><th>#</th><th>روش</th><th>مستحصله</th><th>بدون تکرار</th><th>جمل</th><th>مدخل</th></tr></thead><tbody>';
     results.forEach((r, i) => {
@@ -224,18 +246,22 @@
       const bundle = JafrEngine.runMany(input, ids, { table: baseOpts.table, isqatEnabled: baseOpts.isqatEnabled });
       if (!bundle.ok) {
         lastBundle = null;
-        ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard'].forEach((id) => $(id).classList.add('hidden'));
+        ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
         showAlert('error', bundle.error);
         return;
       }
 
-      const prompt = JafrEngine.buildMultiNatqPrompt(bundle, meta);
+      const stability = JafrEngine.analyzeStabilityForMulti(input, ids, { table: baseOpts.table, isqatEnabled: baseOpts.isqatEnabled }, meta);
+      const pack = JafrEngine.buildMultiNatqPrompt(bundle, meta, { stability });
       const report = JafrEngine.buildMultiReport(bundle, meta);
       lastBundle = {
         mode: 'multi',
         primary: bundle.primary,
         multi: bundle,
-        prompt,
+        prompt: pack.prompt || pack.generator,
+        generator: pack.generator,
+        judge: pack.judge,
+        stability,
         report,
         meta
       };
@@ -244,14 +270,16 @@
       $('mustLabel').textContent = 'مستحصله روش ۱ (برای مرور سریع)';
       showPrimary(bundle.primary, true);
       renderCompare(bundle.results, bundle.sharedUnique);
+      renderStability(stability);
       renderMethodTabs(bundle.results);
       renderSteps(bundle.results[0].steps);
-      $('promptBox').value = prompt;
+      $('promptBox').value = pack.generator;
+      $('judgeBox').value = pack.judge;
       $('reportBox').value = report;
       $('stepsCard').classList.remove('hidden');
       $('promptCard').classList.remove('hidden');
       $('reportCard').classList.remove('hidden');
-      showAlert('ok', `${bundle.results.length} روش محاسبه شد — پرامپت تجمیعی آماده است`);
+      showAlert('ok', `${bundle.results.length} روش محاسبه شد — مولّد + داور آماده است`);
       $('compareCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
@@ -265,7 +293,7 @@
 
     if (!result.ok) {
       lastBundle = null;
-      ['resultCard', 'promptCard', 'reportCard', 'compareCard'].forEach((id) => $(id).classList.add('hidden'));
+      ['resultCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
       showAlert('error', result.error);
       renderMethodTabs(null);
       renderSteps(result.steps || []);
@@ -273,21 +301,36 @@
       return;
     }
 
-    const prompt = JafrEngine.buildNatqPrompt(result, meta);
+    const stability = JafrEngine.analyzeStabilityForResult(input, Object.assign({}, baseOpts, {
+      methodId: 'custom',
+      methodLabel: 'جفر کبیر · سفارشی · ' + JafrEngine.describeOptions(baseOpts)
+    }), meta);
+    const pack = JafrEngine.buildNatqPrompt(result, meta, { stability });
     const report = JafrEngine.buildReport(result, meta);
-    lastBundle = { mode: 'single', primary: result, prompt, report, meta };
+    lastBundle = {
+      mode: 'single',
+      primary: result,
+      prompt: pack.prompt || pack.generator,
+      generator: pack.generator,
+      judge: pack.judge,
+      stability,
+      report,
+      meta
+    };
 
     $('resultTitle').textContent = 'نتیجه مستحصله';
     $('mustLabel').textContent = 'مستحصله';
     showPrimary(result, false);
+    renderStability(stability);
     renderMethodTabs(null);
     renderSteps(result.steps);
-    $('promptBox').value = prompt;
+    $('promptBox').value = pack.generator;
+    $('judgeBox').value = pack.judge;
     $('reportBox').value = report;
     $('stepsCard').classList.remove('hidden');
     $('promptCard').classList.remove('hidden');
     $('reportCard').classList.remove('hidden');
-    showAlert('ok', 'محاسبه کامل شد — مستحصله و پرامپت نطق آماده است');
+    showAlert('ok', 'محاسبه کامل شد — مولّد + داور آماده است');
     $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -297,7 +340,7 @@
     $('extraEnabled').checked = false;
     syncExtraUI();
     lastBundle = null;
-    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard'].forEach((id) => $(id).classList.add('hidden'));
+    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
     hideAlert();
   }
 
@@ -340,14 +383,18 @@
   $('btnClear').addEventListener('click', clearAll);
   $('btnSample').addEventListener('click', loadSample);
 
-  $('btnCopyPrompt').addEventListener('click', () => {
+  function copyGenerator() {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
-    copyText(lastBundle.prompt, 'پرامپت نطق کپی شد');
-  });
-  $('btnCopyPrompt2').addEventListener('click', () => {
-    if (!$('promptBox').value) return;
-    copyText($('promptBox').value, 'پرامپت نطق کپی شد');
-  });
+    copyText(lastBundle.generator || lastBundle.prompt || $('promptBox').value, 'پرامپت مولّد کپی شد');
+  }
+  function copyJudge() {
+    if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
+    copyText(lastBundle.judge || $('judgeBox').value, 'پرامپت داور کپی شد');
+  }
+  $('btnCopyPrompt').addEventListener('click', copyGenerator);
+  $('btnCopyPrompt2').addEventListener('click', copyGenerator);
+  $('btnCopyJudge').addEventListener('click', copyJudge);
+  $('btnCopyJudgeTop').addEventListener('click', copyJudge);
   $('btnCopyReport').addEventListener('click', () => {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
     copyText(lastBundle.report, 'گزارش کامل کپی شد');

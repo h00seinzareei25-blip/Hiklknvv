@@ -199,10 +199,17 @@
       <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
 
       <div class="actions">
-        <button class="btn btn-accent" id="btnCopyPrompt" type="button">کپی پرامپت نطق</button>
+        <button class="btn btn-accent" id="btnCopyPrompt" type="button">کپی پرامپت مولّد</button>
+        <button class="btn btn-ghost" id="btnCopyJudgeTop" type="button">کپی پرامپت داور</button>
         <button class="btn btn-ghost" id="btnCopyReport" type="button">کپی گزارش کامل</button>
         <button class="btn btn-ghost" id="btnCopyMust" type="button">کپی مستحصله</button>
       </div>
+    </section>
+
+    <section class="card hidden" id="stabilityCard">
+      <h2>پایداری با/بدون تکمیلی</h2>
+      <p class="hint" id="stabilityNote">—</p>
+      <div id="stabilityList"></div>
     </section>
 
     <section class="card hidden" id="stepsCard">
@@ -212,11 +219,17 @@
     </section>
 
     <section class="card hidden" id="promptCard">
-      <h2>پرامپت نطق (برای هوش مصنوعی)</h2>
-      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">پرامپت سخت‌گیر: دیکشنری داخلی + نظیره/ترفع/تنزل + عنصر/مدخل + پروفایل سؤال. کپی کنید و به ChatGPT / Claude / Gemini بدهید.</p>
+      <h2>۱) پرامپت مولّد</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">اول این را به AI بده تا کاندید بسازد. شامل دیکشنری، پایداری، عنصر/مدخل است.</p>
       <textarea class="prebox" id="promptBox" readonly></textarea>
       <div class="actions" style="margin-top:10px">
-        <button class="btn btn-accent" id="btnCopyPrompt2" type="button">کپی پرامپت</button>
+        <button class="btn btn-accent" id="btnCopyPrompt2" type="button">کپی مولّد</button>
+      </div>
+      <h2 style="margin-top:18px">۲) پرامپت داور</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">بعد پاسخ مولّد را جای <code>PASTE_GENERATOR_ANSWER_HERE</code> بگذار و به AI بده تا فقط رد/قبول کند.</p>
+      <textarea class="prebox" id="judgeBox" readonly></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-accent" id="btnCopyJudge" type="button">کپی داور</button>
       </div>
     </section>
 
