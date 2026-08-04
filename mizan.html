@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>میزان — محاسبه‌گر رمل (MIZAN-AI-ONLY-v3.3)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161c26; --panel2:#1c2431; --line:#2b3648;
+    --gold:#d4a94b; --gold2:#f0cf8a; --txt:#e8e3d5; --dim:#9aa4b2;
+    --ok:#4cc38a; --bad:#e5604c; --mid:#e0b64f; --link:#7db3e8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:"Vazirmatn","Segoe UI",Tahoma,Arial,sans-serif;
+    line-height:1.9; font-size:15px;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:24px 16px 80px}
+  header{
+    text-align:center; padding:28px 12px 18px;
+    border-bottom:1px solid var(--line); margin-bottom:22px;
+  }
+  header h1{margin:0; font-size:30px; color:var(--gold2); letter-spacing:1px}
+  header p{margin:6px 0 0; color:var(--dim); font-size:13px}
+  .badge{
+    display:inline-block; margin-top:10px; padding:3px 14px; border-radius:20px;
+    font-size:12px; border:1px solid var(--line); background:var(--panel);
+  }
+  .badge.ok{color:var(--ok); border-color:var(--ok)}
+  .badge.bad{color:var(--bad); border-color:var(--bad)}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; margin-bottom:18px;
+  }
+  .card h2{
+    margin:0 0 14px; font-size:18px; color:var(--gold);
+    border-bottom:1px dashed var(--line); padding-bottom:8px;
+  }
+  .card h3{margin:18px 0 8px; font-size:15px; color:var(--gold2)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px}
+  label{display:block; font-size:13px; color:var(--dim); margin-bottom:4px}
+  input[type=text],textarea,select{
+    width:100%; background:var(--panel2); color:var(--txt);
+    border:1px solid var(--line); border-radius:8px; padding:9px 12px;
+    font-family:inherit; font-size:14px;
+  }
+  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--gold)}
+  textarea{resize:vertical}
+  .btn{
+    background:linear-gradient(135deg,var(--gold),#b8892f); color:#1a1408;
+    border:none; border-radius:10px; padding:11px 30px; font-family:inherit;
+    font-size:15px; font-weight:700; cursor:pointer; margin-top:14px;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{
+    background:transparent; color:var(--gold); border:1px solid var(--gold);
+    font-weight:400; padding:7px 18px; font-size:13px;
+  }
+  .note{
+    background:var(--panel2); border-right:3px solid var(--gold); border-radius:8px;
+    padding:10px 14px; font-size:13px; color:var(--dim); margin:10px 0;
+  }
+  .warn{border-right-color:var(--bad); color:#e8b0a6}
+  .mono{
+    font-family:"Consolas","Courier New",monospace; direction:ltr; text-align:left;
+    background:#10151d; border:1px solid var(--line); border-radius:8px;
+    padding:10px 14px; overflow-x:auto; font-size:13px; white-space:pre; line-height:1.7;
+  }
+  table{border-collapse:collapse; width:100%; font-size:13px; margin:8px 0}
+  th,td{border:1px solid var(--line); padding:6px 10px; text-align:center}
+  th{background:var(--panel2); color:var(--gold2); font-weight:600}
+  .houses{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
+  .house{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 8px; text-align:center;
+  }
+  .house.key{border-color:var(--gold)}
+  .house .hn{font-size:11px; color:var(--dim)}
+  .house .fig{
+    font-size:17px; line-height:1.5; margin:6px 0; letter-spacing:2px; color:var(--gold2);
+  }
+  .house .nm{font-size:13px; font-weight:700}
+  .house .sig{font-size:11px; color:var(--dim)}
+  .q1{color:var(--ok)} .qm1{color:var(--bad)} .q0{color:var(--mid)}
+  ul.checks{list-style:none; padding:0; margin:0}
+  ul.checks li{padding:3px 0; font-size:13px}
+  ul.checks li::before{content:"✔ "; color:var(--ok)}
+  ul.checks li.fail::before{content:"✘ "; color:var(--bad)}
+  .verdict{
+    font-size:17px; font-weight:700; padding:14px; border-radius:10px;
+    background:var(--panel2); border:1px solid var(--line); text-align:center; margin:10px 0;
+  }
+  .hidden{display:none}
+  details{margin:8px 0}
+  summary{cursor:pointer; color:var(--link); font-size:14px}
+  .tag{
+    display:inline-block; background:var(--panel2); border:1px solid var(--line);
+    border-radius:6px; padding:1px 10px; font-size:12px; margin:2px;
+  }
+  footer{text-align:center; color:var(--dim); font-size:12px; margin-top:30px}
+  @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>⚖️ میزان</h1>
+  <p>محاسبه‌گر رمل بر پایهٔ پروتکل MIZAN-AI-ONLY-v3.3 — بدون نیاز به سرور یا هوش مصنوعی</p>
+  <span class="badge" id="selftestBadge">در حال اجرای بردار کنترل…</span>
+</header>
+
+<div class="card">
+  <h2>این ابزار چه می‌کند و چه نمی‌کند؟</h2>
+  <p style="font-size:14px">
+    همهٔ بخش‌های <b>محاسباتی</b> پروتکل، قطعی و بدون هوش مصنوعی در همین صفحه اجرا می‌شوند:
+    الگوریتم دیجیتال <b>MZ-16 v1</b> (نرمال‌سازی، P/B/D/C/F)، روش سنتی ۱۶ عددی، ساخت ۱۶ خانهٔ زایچه،
+    نام‌گذاری اشکال از روی امضا، آزمون‌های اجباری صحت، تراز <b>T/L/J</b>، محورهای <b>E/Q</b>،
+    چهار حالت کمال، شرکت ساده و رکورد متنی نتیجه.
+  </p>
+  <div class="note">
+    آنچه به هوش مصنوعی (یا انسان) نیاز دارد: «مصاحبهٔ اصولی» یعنی تبدیل درخواست مبهم به سؤال
+    قابل‌سنجش با معیار و مهلت، و همچنین تفسیر آزادِ نمادین. این صفحه به‌جای آن، خروجیِ
+    <b>قالبی و قاعده‌مند</b> می‌دهد؛ پس خودتان باید سؤال را دقیق، دودویی و مهلت‌دار بنویسید.
+  </div>
+  <div class="note warn">
+    رمل فقط یک سنت نمادین است؛ واقعیت، آینده یا ذهن اشخاص را اثبات نمی‌کند. برای پزشکی، حقوقی،
+    مالی و ایمنی به متخصص مراجعه کنید. این ابزار درصد موفقیت یا پیش‌گویی قطعی نمی‌سازد.
+  </div>
+</div>
+
+<div class="card">
+  <h2>۱) فرم قفل سؤال</h2>
+  <div class="grid">
+    <div><label>نام سائل *</label><input type="text" id="fName" placeholder="مثال: حسین"></div>
+    <div><label>نام والد (اختیاری)</label><input type="text" id="fParent" placeholder="اختیاری"></div>
+    <div><label>تاریخ سؤال * (۸ رقم، مثل 1405/04/23)</label><input type="text" id="fDate" placeholder="1405/04/23"></div>
+    <div><label>ساعت (برای روش دیجیتال الزامی)</label><input type="text" id="fTime" placeholder="10:30"></div>
+  </div>
+  <div style="margin-top:12px">
+    <label>سؤال دقیق و قابل‌سنجش * (رویداد مشاهده‌پذیر + مهلت)</label>
+    <textarea id="fQuestion" rows="2" placeholder="مثال: آیا او تا پایان این ماه برای ادامه رابطه تماس روشن و داوطلبانه‌ای می‌گیرد؟"></textarea>
+  </div>
+  <div class="grid" style="margin-top:12px">
+    <div><label>معیار موفقیت *</label><input type="text" id="fCriterion" placeholder="مثال: دریافت تماس یا پیام صریح"></div>
+    <div><label>مهلت نتیجه *</label><input type="text" id="fDeadline" placeholder="مثال: تا 1405/06/31"></div>
+    <div><label>منبع تعیین نتیجهٔ واقعی</label><input type="text" id="fSource" placeholder="پیام، قرارداد، رسید، مشاهده مستقیم…"></div>
+  </div>
+  <div class="grid" style="margin-top:12px">
+    <div>
+      <label>بیت اصلی سؤال *</label>
+      <select id="fBayt"></select>
+    </div>
+    <div>
+      <label>روش تولید *</label>
+      <select id="fMethod">
+        <option value="trad">سنتی ۱۶ ردیفی (پیشنهادی)</option>
+        <option value="digital">دیجیتال دستی MZ-16 v1 (آزمایشی)</option>
+      </select>
+    </div>
+  </div>
+  <div id="tradInputBox" style="margin-top:12px">
+    <label>۱۶ عدد صحیح مثبت (با فاصله یا ویرگول؛ بدون فکرکردن به زوج/فرد بودن) *</label>
+    <textarea id="fNumbers" rows="2" placeholder="مثال قالب: 23, 48, 17, 62, ..."></textarea>
+  </div>
+  <div class="note" id="methodNote">
+    در روش سنتی، خودِ شما ۱۶ عدد می‌دهید و فقط زوج/فرد بودنشان استفاده می‌شود.
+    در روش دیجیتال، دنبالهٔ ۱۶بیتی به‌طور بازتولیدپذیر از نام، تاریخ، ساعت، متن سؤال و مهلت ساخته می‌شود.
+  </div>
+  <button class="btn" id="btnCast">🔒 قفل کن و زایچه بساز</button>
+  <div id="formError" class="note warn hidden"></div>
+</div>
+
+<div id="results" class="hidden">
+
+  <div class="card" id="sourceCard">
+    <h2>۲) منبع تولید (قفل‌شده)</h2>
+    <div id="sourceBody"></div>
+  </div>
+
+  <div class="card">
+    <h2>۳) زایچهٔ ۱۶ خانه</h2>
+    <div class="houses" id="housesBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>۴) آزمون‌های اجباری صحت</h2>
+    <ul class="checks" id="checksBox"></ul>
+    <div id="checksVerdict" class="verdict"></div>
+  </div>
+
+  <div class="card" id="analysisCard">
+    <h2>۵) تحلیل قاعده‌مند</h2>
+    <div id="analysisBody"></div>
+  </div>
+
+  <div class="card" id="recordCard">
+    <h2>۶) رکورد متنی نتیجه</h2>
+    <p style="font-size:13px;color:var(--dim)">این بلوک را نگه دارید و هنگام معلوم‌شدن نتیجهٔ واقعی، فیلدهای «نتیجه واقعی» و «وضعیت» را کامل کنید. این صفحه حافظه ندارد.</p>
+    <textarea id="recordBox" rows="18" class="mono" style="width:100%" readonly></textarea>
+    <button class="btn ghost" id="btnCopy">کپی رکورد</button>
+  </div>
+
+</div>
+
+<footer>
+  MIZAN-AI-ONLY-v3.3 — خروجی این صفحه «خوانش نمادین» است، نه واقعیت و نه احتمال آماری.
+</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   بخش ۱: هستهٔ محاسباتی خالص (بدون DOM)
+   ============================================================ */
+
+const FIGURES = {
+  "1222": {fa:"لحیان",        la:"Laetitia",       q:+1, m:"شادی و گشایش"},
+  "2122": {fa:"حمره",         la:"Rubeus",         q:-1, m:"تندی، آشفتگی و تنش"},
+  "1122": {fa:"نصرةالخارج",   la:"Fortuna Minor",  q:+1, m:"پیروزی کوتاه و وابسته"},
+  "2212": {fa:"بیاض",         la:"Albus",          q:+1, m:"آرامش، صلح و روشنی"},
+  "1212": {fa:"قبض‌الخارج",   la:"Amissio",        q:-1, m:"خروج، کاهش یا واگذاری"},
+  "2112": {fa:"اجتماع",       la:"Conjunctio",     q: 0, m:"پیوند، تقاطع و گردهم‌آیی"},
+  "1112": {fa:"عتبةالخارج",   la:"Cauda Draconis", q:-1, m:"پایان، خروج و جدایی"},
+  "2221": {fa:"انکیس",        la:"Tristitia",      q:-1, m:"فرود، سنگینی و اندوه"},
+  "1221": {fa:"عقله",         la:"Carcer",         q:-1, m:"گره، حبس، ثبات یا تأخیر"},
+  "2121": {fa:"قبض‌الداخل",   la:"Acquisitio",     q:+1, m:"کسب و افزایش"},
+  "1121": {fa:"جودله",        la:"Puer",           q: 0, m:"اقدام، رقابت و بی‌قراری"},
+  "2211": {fa:"نصرةالداخل",   la:"Fortuna Major",  q:+1, m:"پیروزی پایدار"},
+  "1211": {fa:"نقی‌الخد",     la:"Puella",         q:+1, m:"سازگاری، آرامش و زیبایی"},
+  "2111": {fa:"عتبةالداخل",   la:"Caput Draconis", q:+1, m:"آغاز و ورود"},
+  "1111": {fa:"طریق",         la:"Via",            q: 0, m:"حرکت و تغییر"},
+  "2222": {fa:"جماعت",        la:"Populus",        q: 0, m:"جمع، تراکم و ثبات"}
+};
+
+const JUDGE_ALLOWED = new Set(["1111","2222","2112","1221","1212","2121","1122","2211"]);
+const MOBILE_SIGS   = new Set(["1212","1222","1122","2122","1121","1112","2112","1111"]);
+
+const BAYTS = [
+  [1,"خود سائل، تن، آغاز و تصمیم شخصی"],
+  [2,"پول، دارایی، درآمد و ارزش مالی"],
+  [3,"پیام، تماس، خبر، خویشان و سفر کوتاه"],
+  [4,"خانه، زمین، ملک، پدر و سرانجام"],
+  [5,"کشش، عشق، قرار عاشقانه، لذت و فرزند"],
+  [6,"کار روزانه و بیماری در متون سنتی"],
+  [7,"طرف مقابل، رابطه، ازدواج، شراکت، قرارداد و دعوا"],
+  [8,"مال مشترک، وام، میراث، ترس و بحران"],
+  [9,"دانش، دین، دانشگاه، مهاجرت و سفر دور"],
+  [10,"شغل، مقام، رئیس، شهرت و مادر"],
+  [11,"آرزو، دوست، گروه، حامی و هدف بلندمدت"],
+  [12,"امر پنهان، انزوا و گمشده در متون سنتی"]
+];
+
+const HOUSE_LABELS = ["","بیت۱","بیت۲","بیت۳","بیت۴","بیت۵","بیت۶","بیت۷","بیت۸",
+  "نتیجه۹","نتیجه۱۰","نتیجه۱۱","نتیجه۱۲","شاهد اول ۱۳","شاهد دوم ۱۴","قاضی ۱۵","جامع ۱۶"];
+
+/* --- نرمال‌سازی و نگاشت بیت MZ-16 v1 --- */
+
+const BIT1_LETTERS = new Set([..."اجهزطکمسفقشثذظچژگ"]);
+const BIT0_LETTERS = new Set([..."بدوحیلنعصرتخضغپ"]);
+const LATIN1 = new Set([..."ACEGIKMOQSUWY"]);
+const LATIN0 = new Set([..."BDFHJLNPRTVXZ"]);
+
+function normalizeText(s){
+  if(!s) return "";
+  let t = String(s);
+  const map = {"ي":"ی","ى":"ی","ك":"ک","ة":"ه","ۀ":"ه","ؤ":"و","إ":"ا","أ":"ا","ٱ":"ا","آ":"ا"};
+  t = t.replace(/[يىكةۀؤإأٱآ]/g, ch => map[ch]);
+  t = t.replace(/[۰-۹]/g, ch => String(ch.charCodeAt(0) - 0x06F0));
+  t = t.replace(/[٠-٩]/g, ch => String(ch.charCodeAt(0) - 0x0660));
+  // حذف حرکات، تطویل، نیم‌فاصله، فاصله و نشانه‌های نگارشی
+  t = t.replace(/[\u064B-\u065F\u0670\u0640\u200C\u200D\s]/g,"");
+  t = t.replace(/[.,;:!?؟،؛"'«»()\[\]{}\/\\\-_+=*&%$#@~^|<>]/g,"");
+  return t;
+}
+
+function extractDigits(s){
+  return normalizeText(s).replace(/[^0-9]/g,"");
+}
+
+function charToBit(ch){
+  if(BIT1_LETTERS.has(ch)) return 1;
+  if(BIT0_LETTERS.has(ch)) return 0;
+  if(/[0-9]/.test(ch)) return (Number(ch) % 2 === 0) ? 1 : 0;
+  const up = ch.toUpperCase();
+  if(LATIN1.has(up)) return 1;
+  if(LATIN0.has(up)) return 0;
+  return null;
+}
+
+function mz16v1(name, parent, dateDigits, timeDigits, question, deadline){
+  const S = normalizeText(name) + normalizeText(parent) + dateDigits + timeDigits +
+            normalizeText(question) + normalizeText(deadline);
+  const P = [];
+  for(const ch of S){
+    const b = charToBit(ch);
+    if(b === null) return {error:"نویسهٔ پشتیبانی‌نشده در ورودی: «" + ch + "» — آن را حذف یا اصلاح کنید."};
+    P.push(b);
+  }
+  if(P.length === 0) return {error:"رشتهٔ کانونی S خالی است."};
+  // اگر P کوتاه‌تر از ۱۶ بیت بود، خودش تکرار می‌شود
+  let Pfull = P.slice(), repeated = false;
+  while(Pfull.length < 16){ Pfull = Pfull.concat(P); repeated = true; }
+  // تا کردن در ۱۶ ستون با XOR
+  const B = new Array(16).fill(0);
+  Pfull.forEach((b,i) => { B[i % 16] ^= b; });
+  // ماسک تاریخ و ساعت
+  const dt = dateDigits + timeDigits;
+  const D = new Array(16);
+  for(let i = 0; i < 16; i++){
+    D[i] = (Number(dt[i % dt.length]) % 2 === 0) ? 1 : 0;
+  }
+  const C = mixC(B, D);
+  const F = mixF(C);
+  // گذر راستی‌آزمایی مستقل
+  const C2 = mixC(B.slice(), D.slice());
+  const F2 = mixF(C2);
+  const verified = C.join("") === C2.join("") && F.join("") === F2.join("");
+  return {S, P, B, D, C, F, repeated, verified};
+}
+
+function mixC(B, D){
+  const C = new Array(16);
+  for(let i = 0; i < 16; i++){
+    const prev = (i - 1 + 16) % 16;
+    C[i] = B[i] ^ B[prev] ^ D[i];
+  }
+  return C;
+}
+
+function mixF(C){
+  const F = new Array(16);
+  for(let i = 0; i < 16; i++){
+    F[i] = C[i] ^ C[(i - 3 + 16) % 16] ^ C[(i - 7 + 16) % 16];
+  }
+  return F;
+}
+
+/* --- ساخت زایچه --- */
+/* هر شکل = آرایهٔ ۴تایی [آتش، باد، آب، خاک] با ۱=نقطه و ۲=خط */
+
+function combineFigs(a, b){
+  return a.map((r,i) => (r === b[i]) ? 2 : 1);
+}
+function sigOf(f){ return f.join(""); }
+
+function buildChart(mothers){
+  const H = new Array(17); // اندیس ۱..۱۶
+  H[1] = mothers[0]; H[2] = mothers[1]; H[3] = mothers[2]; H[4] = mothers[3];
+  for(let row = 0; row < 4; row++){
+    H[5 + row] = [mothers[0][row], mothers[1][row], mothers[2][row], mothers[3][row]];
+  }
+  H[9]  = combineFigs(H[1], H[2]);
+  H[10] = combineFigs(H[3], H[4]);
+  H[11] = combineFigs(H[5], H[6]);
+  H[12] = combineFigs(H[7], H[8]);
+  H[13] = combineFigs(H[9], H[10]);
+  H[14] = combineFigs(H[11], H[12]);
+  H[15] = combineFigs(H[13], H[14]);
+  H[16] = combineFigs(H[15], H[1]);
+  return H;
+}
+
+function mothersFromBits(bits16){
+  // بیت ۱ → نقطه (۱)، بیت ۰ → خط (۲)
+  const rows = bits16.map(b => b === 1 ? 1 : 2);
+  return [rows.slice(0,4), rows.slice(4,8), rows.slice(8,12), rows.slice(12,16)];
+}
+
+function mothersFromNumbers(nums16){
+  // عدد فرد → نقطه (۱)، عدد زوج → خط (۲)
+  const rows = nums16.map(n => (n % 2 === 1) ? 1 : 2);
+  return [rows.slice(0,4), rows.slice(4,8), rows.slice(8,12), rows.slice(12,16)];
+}
+
+/* --- آزمون‌های صحت (بخش ۹ و ۱۸.۱۳) --- */
+
+function dotCount(f){ return f.filter(r => r === 1).length; }
+
+function runChecks(H, digital){
+  const checks = [];
+  const add = (name, pass) => checks.push({name, pass});
+
+  add("۱۶ خانه ساخته شده و همهٔ امضاها معتبرند",
+      H.slice(1).every(f => f && f.length === 4 && FIGURES[sigOf(f)]));
+
+  let banat = true;
+  for(let row = 0; row < 4; row++)
+    for(let m = 0; m < 4; m++)
+      if(H[5 + row][m] !== H[1 + m][row]) banat = false;
+  add("بنات دقیقاً انتقال سطرهای چهار امّ هستند", banat);
+
+  const derivOk =
+    sigOf(H[9])  === sigOf(combineFigs(H[1],H[2]))  &&
+    sigOf(H[10]) === sigOf(combineFigs(H[3],H[4]))  &&
+    sigOf(H[11]) === sigOf(combineFigs(H[5],H[6]))  &&
+    sigOf(H[12]) === sigOf(combineFigs(H[7],H[8]))  &&
+    sigOf(H[13]) === sigOf(combineFigs(H[9],H[10])) &&
+    sigOf(H[14]) === sigOf(combineFigs(H[11],H[12]))&&
+    sigOf(H[15]) === sigOf(combineFigs(H[13],H[14]))&&
+    sigOf(H[16]) === sigOf(combineFigs(H[15],H[1]));
+  add("بازمحاسبهٔ خانه‌های ۹ تا ۱۶ از والدها", derivOk);
+
+  const dots14 = [1,2,3,4].reduce((s,i) => s + dotCount(H[i]), 0);
+  const dots58 = [5,6,7,8].reduce((s,i) => s + dotCount(H[i]), 0);
+  add("تعادل نقاط امهات (۱-۴) و بنات (۵-۸)", dots14 === dots58);
+
+  const jd = dotCount(H[15]);
+  add("زوجیت قاضی (تعداد سطرهای نقطه: " + jd + ")", jd % 2 === 0);
+  add("قاضی در فهرست هشت امضای مجاز", JUDGE_ALLOWED.has(sigOf(H[15])));
+
+  const sigs = H.slice(1).map(sigOf);
+  add("وجود دست‌کم یک امضای تکراری در ۱۶ خانه", new Set(sigs).size < 16);
+
+  add("هم‌پاریتی شاهدان ۱۳ و ۱۴", dotCount(H[13]) % 2 === dotCount(H[14]) % 2);
+
+  let direct = H[1];
+  for(let i = 2; i <= 8; i++) direct = combineFigs(direct, H[i]);
+  add("قاضی = ترکیب مستقیم خانه‌های ۱ تا ۸", sigOf(direct) === sigOf(H[15]));
+
+  add("بازگشت جامع: ترکیب خانهٔ ۱۶ و ۱ دوباره قاضی را می‌سازد",
+      sigOf(combineFigs(H[16],H[1])) === sigOf(H[15]));
+
+  if(digital){
+    add("طول S برابر تعداد بیت‌های P" + (digital.repeated ? " (P برای رسیدن به ۱۶ بیت تکرار شد)" : ""),
+        [...digital.S].length === digital.P.length);
+    add("B و D و C و F هرکدام دقیقاً ۱۶ بیت", [digital.B,digital.D,digital.C,digital.F].every(a => a.length === 16));
+    add("بازمحاسبهٔ مستقل C و F با خروجی اول برابر است", digital.verified === true);
+  }
+  return checks;
+}
+
+/* --- تحلیل: T/L/J و E/Q (بخش ۱۰، ۱۱، ۱۸.۳–۱۸.۵) --- */
+
+function ringNeighbors(h){
+  return [h === 1 ? 12 : h - 1, h === 12 ? 1 : h + 1];
+}
+
+function analyze(H, bayt){
+  const sig = i => sigOf(H[i]);
+  const talibSig = sig(1);
+  const matlubSig = sig(bayt);
+  const pos = s => { const p = []; for(let i = 1; i <= 12; i++) if(sig(i) === s) p.push(i); return p; };
+
+  // --- محور E: چهار حالت کمال ---
+  const modes = [];
+  let E;
+  if(bayt === 1){
+    E = "نامشخص (بیت سؤال ۱ است؛ طالب و مطلوب یکی‌اند)";
+  } else {
+    if(talibSig === matlubSig) modes.push("اشغال (Occupation)");
+    const nbT = ringNeighbors(bayt), nb1 = ringNeighbors(1);
+    if(nbT.some(h => sig(h) === talibSig) || nb1.some(h => sig(h) === matlubSig))
+      modes.push("اقتران (Conjunction)");
+    // انتقال/مبادله
+    let mutation = false;
+    for(const a of pos(talibSig)){
+      if(a === 1) continue;
+      for(const b of pos(matlubSig)){
+        if(b === bayt) continue;
+        if(ringNeighbors(a).includes(b)) mutation = true;
+      }
+    }
+    if(mutation) modes.push("انتقال/مبادله (Mutation)");
+    // ترجمه/نقل: شکل سوم در همسایگی خانه۱ و همسایگی خانهٔ موضوع (در دو موضع متفاوت)
+    let translation = false;
+    for(const s of Object.keys(FIGURES)){
+      if(s === talibSig || s === matlubSig) continue;
+      const p = pos(s);
+      const in1 = p.filter(h => nb1.includes(h));
+      const inT = p.filter(h => nbT.includes(h));
+      if(in1.some(a => inT.some(b => a !== b))) translation = true;
+    }
+    if(translation) modes.push("ترجمه/نقل (Translation)");
+    E = modes.length ? "پیوند موجود" : "انکار کمال / پیوند یافت نشد";
+  }
+
+  // --- L (بخش ۱۰): اشغال/اقتران → +۱، وگرنه −۱ ---
+  let L, Lnote;
+  if(bayt === 1){
+    L = 0; Lnote = "بیت سؤال ۱ است؛ تطبیق طالب/مطلوب اطلاع تازه نمی‌دهد.";
+  } else if(modes.includes("اشغال (Occupation)")){
+    L = 1; Lnote = "اشغال: شکل بیت۱ و بیت موضوع یکسان است.";
+  } else if(modes.includes("اقتران (Conjunction)")){
+    L = 1; Lnote = "اقتران: تکرار شکل در خانهٔ مجاور.";
+  } else {
+    L = -1; Lnote = "عدم حصول: نه اشغال و نه اقتران.";
+  }
+
+  // --- T و J: کیفیت پایه از جدول اشکال ---
+  const T = FIGURES[matlubSig].q;
+  const J = FIGURES[sig(15)].q;
+  let balance = T + L + J;
+
+  let verdict;
+  if(J === 0 && T * L < 0){ verdict = "نامشخص / دوپهلو"; }
+  else if(balance >= 3)   verdict = "مثبت همسو";
+  else if(balance >= 1)   verdict = "مثبت مشروط";
+  else if(balance === 0)  verdict = "نامشخص / دوپهلو";
+  else if(balance >= -2)  verdict = "منفی مشروط";
+  else                    verdict = "منفی همسو";
+
+  const outBin = verdict.startsWith("مثبت") ? "yes" : verdict.startsWith("منفی") ? "no" : "unknown";
+
+  // --- Q (بخش ۱۸.۵) ---
+  const QT = T, QJ = J, Qtotal = QT + QJ;
+  const Qlabel = Qtotal >= 2 ? "مساعد همسو" : Qtotal === 1 ? "مساعد مشروط" :
+                 Qtotal === 0 ? "مختلط/نامشخص" : Qtotal === -1 ? "نامساعد مشروط" : "نامساعد همسو";
+
+  // --- برچسب وضعیت ---
+  const jm = MOBILE_SIGS.has(sig(15)), tm = MOBILE_SIGS.has(matlubSig);
+  const status = (jm && tm) ? "حرکت/تغییر" : (!jm && !tm) ? "توقف/ماندگاری" : "مختلط";
+
+  // --- شرکت ساده (بخش ۱۸.۱۲) ---
+  const companies = [];
+  for(const [a,b] of [[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]]){
+    if(sig(a) === sig(b))
+      companies.push("جفت (" + a + "،" + b + "): " + FIGURES[sig(a)].fa + " — " + sig(a));
+  }
+
+  return {talibSig, matlubSig, E, modes, T, L, Lnote, J, balance, verdict, outBin,
+          QT, QJ, Qtotal, Qlabel, status, companies};
+}
+
+/* --- بردار کنترل داخلی MZ-16 v1 (بخش ۵) --- */
+
+function selfTest(){
+  const r = mz16v1("اب", "", "14050423", "1030", "جد", "");
+  if(r.error) return {ok:false, detail:r.error};
+  const exp = {
+    S:"اب140504231030جد",
+    P:"1001101110010110",
+    B:"1001101110010110",
+    D:"0110111001010110",
+    C:"1011100000001011",
+    F:"1101100001111010"
+  };
+  const got = {S:r.S, P:r.P.join(""), B:r.B.join(""), D:r.D.join(""), C:r.C.join(""), F:r.F.join("")};
+  for(const k of Object.keys(exp)){
+    if(got[k] !== exp[k]) return {ok:false, detail:"عدم تطابق " + k + ": انتظار " + exp[k] + " دریافت " + got[k]};
+  }
+  return {ok:true};
+}
+
+/* ============================================================
+   بخش ۲: رابط کاربری
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const faDigits = s => String(s).replace(/[0-9]/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
+
+function qClass(q){ return q > 0 ? "q1" : q < 0 ? "qm1" : "q0"; }
+function qStr(q){ return q > 0 ? "+۱" : q < 0 ? "−۱" : "۰"; }
+
+function figGlyph(f){
+  return f.map(r => r === 1 ? "●" : "▬ ▬").join("<br>");
+}
+
+function init(){
+  // فهرست بیت‌ها
+  const sel = $("fBayt");
+  BAYTS.forEach(([n, t]) => {
+    const o = document.createElement("option");
+    o.value = n; o.textContent = "بیت " + faDigits(n) + " — " + t;
+    if(n === 7) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  // بردار کنترل
+  const st = selfTest();
+  const badge = $("selftestBadge");
+  if(st.ok){ badge.textContent = "✔ بردار کنترل MZ-16 v1 تأیید شد (F=1101100001111010)"; badge.className = "badge ok"; }
+  else { badge.textContent = "✘ بردار کنترل رد شد: " + st.detail; badge.className = "badge bad"; }
+
+  $("fMethod").addEventListener("change", () => {
+    $("tradInputBox").classList.toggle("hidden", $("fMethod").value !== "trad");
+  });
+  $("btnCast").addEventListener("click", cast);
+  $("btnCopy").addEventListener("click", () => {
+    const box = $("recordBox");
+    box.select();
+    try{ navigator.clipboard.writeText(box.value); }catch(e){ document.execCommand("copy"); }
+    $("btnCopy").textContent = "کپی شد ✔";
+    setTimeout(() => $("btnCopy").textContent = "کپی رکورد", 1500);
+  });
+}
+
+function showError(msg){
+  const e = $("formError");
+  e.textContent = msg;
+  e.classList.remove("hidden");
+  $("results").classList.add("hidden");
+}
+
+function cast(){
+  $("formError").classList.add("hidden");
+
+  const name = $("fName").value.trim();
+  const parent = $("fParent").value.trim();
+  const dateDigits = extractDigits($("fDate").value);
+  const timeDigits = extractDigits($("fTime").value);
+  const question = $("fQuestion").value.trim();
+  const criterion = $("fCriterion").value.trim();
+  const deadline = $("fDeadline").value.trim();
+  const source = $("fSource").value.trim();
+  const bayt = Number($("fBayt").value);
+  const method = $("fMethod").value;
+
+  if(!name) return showError("نام سائل الزامی است.");
+  if(dateDigits.length !== 8) return showError("تاریخ باید دقیقاً ۸ رقم باشد (مثل 1405/04/23). رقم‌های واردشده: " + faDigits(dateDigits.length));
+  if(!question) return showError("متن دقیق سؤال الزامی است.");
+  if(!criterion) return showError("معیار موفقیت الزامی است؛ باید دودویی و بیرونی باشد.");
+  if(!deadline) return showError("مهلت نتیجه الزامی است.");
+
+  let mothers, digital = null, sourceHTML = "";
+
+  if(method === "digital"){
+    if(timeDigits.length !== 4) return showError("در روش دیجیتال، ساعت دقیق به قالب HH:MM الزامی است.");
+    const st = selfTest();
+    if(!st.ok) return showError("بردار کنترل داخلی رد شده است؛ محاسبهٔ دیجیتال مجاز نیست. " + st.detail);
+    digital = mz16v1(name, parent, dateDigits, timeDigits, question, deadline);
+    if(digital.error) return showError(digital.error);
+    if(!digital.verified) return showError("گذر راستی‌آزمایی C/F رد شد؛ محاسبه نامعتبر است.");
+    mothers = mothersFromBits(digital.F);
+    sourceHTML = renderDigitalSource(digital);
+  } else {
+    const raw = normalizeText($("fNumbers").value).length ? $("fNumbers").value : "";
+    const parts = raw.replace(/[۰-۹]/g, ch => String(ch.charCodeAt(0) - 0x06F0))
+                     .split(/[\s,،;]+/).filter(x => x.length);
+    if(parts.length !== 16) return showError("دقیقاً ۱۶ عدد لازم است؛ شما " + faDigits(parts.length) + " مورد وارد کرده‌اید. فقط تعداد را اصلاح کنید.");
+    const nums = parts.map(Number);
+    if(nums.some(n => !Number.isInteger(n) || n <= 0)) return showError("همهٔ مقادیر باید عدد صحیح مثبت باشند.");
+    mothers = mothersFromNumbers(nums);
+    sourceHTML = renderTradSource(nums);
+  }
+
+  const H = buildChart(mothers);
+  const checks = runChecks(H, digital);
+  const allOk = checks.every(c => c.pass);
+  const an = allOk ? analyze(H, bayt) : null;
+
+  $("sourceBody").innerHTML = sourceHTML;
+  renderHouses(H, bayt);
+  renderChecks(checks, allOk);
+
+  if(allOk){
+    $("analysisCard").classList.remove("hidden");
+    $("recordCard").classList.remove("hidden");
+    renderAnalysis(H, bayt, an);
+    renderRecord({name, dateDigits, timeDigits, question, criterion, deadline, source,
+                  bayt, method, digital, H, an,
+                  rawNums: method === "trad" ? $("fNumbers").value.trim() : null});
+  } else {
+    $("analysisCard").classList.add("hidden");
+    $("recordCard").classList.add("hidden");
+  }
+
+  $("results").classList.remove("hidden");
+  $("results").scrollIntoView({behavior:"smooth"});
+}
+
+function renderDigitalSource(d){
+  const row = a => a.join(" ");
+  const idx = Array.from({length:16}, (_,i) => String(i+1).padStart(2,"0")).join(" ");
+  const spread = a => a.map(x => " " + x).join(" ");
+  return `
+    <p style="font-size:13px">روش: <b>دیجیتال دستی MZ-16 v1</b> — دنبالهٔ بازتولیدپذیر از ورودی‌های قفل‌شده. این روش تصادفی یا دارای اعتبار پیش‌بینی اثبات‌شده نیست.</p>
+    <div class="mono">S  (طول ${[...d.S].length}) = ${d.S}
+P  = ${d.P.join("")}${d.repeated ? "   (P برای رسیدن به ۱۶ بیت تکرار شد)" : ""}</div>
+    <h3>دفتر محاسبه</h3>
+    <div class="mono">idx:    ${idx}
+B:      ${spread(d.B)}
+D:      ${spread(d.D)}
+C:      ${spread(d.C)}
+F:      ${spread(d.F)}</div>
+    <p style="font-size:13px">🔒 <b>منبع قفل‌شده:</b> <span class="mono" style="display:inline;padding:2px 8px">F = ${d.F.join("")}</span> — گذر راستی‌آزمایی C/F: ${d.verified ? "✔ برابر" : "✘ نابرابر"}</p>`;
+}
+
+function renderTradSource(nums){
+  const rows = nums.map((n,i) => "r" + (i+1) + "=" + n + (n % 2 ? " (فرد → ●)" : " (زوج → ▬)"));
+  return `
+    <p style="font-size:13px">روش: <b>سنتی ۱۶ ردیفی</b> — فقط زوج/فرد بودن هر عدد استفاده می‌شود.</p>
+    <div class="mono">${rows.join("\n")}</div>
+    <p style="font-size:13px">🔒 <b>منبع قفل‌شده:</b> ${nums.join(", ")}</p>`;
+}
+
+function renderHouses(H, bayt){
+  const box = $("housesBox");
+  box.innerHTML = "";
+  for(let i = 1; i <= 16; i++){
+    const f = H[i], info = FIGURES[sigOf(f)];
+    const div = document.createElement("div");
+    div.className = "house" + ((i === 1 || i === bayt || i === 15) ? " key" : "");
+    let tag = "";
+    if(i === 1) tag = " (طالب)";
+    if(i === bayt) tag += " (مطلوب)";
+    div.innerHTML = `<div class="hn">${HOUSE_LABELS[i]}${tag}</div>
+      <div class="fig">${figGlyph(f)}</div>
+      <div class="nm">${info.fa}</div>
+      <div class="sig">${info.la} — ${faDigits(sigOf(f))} — <span class="${qClass(info.q)}">${qStr(info.q)}</span></div>`;
+    box.appendChild(div);
+  }
+}
+
+function renderChecks(checks, allOk){
+  const ul = $("checksBox");
+  ul.innerHTML = "";
+  checks.forEach(c => {
+    const li = document.createElement("li");
+    li.textContent = c.name;
+    if(!c.pass) li.className = "fail";
+    ul.appendChild(li);
+  });
+  const v = $("checksVerdict");
+  v.textContent = allOk ? "✔ همهٔ آزمون‌ها پذیرفته شدند؛ تفسیر مجاز است."
+                        : "✘ محاسبه نامعتبر است؛ طبق پروتکل، تفسیر ممنوع است.";
+  v.style.color = allOk ? "var(--ok)" : "var(--bad)";
+}
+
+function renderAnalysis(H, bayt, an){
+  const figT = FIGURES[an.matlubSig], figJ = FIGURES[sigOf(H[15])];
+  const fig1 = FIGURES[an.talibSig];
+  const fig13 = FIGURES[sigOf(H[13])], fig14 = FIGURES[sigOf(H[14])], fig16 = FIGURES[sigOf(H[16])];
+  const baytTopic = BAYTS.find(b => b[0] === bayt)[1];
+
+  const balanceFa = (an.balance > 0 ? "+" : "") + faDigits(an.balance);
+
+  $("analysisBody").innerHTML = `
+    <h3>سیگنال‌های سه‌گانه (بخش ۱۱)</h3>
+    <table>
+      <tr><th>سیگنال</th><th>منبع</th><th>مقدار</th><th>توضیح</th></tr>
+      <tr><td>T — موضوع</td><td>${figT.fa} در بیت ${faDigits(bayt)}</td>
+          <td class="${qClass(an.T)}">${qStr(an.T)}</td><td>${figT.m} [سنت]</td></tr>
+      <tr><td>L — پیوند</td><td>طالب: ${fig1.fa} / مطلوب: ${figT.fa}</td>
+          <td class="${qClass(an.L)}">${qStr(an.L)}</td><td>${an.Lnote} [قاعده]</td></tr>
+      <tr><td>J — حکم</td><td>قاضی: ${figJ.fa}</td>
+          <td class="${qClass(an.J)}">${qStr(an.J)}</td><td>${figJ.m} [سنت]</td></tr>
+    </table>
+
+    <div class="verdict">
+      تراز = T + L + J = ${balanceFa} → <b>${an.verdict}</b><br>
+      <span style="font-size:13px;color:var(--dim)">وضعیت: ${an.status} — این تراز احتمال آماری یا درجهٔ اطمینان نیست.</span>
+    </div>
+
+    <h3>دو محور نسخهٔ ۳.۲ (بخش ۱۸.۳ تا ۱۸.۵)</h3>
+    <p style="font-size:14px">
+      <b>وقوع نمادین E:</b> ${an.E}<br>
+      <b>حالت‌های کمال:</b> ${an.modes.length ? an.modes.map(m => `<span class="tag">${m}</span>`).join(" ") : "هیچ‌کدام"}<br>
+      <b>کیفیت Q:</b> QT=${qStr(an.QT)}، QJ=${qStr(an.QJ)}، مجموع=${(an.Qtotal>0?"+":"")+faDigits(an.Qtotal)} → ${an.Qlabel}<br>
+      <span style="color:var(--dim);font-size:13px">وقوع و کیفیت دو گزارهٔ جدا هستند؛ «پیوند موجود + کیفیت نامساعد» یعنی امکان رخ‌دادن با نتیجهٔ نه‌چندان مطلوب.</span>
+    </p>
+
+    <h3>دادگاه (شرح بدون امتیاز)</h3>
+    <p style="font-size:14px">
+      شاهد اول (۱۳): <b>${fig13.fa}</b> — ${fig13.m}؛
+      شاهد دوم (۱۴): <b>${fig14.fa}</b> — ${fig14.m}؛
+      جامع (۱۶): <b>${fig16.fa}</b> — ${fig16.m}.
+      این سه فقط روند و پیامد را شرح می‌دهند و رأی مستقل ندارند.
+    </p>
+
+    ${an.companies.length ? `<h3>شرکت ساده</h3><p style="font-size:14px">${an.companies.join("<br>")}<br><span style="color:var(--dim);font-size:13px">تکرار و تقویت همان مضمون در جفت؛ بدون امتیاز مستقل.</span></p>` : ""}
+
+    <h3>خوانش نمادین [تفسیر]</h3>
+    <p style="font-size:14px">
+      موضوع سؤال (بیت ${faDigits(bayt)}: ${baytTopic}) با شکل <b>${figT.fa}</b> (${figT.m}) نشسته است.
+      قاضی <b>${figJ.fa}</b> (${figJ.m}) زمینهٔ کلی حکم است.
+      جمع‌بندی قاعده‌مند: <b>${an.verdict}</b> با وضعیت «${an.status}».
+      این خوانش نمادین است؛ واقعیت فقط با رفتار قابل مشاهده، گفت‌وگوی مستقیم و شواهد بیرونی معلوم می‌شود.
+    </p>
+
+    <h3>توصیهٔ عملی</h3>
+    <p style="font-size:14px">${adviceText(an)}</p>`;
+}
+
+function adviceText(an){
+  if(an.outBin === "yes")
+    return "مسیر نمادین همسو دیده می‌شود؛ اقدام مشخصِ داخل معیار و مهلت را خودتان انجام دهید و نتیجهٔ واقعی را در رکورد ثبت کنید. تراز مثبت جایگزین اقدام و شواهد نیست.";
+  if(an.outBin === "no")
+    return "خوانش نمادین همسو نیست؛ به‌جای تکرار ریختن، روی رفتار قابل کنترل خودتان تمرکز کنید (گفت‌وگوی مستقیم، جمع‌آوری اطلاعات واقعی، تعیین گزینهٔ جایگزین) و نتیجهٔ واقعی را تا مهلت ثبت کنید.";
+  return "خروجی نامشخص است و طبق پروتکل نباید به‌زور بله یا خیر شود. معیار و مهلت را نگه دارید، شواهد بیرونی جمع کنید و نتیجهٔ واقعی را در رکورد ثبت کنید.";
+}
+
+function renderRecord(o){
+  const sig = i => sigOf(o.H[i]);
+  const fa = s => FIGURES[s].fa;
+  const dateFmt = o.dateDigits.replace(/(\d{4})(\d{2})(\d{2})/, "$1/$2/$3");
+  const methodName = o.method === "digital" ? "دیجیتال دستی MZ-16 v1" : "سنتی ۱۶ ردیفی";
+  const lock = o.method === "digital"
+    ? "S=" + o.digital.S + " | F=" + o.digital.F.join("")
+    : "اعداد خام: " + o.rawNums;
+  const now = new Date().toISOString().slice(0,16).replace("T"," ");
+
+  $("recordBox").value =
+`رکورد میزان
+نسخه پروتکل: MIZAN-AI-ONLY-v3.3
+شناسه متنی: ${o.name}|${dateFmt}|${o.question}|${o.criterion}|${o.deadline}
+روش: ${methodName}
+پروفایل مکتب: CORE-32
+بیت قفل‌شده: ${o.bayt}
+منبع قفل‌شده: ${lock}
+معیار موفقیت: ${o.criterion}
+منبع تعیین واقعیت: ${o.source || "ثبت نشده"}
+قاضی: ${fa(sig(15))} (${sig(15)})
+جامع: ${fa(sig(16))} (${sig(16)})
+T/L/J و تراز: T=${o.an.T} L=${o.an.L} J=${o.an.J} | تراز=${o.an.balance} (${o.an.verdict})
+محور وقوع E: ${o.an.E}
+حالت یا حالت‌های کمال: ${o.an.modes.length ? o.an.modes.join("، ") : "هیچ‌کدام"}
+QT/QJ/Qtotal: ${o.an.QT}/${o.an.QJ}/${o.an.Qtotal} (${o.an.Qlabel})
+پیش‌بینی: ${o.an.outBin}
+زمان قفل پیش‌بینی: ${now}
+مهلت بررسی: ${o.deadline}
+نتیجه واقعی: ثبت نشده
+مدرک یا شرح نتیجه: ثبت نشده
+وضعیت: در انتظار`;
+}
+
+if(typeof document !== "undefined" && document.getElementById("btnCast")){
+  init();
+}
+</script>
+</body>
+</html>
