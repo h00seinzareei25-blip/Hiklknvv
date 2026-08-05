@@ -43,7 +43,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی میزان‌دار: ستون‌حروف سؤال → A–D + نظیره → میزان (جمل mod ۲۸) → انتخاب → لقط میزانی → نطق جمله‌ای.';
+        $('pipelineHint').textContent = 'جدولی میزان‌دار: ستون‌حروف → A/B/C/D ربع دایره (+۰/+۷/+۱۴/+۲۱) + نظیره → میزان (جمل mod ۲۸) → انتخاب → نطق جمله‌ای از مخزن ABCD.';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';

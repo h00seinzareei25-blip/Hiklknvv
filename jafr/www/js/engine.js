@@ -367,30 +367,42 @@
     return r === 0 ? base : r;
   }
 
+  /** جابه‌جایی روی دایرهٔ ۲۸حرفی ابجد */
+  function shiftAbjad(str, delta) {
+    const d = ((delta % 28) + 28) % 28;
+    return [...String(str || '')].map((ch) => {
+      const i = indexOfLetter(ch);
+      if (i < 0) return ch;
+      return ABJAD_ORDER[(i + d) % 28];
+    }).join('');
+  }
+
   /**
-   * لایه‌های جدول حروف سؤال:
-   * A خام، B ترفع، C تنزل، D ترفعِ نظیره — هر کدام با سطر نظیره
+   * لایه‌های جدول حروف سؤال (مدل ربع دایره — مطابق سنت جدولی A–D):
+   * A = خام، B = +۷، C = +۱۴ (=نظیره A)، D = +۲۱ (=نظیره B)
+   * به‌همراه سطر نظیرهٔ هر کدام (در این مدل nA≡C و nB≡D و …)
    */
   function buildJadwalLayers(asas) {
     const A = String(asas || '');
-    const nA = mapNazira(A);
-    const B = mapLetters(A, mapTarfa);
-    const nB = mapNazira(B);
-    const C = mapLetters(A, mapTanzil);
-    const nC = mapNazira(C);
-    const D = mapLetters(nA, mapTarfa);
-    const nD = mapNazira(D);
+    const B = shiftAbjad(A, 7);
+    const C = shiftAbjad(A, 14); // نظیرهٔ استاندارد (+۱۴)
+    const D = shiftAbjad(A, 21);
+    const nA = mapNazira(A); // ≡ C
+    const nB = mapNazira(B); // ≡ D
+    const nC = mapNazira(C); // ≡ A
+    const nD = mapNazira(D); // ≡ B
     const rows = [
-      { id: 'A', title: 'حروف A (خام سؤال)', str: A },
-      { id: 'nA', title: 'نظیره A', str: nA },
-      { id: 'B', title: 'حروف B (ترفع)', str: B },
-      { id: 'nB', title: 'نظیره B', str: nB },
-      { id: 'C', title: 'حروف C (تنزل)', str: C },
-      { id: 'nC', title: 'نظیره C', str: nC },
-      { id: 'D', title: 'حروف D (ترفعِ نظیره)', str: D },
-      { id: 'nD', title: 'نظیره D', str: nD }
+      { id: 'A', title: 'حروف A (خام · +۰)', str: A },
+      { id: 'nA', title: 'نظیره A (+۱۴)', str: nA },
+      { id: 'B', title: 'حروف B (ربع · +۷)', str: B },
+      { id: 'nB', title: 'نظیره B (+۲۱)', str: nB },
+      { id: 'C', title: 'حروف C (ربع · +۱۴)', str: C },
+      { id: 'nC', title: 'نظیره C (+۰)', str: nC },
+      { id: 'D', title: 'حروف D (ربع · +۲۱)', str: D },
+      { id: 'nD', title: 'نظیره D (+۷)', str: nD }
     ];
-    return { A, nA, B, nB, C, nC, D, nD, rows };
+    const poolABCD = A + B + C + D;
+    return { A, nA, B, nB, C, nC, D, nD, rows, poolABCD, model: 'quarter28' };
   }
 
   /**
@@ -630,6 +642,13 @@
       });
 
       const layers = buildJadwalLayers(asas);
+      steps.push({
+        id: 'jadwal_model',
+        title: 'مدل لایه‌ها · ربع دایره ۲۸',
+        input: asas,
+        output: 'A+0 | B+7 | C+14 | D+21',
+        note: 'A خام، B یک‌ربع، C دو ربع (=نظیره)، D سه ربع؛ سطرهای نظیره همان جابه‌جایی +۱۴ هستند'
+      });
       layers.rows.forEach((row) => {
         steps.push({
           id: 'jadwal_' + row.id,
@@ -646,7 +665,7 @@
         title: 'سطر انتخاب (با کلید میزان)',
         input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 8`,
         output: sel.selected,
-        note: 'از ۸ لایهٔ A/nA/B/nB/C/nC/D/nD برای هر ستون یک حرف انتخاب می‌شود'
+        note: 'هایلایت‌های نرم‌افزار مرجع گزینشی‌ترند؛ این سطر تقریب قاعده‌مند است. نطق جمله‌ای از مخزن A+B+C+D ساخته می‌شود'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
@@ -664,10 +683,19 @@
         title: 'تخلیص فرد از سطر انتخاب',
         input: sel.selected,
         output: condensed,
-        note: 'برای فشرده‌سازی نطق؛ مستحصلهٔ اصلی = لقط میزانی + پشتیبان انتخاب کامل'
+        note: 'فشرده‌سازی کمکی'
       });
 
-      // مستحصله غالب: لقط میزانی؛ اگر خیلی کوتاه شد از تخلیص فرد، وگرنه انتخاب
+      const poolABCD = layers.poolABCD || (layers.A + layers.B + layers.C + layers.D);
+      steps.push({
+        id: 'jadwal_pool',
+        title: 'مخزن حروف نطق (A+B+C+D)',
+        input: 'چهار ربع دایره',
+        output: poolABCD,
+        note: `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)} — جملهٔ نطق مرجع از این مخزن قابل‌ساخت است`
+      });
+
+      // مستحصله نمایشی: لقط میزانی؛ مخزن کامل برای نطق جمله‌ای جداگانه است
       let mustehsila = mizanExtract;
       if (mustehsila.length < 4) mustehsila = condensed;
       if (mustehsila.length < 4) mustehsila = sel.selected;
@@ -675,9 +703,9 @@
       steps.push({
         id: 'mustehsila',
         title: 'مستحصله نهایی (جدولی)',
-        input: `انتخاب:${sel.selected.length} | لقط‌میزان:${mizanExtract} | فرد:${condensed}`,
+        input: `انتخاب:${sel.selected.length} | لقط‌میزان:${mizanExtract} | مخزنABCD:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)} | این زنجیره تقریب عملیاتی قابل‌ممیزی از جفر جدولی است`
+        note: `میزان=${mizan} | مدل=ربع۲۸ | بدون تکرار مستحصله: ${uniqueLetters(mustehsila)} | نطق جمله‌ای را از مخزن A+B+C+D بساز`
       });
 
       const methodLabel = opts.methodLabel || 'جفر جدولی میزان‌دار';
@@ -702,11 +730,14 @@
         extraEnabled,
         jadwal: {
           mizan,
+          model: layers.model || 'quarter28',
           layers: layers.rows.map((r) => ({ id: r.id, title: r.title, str: r.str })),
           selected: sel.selected,
           picks: sel.picks,
           mizanExtract,
-          condensed
+          condensed,
+          poolABCD,
+          poolUnique: uniqueLetters(poolABCD)
         }
       };
     }
@@ -1647,17 +1678,21 @@
     let ranked = rules.isChoice ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, [result], result.mustehsilaUnique) : [];
     if (rules.isChoice) ranked = enhanceChoiceScores(ranked, [result], meta);
     const choiceLines = formatChoiceScoreTable(ranked);
-    const dict = buildInternalDictionary(result.mustehsila, meta, { madkhal: result.madkhal, table: result.options.table });
+    const dictSource = (result.jadwal && result.jadwal.poolABCD) ? result.jadwal.poolABCD : result.mustehsila;
+    const dict = buildInternalDictionary(dictSource, meta, { madkhal: result.madkhal, table: result.options.table });
     const assist = formatNatiqAssistBlock(dict, result.madkhal);
     const stability = extras && extras.stability;
     const stabilityLines = formatStabilityBlock(stability);
     const jadwalLines = [];
     if (result.jadwal) {
       jadwalLines.push('## جزئیات جفر جدولی میزان‌دار');
+      jadwalLines.push(`- مدل لایه: ربع دایره ۲۸ (A+0, B+7, C+14, D+21)`);
       jadwalLines.push(`- میزان: ${result.mizan != null ? result.mizan : result.jadwal.mizan}`);
-      jadwalLines.push(`- سطر انتخاب: ${result.jadwal.selected}`);
+      jadwalLines.push(`- سطر انتخاب (تقریب): ${result.jadwal.selected}`);
       jadwalLines.push(`- لقط میزانی: ${result.jadwal.mizanExtract}`);
-      jadwalLines.push(`- تخلیص فرد: ${result.jadwal.condensed}`);
+      jadwalLines.push(`- مخزن حروف نطق A+B+C+D: ${result.jadwal.poolABCD}`);
+      jadwalLines.push(`- بدون تکرار مخزن: ${result.jadwal.poolUnique}`);
+      jadwalLines.push('قانون نطق جمله‌ای: واژه‌ها را فقط از مخزن A+B+C+D بساز؛ حروف سطر انتخاب/میزان را اولویت بده؛ حرف خارج از مخزن نیاور.');
       (result.jadwal.layers || []).forEach((row) => {
         jadwalLines.push(`- ${row.title}: ${row.str}`);
       });
@@ -1811,7 +1846,7 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
-    computeMizan, buildJadwalLayers, selectJadwalRow, extractByMizanStep,
+    computeMizan, buildJadwalLayers, selectJadwalRow, extractByMizanStep, shiftAbjad,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
   };
 })(typeof window !== 'undefined' ? window : globalThis);
