@@ -110,8 +110,10 @@ const warLayers = E.buildJadwalLayers(warAsas);
 const warTarget = E.normalizeText('نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت');
 assert(E.coverageAgainst(warTarget, warLayers.poolABCD).complete, 'جواب نمونه تصویر از مخزن ABCD قابل‌ساخت است');
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
-assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق جمله‌ای'), 'پرامپت جدولی جمله‌ای');
+assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');
+assert(jadPrompt.generator.includes('نادم شوند') && jadPrompt.generator.includes('تفسیر هوش مصنوعی'), 'الگوی نطق یک‌خطی + تفسیر در پرامپت');
+assert(jadPrompt.judge.includes('نطق یک‌خطی نهایی') && jadPrompt.judge.includes('تفسیر هوش مصنوعی'), 'داور خواهان نطق یک‌خطی + تفسیر است');
 
 assert(E.takhlisLaqt('ابجدهوزحطی', 3) === 'ادزی', 'لقط گام ۳');
 assert(E.takhlisLaqt('ابجدهوزحطیکل', 4) === 'اهط', 'لقط گام ۴');
