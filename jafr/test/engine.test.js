@@ -179,8 +179,26 @@ const warNawab = E.runClassic({
 assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
 
 const lockDiag = E.analyzeJamalLock(4963, { sael: '' }, { table: 'kabir' });
-assert(lockDiag.gap === 59 && lockDiag.recipes.length === 1 && lockDiag.recipes[0].classic, 'تحلیل قفل فقط دستور کلاسیک سائل ۵۹');
+assert(lockDiag.gap === 59 && lockDiag.recipes.length === 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: دستور کلاسیک سائل ۵۹ + هشدار آ=۶۰ غیرکلاسیک');
+assert(lockDiag.recipes[1].id === 'alef60_nonclassic' && !lockDiag.recipes[1].classic, 'دستور دوم غیرکلاسیک آ=۶۰');
 assert(E.JAMAL_LOCK_TARGET.jamal === 5022, 'ثابت هدف قفل');
+
+const scopeWar = E.classifyQuestionScope({
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  sael: '', taleb: '', matloob: ''
+});
+assert(scopeWar.id === 'markazi' && !scopeWar.saelRequired, 'جنگ بدون شخص = سؤال مرکزی');
+const scopeMeh = E.classifyQuestionScope({
+  soal: 'آیا علی با فاطمه ازدواج خواهد کرد',
+  sael: 'حسین', questionScope: 'mehvari'
+});
+assert(scopeMeh.id === 'mehvari' && scopeMeh.saelRequired, 'ازدواج/اجبار محوری = شخصی');
+
+const mGrid = E.buildMustehsilaGrid('غتخجقنایفذرسلظکعضدوصهشزمبحثط');
+assert(mGrid.rows.length === 4 && mGrid.source.length === 28, 'جدول مستحصله ۴ ردیف از حروف یکتا');
+assert(warSael.mustehsilaGrid && warSael.mustehsilaGrid.rows.length === 4, 'نتیجه جدولی شامل شبکهٔ مستحصله');
+assert(warSael.questionScope && warSael.steps.some((s) => s.id === 'question_scope'), 'گام نوع سؤال در مراحل');
+assert(warSael.steps.some((s) => s.id === 'mustehsila_grid'), 'گام جدول مستحصله در مراحل');
 
 // قفل نطق: مخزن‌آزاد + جاروی چندباره برای رنگ
 const refNatq = 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';

@@ -51,6 +51,22 @@
         <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
       </div>
 
+      <div class="mode-row" style="margin-top:8px">
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeAuto" value="auto" checked>
+          <span>نوع سؤال: خودکار</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeMarkazi" value="markazi">
+          <span>مرکزی (عامه)</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeMehvari" value="mehvari">
+          <span>محوری (شخصی)</span>
+        </label>
+      </div>
+      <p class="hint">از کتب معتبر (طوخى/شاد گیلانی): مرکزی بدون نام سائل؛ محوری با سائل (+والدہ) و تاریخ. قفل اسکرین ۵۰۲۲ با سائل۵۹ محوری‌وار است.</p>
+
       <div id="mizanDateBox" class="extra-box" style="margin-top:10px">
         <div class="field">
           <label for="questionDate">تاریخ سؤال (شمسی · برای میزان/جدولی)</label>
@@ -59,7 +75,7 @@
             <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
           </div>
         </div>
-        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. قفل نمونه: ۵۰۲۲/۱۰ با سائل جمل ۵۹ (مثل مهدی) — کلاسیک خواجه نصیر.</p>
+        <p class="hint">در جفر جدولی: تاریخ + (در محوری) سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. ابجد کلاسیک: آ→ا=۱. قفل ۵۰۲۲/۱۰ با سائل جمل ۵۹.</p>
       </div>
 
       <div class="check" style="margin-top:8px">
@@ -229,6 +245,12 @@
       <div class="letters" id="mustehsilaBox">—</div>
       <label>بدون تکرار</label>
       <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
+
+      <div id="mustehsilaGridWrap" class="hidden" style="margin-top:12px">
+        <label>جدول مستحصله (نمایش فشرده)</label>
+        <p class="hint" id="mustehsilaGridHint">در کتب مستحصله یک سطر است؛ این شبکه همان حروف را فشرده نشان می‌دهد.</p>
+        <div class="jadwal-scroll" id="mustehsilaGridBox"></div>
+      </div>
 
       <div id="jadwalGridWrap" class="hidden" style="margin-top:14px">
         <label>جدول لایه‌ها + مسیر رنگ (جاروی چندباره)</label>

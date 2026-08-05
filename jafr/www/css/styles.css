@@ -337,6 +337,30 @@ textarea { min-height: 84px; resize: vertical; }
 .jadwal-table td.hl-s5 { background: #e0b0ff; color: #1a1a1a; font-weight: 800; }
 .jadwal-table tr.sel-row td:not(.row-label) { background: #f7f3e8; }
 
+.must-grid-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 100%;
+}
+.must-grid-table th,
+.must-grid-table td {
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 4px 6px;
+  text-align: center;
+}
+.must-grid-table th {
+  background: rgba(0,0,0,0.25);
+  font-weight: 600;
+  color: var(--muted);
+}
+.must-grid-table td.row-label {
+  text-align: right;
+  white-space: nowrap;
+  background: rgba(0,0,0,0.18);
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .prebox {
   width: 100%;
   min-height: 180px;

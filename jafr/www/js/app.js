@@ -110,12 +110,15 @@
   function metaFromForm() {
     const extraEnabled = $('extraEnabled').checked;
     const questionDate = ($('questionDate') && $('questionDate').value.trim()) || '';
+    const scopeEl = document.querySelector('input[name="questionScope"]:checked');
+    const scopeVal = (scopeEl && scopeEl.value) || 'auto';
     return {
       sael: $('sael').value.trim(),
       taleb: $('taleb').value.trim(),
       matloob: $('matloob').value.trim(),
       modda: $('modda').value.trim(),
       soal: $('soal').value.trim(),
+      questionScope: scopeVal === 'auto' ? '' : scopeVal,
       extraEnabled,
       saelFamily: extraEnabled ? $('saelFamily').value.trim() : '',
       talebFamily: extraEnabled ? $('talebFamily').value.trim() : '',
@@ -133,6 +136,7 @@
       matloob: meta.matloob,
       modda: meta.modda,
       soal: meta.soal,
+      questionScope: meta.questionScope || '',
       extraEnabled: meta.extraEnabled,
       saelFamily: meta.saelFamily,
       talebFamily: meta.talebFamily,
@@ -170,6 +174,9 @@
         : 'جفر جدولی میزان‌دار (ربع دایره)';
       opts.natqStyle = 'sentence';
     }
+    const scopeEl = document.querySelector('input[name="questionScope"]:checked');
+    const scopeVal = (scopeEl && scopeEl.value) || 'auto';
+    if (scopeVal === 'markazi' || scopeVal === 'mehvari') opts.questionScope = scopeVal;
     return opts;
   }
 
@@ -338,6 +345,36 @@
     wrap.classList.remove('hidden');
   }
 
+  function renderMustehsilaGrid(result) {
+    const wrap = $('mustehsilaGridWrap');
+    const box = $('mustehsilaGridBox');
+    const hint = $('mustehsilaGridHint');
+    if (!wrap || !box) return;
+    const grid = result.mustehsilaGrid
+      || (result.jadwal && result.jadwal.mustehsilaGrid)
+      || (result.mustehsilaUnique ? JafrEngine.buildMustehsilaGrid(result.mustehsilaUnique) : null);
+    if (!grid || !grid.rows || !grid.rows.length) {
+      wrap.classList.add('hidden');
+      box.innerHTML = '';
+      return;
+    }
+    const cols = grid.cols || (grid.rows[0].cells || []).length;
+    let html = '<table class="must-grid-table"><thead><tr><th>سطر</th>';
+    for (let c = 1; c <= cols; c++) html += '<th>' + c + '</th>';
+    html += '</tr></thead><tbody>';
+    grid.rows.forEach((row) => {
+      html += '<tr><td class="row-label">' + escapeHtml(row.title || row.id) + '</td>';
+      (row.cells || []).forEach((ch) => {
+        html += '<td>' + escapeHtml(ch || '') + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    if (hint) hint.textContent = grid.classicNote || 'نمایش فشردهٔ حروف مستحصله.';
+    wrap.classList.remove('hidden');
+  }
+
   function showPrimary(result, keepCompare) {
     $('statJamal').textContent = String(result.jamal);
     if ($('statMizan')) $('statMizan').textContent = result.mizan != null ? String(result.mizan) : '—';
@@ -348,6 +385,11 @@
       : String(result.letterCount);
     $('mustehsilaBox').textContent = result.mustehsila || '—';
     $('uniqueBox').textContent = result.mustehsilaUnique || '—';
+    const scope = result.questionScope || (result.jadwal && result.jadwal.questionScope);
+    if ($('profileHint') && scope) {
+      $('profileHint').textContent = `نوع سؤال: ${scope.title} — ${scope.classicNote}`;
+    }
+    renderMustehsilaGrid(result);
     renderJadwalGrid(result);
     $('resultCard').classList.remove('hidden');
     if (!keepCompare) $('compareCard').classList.add('hidden');
@@ -501,7 +543,8 @@
     ensureTodayDate(true);
     lastBundle = null;
     if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
-    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
+    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard', 'mustehsilaGridWrap', 'jadwalGridWrap']
+      .forEach((id) => { const el = $(id); if (el) el.classList.add('hidden'); });
     hideAlert();
   }
 

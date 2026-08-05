@@ -360,8 +360,58 @@
   }
 
   /**
+   * نوع سؤال از متون معتبر جفر (طوخى/شاد گیلانی و مستحصلهٔ عسکریه):
+   * - مرکزی (امور عامه): نام سائل لازم نیست
+   * - محوری (شخصی): سائل + والدہ + تاریخ الزامی است
+   */
+  function classifyQuestionScope(meta) {
+    const forced = meta && meta.questionScope;
+    if (forced === 'markazi' || forced === 'mehvari') {
+      return {
+        id: forced,
+        title: forced === 'markazi' ? 'مرکزی (امور عامه)' : 'محوری (شخصی)',
+        saelRequired: forced === 'mehvari',
+        classicNote: forced === 'markazi'
+          ? 'در سؤال مرکزی نام سائل در اساس نمی‌آید (طوخى/شاد گیلانی).'
+          : 'در سؤال محوری سائل+والدہ+تاریخ در اساس لازم است.'
+      };
+    }
+    const hasPerson = !!(meta && (meta.sael || meta.taleb || meta.matloob));
+    const text = [meta && meta.soal, meta && meta.modda].filter(Boolean).join(' ');
+    const publicWar = /جنگ|نبرد|اسرائیل|اسراییل|آمریکا|ایران|دولت|کشور|انتخابا?ت|اقتصاد/.test(text);
+    if (publicWar && !hasPerson) {
+      return {
+        id: 'markazi',
+        title: 'مرکزی (امور عامه)',
+        saelRequired: false,
+        classicNote: 'سؤال عمومی/سیاسی؛ کلاسیک بدون سائل محاسبه می‌شود.'
+      };
+    }
+    if (hasPerson || /ازدواج|همسر|مریض|غائب|فرزند|من\b|برای من/.test(text)) {
+      return {
+        id: 'mehvari',
+        title: 'محوری (شخصی)',
+        saelRequired: true,
+        classicNote: 'سؤال شخصی؛ کلاسیک سائل (+والدہ) و تاریخ می‌خواهد.'
+      };
+    }
+    return {
+      id: 'markazi',
+      title: 'مرکزی (پیش‌فرض)',
+      saelRequired: false,
+      classicNote: 'بدون قرینهٔ شخصی، مرکزی فرض شد.'
+    };
+  }
+
+  /**
    * تحلیل قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰)
-   * راه کلاسیک: سائل با جمل ۵۹ (مهدی / نواب) — خواجه نصیر
+   *
+   * تحقیق کتب/متون معتبر:
+   * - ابجد کبیر کلاسیک: آ ≡ ا = ۱ (ویکی‌ابجد، حساب جمل؛ آ=۶۰ غیرکلاسیک است)
+   * - سؤال جنگِ نمونه بدون سائل با ابجد کلاسیک → ۴۹۶۳ / میزان ۷
+   * - فاصلهٔ +۵۹ تا ۵۰۲۲ فقط با افزودن سائلِ جمل ۵۹ (مهدی/نواب) یا شمارش غیرکلاسیک آ=۶۰ بسته می‌شود
+   * - متون اردو (مدھش الباب / شاد گیلانی): سؤال مرکزی بدون سائل؛ محوری با سائل+والدہ+تاریخ
+   * پس قفل اسکرین با سائل۵۹ «محوری‌وار» است، نه قاعدهٔ مرکزیِ صرف
    */
   function analyzeJamalLock(jamalSum, parts, opts) {
     const target = JAMAL_LOCK_TARGET;
@@ -375,19 +425,28 @@
       hits.push('منطبق با هدف ۵۰۲۲ / میزان ۱۰');
     }
     if (saelSum === target.saelJamal) {
-      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — قاعدهٔ کلاسیک خواجه نصیر');
+      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — بستن قفل اسکرین به‌شیوهٔ محوری');
+    }
+    if (gap === target.saelJamal && saelSum === 0) {
+      hits.push('فاصلهٔ +۵۹: یا سائلِ ۵۹ بیفزای، یا نرم‌افزار مرجع احتمالاً آ را غیرکلاسیک شمرده');
     }
     const recipes = [
       {
         id: 'sael59',
-        title: 'سائل با جمل ۵۹',
+        title: 'سائل با جمل ۵۹ (محوری‌وار)',
         classic: true,
-        note: 'اساس کامل + مهدی یا نواب → ۵۰۲۲؛ ستون‌ها همچنان فقط از سؤال'
+        note: 'مهدی یا نواب → ۵۰۲۲؛ ستون‌ها همچنان فقط از سؤال. برای سؤال مرکزیِ صرف، کتب نام سائل را لازم نمی‌دانند.'
+      },
+      {
+        id: 'alef60_nonclassic',
+        title: 'شمارش آ=۶۰ (غیرکلاسیک)',
+        classic: false,
+        note: 'در ابجد کبیر معتبر آ→ا=۱ است؛ بعضی نرم‌افزارها آ را ۶۰ می‌گیرند و بدون سائل به ۵۰۲۲ می‌رسند.'
       }
     ];
     const summary = gap === 0
       ? `قفل جمل بسته شد (${target.jamal} → میزان ${target.mizan})`
-      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — سائلِ کلاسیک با جمل ۵۹`;
+      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — کلاسیکِ محوری: سائل ۵۹؛ مرکزیِ صرف: ۴۹۶۳/۷`;
     return {
       targetJamal: target.jamal,
       targetMizan: target.mizan,
@@ -399,6 +458,32 @@
       hits,
       recipes,
       summary
+    };
+  }
+
+  /**
+   * جدول مستحصله برای نمایش فشرده (UI)
+   * در کتب: مستحصله یک «سطر» است نه جدول ۴×۲۱ِ نام‌دار.
+   * جداول ۴ردیفی در رسائل معمولاً جدول‌های تبدیلِ قاعده (lookup)اند.
+   * اینجا حروف مستحصله/یکتا را در ۴ ردیف می‌چینیم تا با ویجت اسکرین هم‌خوان شود.
+   */
+  function buildMustehsilaGrid(letters, opts) {
+    const src = String(letters || '');
+    const cols = (opts && opts.cols > 0) ? (opts.cols | 0) : Math.max(1, Math.ceil(src.length / 4) || 1);
+    const rows = [[], [], [], []];
+    for (let i = 0; i < src.length; i++) {
+      rows[i % 4].push(src[i]);
+    }
+    while (rows[0].length < cols) {
+      for (let r = 0; r < 4; r++) {
+        if (rows[r].length < cols) rows[r].push('');
+      }
+    }
+    return {
+      cols,
+      rows: rows.map((cells, i) => ({ id: 'M' + (i + 1), title: 'مستحصله ' + (i + 1), cells })),
+      source: src,
+      classicNote: 'کلاسیک: سطر مستحصله؛ این شبکه فقط نمایش فشردهٔ همان حروف است.'
     };
   }
 
@@ -537,8 +622,15 @@
   }
 
   /**
-   * سطر انتخاب با کلید میزان روی ۴ ردیف A/B/C/D (نه ۸تای تکراری)
-   * ستون i (۱-مبنا): ردیف = ((i * میزان) % 4) میان [A,B,C,D]
+   * سطر انتخاب با کلید میزان روی ۴ ردیف A/B/C/D
+   *
+   * کلاسیکِ معتبر در کتب:
+   * - میزان کلید سنجش حروف است (بدون آن مستحصله ناطق نمی‌شود)
+   * - لقط: برداشتن هر Nاُم حرف (اینجا N=میزان) — هم‌خانوادهٔ تخلیص لقط
+   * - ترفع/تنزل/ترقی/مساوات به‌عنوان دسته‌بندی حروف برای سنجش با میزان
+   *
+   * فرمول نرم‌افزاری ستون i → ردیف ((i×میزان)%4):
+   * در رسائل نام‌دار به‌عنوان قاعدهٔ منقول یافت نشد؛ تقریب مهندسی UI جدولی است.
    */
   function selectJadwalRow(layers, mizan) {
     const abcd = [
@@ -901,6 +993,16 @@
     const jamal = sumAbjad(asas, opts.table);
     const madkhal = reduceToUnits(jamal.sum);
     const jamalLock = analyzeJamalLock(jamal.sum, parts, opts);
+    const questionScope = classifyQuestionScope(Object.assign({}, input, parts, {
+      questionScope: (opts && opts.questionScope) || (input && input.questionScope)
+    }));
+    steps.push({
+      id: 'question_scope',
+      title: 'نوع سؤال (تحقیق کتب)',
+      input: questionScope.id,
+      output: questionScope.title,
+      note: questionScope.classicNote
+    });
     let jamalNote = `جمع جمل (${opts.table}): ${jamal.sum} | مدخل/رد به آحاد: ${madkhal.steps.join(' ← ')}`;
     if (opts.isqatEnabled) {
       const iq = isqat(jamal.sum, opts.isqatBase, opts.isqatKeepZero);
@@ -920,19 +1022,20 @@
       input: [
         `جمل=${jamal.sum}`,
         `سائل=${parts.sael || '—'}(${sumAbjad(parts.sael, opts.table).sum})`,
-        'آ→ا(۱) کلاسیک'
+        'آ→ا(۱) کلاسیک',
+        `نوع=${questionScope.title}`
       ].join(' | '),
       output: jamalLock.summary,
       note: jamalLock.recipes
-        .map((r) => `${r.title}${r.classic ? ' [کلاسیک]' : ''}: ${r.note}`)
+        .map((r) => `${r.title}${r.classic ? ' [کلاسیک]' : ' [غیرکلاسیک]'}: ${r.note}`)
         .concat(jamalLock.hits.length ? ['· ' + jamalLock.hits.join('؛ ')] : [])
         .join(' · ')
     });
 
     // --- جفر جدولی میزان‌دار (الویت کاربر) ---
     if (opts.pipeline === 'jadwali') {
-      // تفکیک نقش‌ها (مطابق نمونهٔ حرفه‌ای + سنت خواجه نصیر):
-      // جمل/میزان ← اساس کامل (سائل+طالب+مطلوب+مدعا+سؤال+تاریخ[+ساعت])
+      // تفکیک نقش‌ها (نمونهٔ حرفه‌ای + متون طوخى/شاد گیلانی):
+      // جمل/میزان ← اساس کامل (در محوری: سائل+…؛ در مرکزی ممکن است بدون سائل)
       // ستون‌های جدول ← فقط حروف سؤال (بدون تاریخ/فیلدهای اضافه)
       const columnBase = parts.soal || asas;
       const jadwalModel = (opts.jadwalModel === 'tttm' || opts.jadwalModel === 'tarfa_tanzil')
@@ -946,8 +1049,10 @@
         output: String(mizan),
         note: [
           `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (منازل/دایره ابجد)`,
-          'جمل از اساس کامل است (سائل/طالب/مطلوب/مدعا/سؤال/تاریخ)',
-          'قفل نمونه: ۵۰۲۲ → ۱۰ با سائل جمل ۵۹ (کلاسیک)'
+          'جمل از اساس کامل است',
+          questionScope.id === 'mehvari'
+            ? 'قفل اسکرین ۵۰۲۲/۱۰ با سائل جمل ۵۹ (شیوهٔ محوری)'
+            : 'مرکزیِ صرف بدون سائل برای نمونهٔ جنگ: ۴۹۶۳/۷؛ ۵۰۲۲ نیاز به سائل۵۹ یا شمارش غیرکلاسیک دارد'
         ].join(' | ')
       });
 
@@ -987,9 +1092,9 @@
       steps.push({
         id: 'jadwal_select',
         title: 'سطر انتخاب (با کلید میزان روی A–D)',
-        input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 4 میان A/B/C/D`,
+        input: `میزان=${mizan} | قاعدهٔ UI: ردیف ستون i = (i×میزان) mod 4 میان A/B/C/D`,
         output: sel.selected,
-        note: 'سطر انتخاب تقریب کمکی است. قفل نطق باز: جمله آزاد از مخزن A+B+C+D؛ رنگ = جاروی چندباره پس از نطق'
+        note: 'لقط هر Nاُم حرف کلاسیک است؛ خودِ فرمول %4 در رسائل نام‌دار یافت نشد (تقریب نرم‌افزاری). نطق از مخزن A–D؛ رنگ پس از نطق'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
@@ -1055,12 +1160,20 @@
         note: `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)}`
       });
 
+      const mustehsilaGrid = buildMustehsilaGrid(uniqueLetters(mustehsila));
       steps.push({
         id: 'mustehsila',
         title: 'مستحصله نهایی (جدولی)',
         input: `اولویت:${priority.length} | لقط:${classicLaqt.pooled.length} | مخزن:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | نطق آزاد از مخزن؛ رنگ پس از نطق`
+        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | در کتب مستحصله «سطر» است؛ شبکهٔ فشرده فقط نمایش است`
+      });
+      steps.push({
+        id: 'mustehsila_grid',
+        title: 'جدول مستحصله (نمایش فشرده)',
+        input: uniqueLetters(mustehsila),
+        output: mustehsilaGrid.rows.map((r) => r.cells.join('')).join(' | '),
+        note: mustehsilaGrid.classicNote
       });
 
       const methodLabel = opts.methodLabel || (jadwalModel === 'tttm'
@@ -1078,10 +1191,12 @@
         mizan,
         jamalLock,
         natqLock,
+        questionScope,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
         mustehsila,
         mustehsilaUnique: uniqueLetters(mustehsila),
+        mustehsilaGrid,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
@@ -1106,7 +1221,9 @@
           condensed,
           poolABCD,
           poolUnique: uniqueLetters(poolABCD),
-          natqLock
+          natqLock,
+          mustehsilaGrid,
+          questionScope
         }
       };
     }
@@ -2324,6 +2441,7 @@
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
+    classifyQuestionScope, buildMustehsilaGrid,
     buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
