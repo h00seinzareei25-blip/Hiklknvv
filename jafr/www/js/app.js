@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · قفل بازشده: سائل مهدی → ۵۰۲۲/۱۰ · نطق از مخزن A–D · رنگ پس از نطق';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق · نمونه جنگ (اختیاری): مهدی → ۵۰۲۲/۱۰';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -273,9 +273,13 @@
       ' | اگر «آیا / یا نه» ننوشته باشی معمولاً چندخوانشی است.';
     if (result && result.jamalLock) {
       const jl = result.jamalLock;
-      text += jl.matched
-        ? ` | قفل جمل: بسته (${jl.jamal}/${jl.mizan})`
-        : ` | قفل جمل: ${jl.summary}`;
+      if (jl.matched) {
+        text += ` | قفل جمل: بسته (${jl.jamal}/${jl.mizan})`;
+      } else if (jl.relevant) {
+        text += ` | قفل جمل: ${jl.summary}`;
+      } else {
+        text += ` | جمل ${jl.jamal} → میزان ${jl.mizan}`;
+      }
     }
     if (result && result.natqLock && result.natqLock.unlocked) {
       text += ' | قفل نطق: باز (مخزن‌آزاد + رنگ پس از نطق)';
@@ -392,8 +396,10 @@
       if (lock && lock.matched) {
         t = (t ? t + ' | ' : '') + 'قفل جمل بسته: ۵۰۲۲ → میزان ۱۰' +
           (lock.hits && lock.hits.length ? (' · ' + lock.hits[0]) : '');
-      } else if (lock && lock.summary) {
+      } else if (lock && lock.relevant && lock.summary) {
         t = (t ? t + ' | ' : '') + lock.summary;
+      } else if (lock && !lock.relevant) {
+        t = (t ? t + ' | ' : '') + `جمل ${lock.jamal} → میزان ${lock.mizan}`;
       }
       $('profileHint').textContent = t || 'پروفایل نطق بعد از اجرا نشان داده می‌شود.';
     }

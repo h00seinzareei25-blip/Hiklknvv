@@ -178,10 +178,15 @@ const warNawab = E.runClassic({
 });
 assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
 
-const lockDiag = E.analyzeJamalLock(4963, { sael: '' }, { table: 'kabir' });
+const lockDiag = E.analyzeJamalLock(4963, {
+  sael: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  modda: 'جنگ'
+}, { table: 'kabir' });
 assert(lockDiag.gap === 59 && lockDiag.recipes.length >= 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: راه مهدی + معادل ۵۹');
 assert(lockDiag.recipes.some((r) => r.id === 'sael_mahdi' && r.resolved), 'راه بازشده سائل مهدی');
 assert(lockDiag.recipes.some((r) => r.id === 'alef60_nonclassic' && !r.classic), 'آ=۶۰ غیرکلاسیک و فرعی');
+assert(lockDiag.relevant === true, 'قفل جنگ برای سؤال جنگ relevant است');
 assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'مهدی', 'ثابت هدف قفل با مهدی');
 assert(E.JAMAL_LOCK_TARGET.resolved === true, 'قفل جمل به‌عنوان بازشده علامت خورده');
 
@@ -235,6 +240,24 @@ assert(jadPrompt.generator.includes('نادم شوند') && jadPrompt.generator.
 assert(jadPrompt.generator.includes('نام طرفین') && jadPrompt.generator.includes('ویرگول'), 'قواعد سبک کلاسیک نطق (بدون نام طرفین / ویرگول خبری)');
 assert(jadPrompt.judge.includes('نطق یک‌خطی نهایی') && jadPrompt.judge.includes('تفسیر هوش مصنوعی'), 'داور خواهان نطق یک‌خطی + تفسیر است');
 assert(jadPrompt.judge.includes('بدون نام طرفین') || jadPrompt.judge.includes('نام طرفین سیاسی'), 'داور سبک کلاسیک را اصلاح می‌کند');
+
+assert(E.detectTopic({ soal: 'نتیجه پیروزی تیم چیست', modda: 'ورزش' }).id !== 'conflict', 'پیروزی ورزشی = جنگ نشود');
+assert(E.detectTopic({ soal: 'سقوط قیمت دلار', modda: 'اقتصاد' }).id !== 'conflict', 'سقوط اقتصادی = جنگ نشود');
+assert(E.detectTopic({ soal: 'آیا این ازدواج مبارک است', modda: 'ازدواج' }).id !== 'conflict', 'ازدواج = جنگ نشود');
+assert(E.classifyQuestionScope({ sael: 'علی', soal: 'وضعیت اقتصاد ایران چگونه خواهد بود', modda: 'اقتصاد' }).title.indexOf('جنگ') < 0, 'اقتصاد برچسب جنگ نگیرد');
+
+const marriageRun = E.runClassic({
+  sael: 'علی', taleb: '', matloob: '', modda: 'ازدواج',
+  soal: 'نتیجه ازدواج علی و زهرا چگونه خواهد بود',
+  questionDate: 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران',
+  options: { pipeline: 'jadwali', table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'takhallus', mazjNazira: true }
+});
+assert(marriageRun.ok && marriageRun.jamalLock && marriageRun.jamalLock.relevant === false, 'قفل ۵۰۲۲ روی ازدواج فشار نیاورد');
+const marriagePrompt = E.buildNatqPrompt(marriageRun, {
+  sael: 'علی', soal: 'نتیجه ازدواج علی و زهرا چگونه خواهد بود', modda: 'ازدواج'
+});
+assert(marriagePrompt.generator.includes('الگوی جنگ را کپی نکن') || marriagePrompt.generator.includes('بانک جنگ'), 'پرامپت ازدواج الگوی جنگ را اجبار نکند');
+assert(!/موضوع کمکی: جنگ/.test(marriagePrompt.generator), 'پرامپت ازدواج موضوع جنگ نگیرد');
 
 assert(E.takhlisLaqt('ابجدهوزحطی', 3) === 'ادزی', 'لقط گام ۳');
 assert(E.takhlisLaqt('ابجدهوزحطیکل', 4) === 'اهط', 'لقط گام ۴');
