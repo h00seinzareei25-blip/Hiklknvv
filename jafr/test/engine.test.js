@@ -120,7 +120,7 @@ assert(jadwali.jadwal.poolABCD && jadwali.jadwal.poolABCD.length === jadwali.col
 assert(jadwali.mustehsila.length > 0, 'مستحصله جدولی غیرخالی');
 
 const jadwaliTttm = E.runClassic({
-  sael: 'مهدی', taleb: '', matloob: '', modda: '',
+  sael: 'نواب', taleb: '', matloob: '', modda: '',
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
   questionDate: 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران',
   options: { pipeline: 'jadwali', table: 'kabir', jadwalModel: 'tttm' }
@@ -154,29 +154,29 @@ assert(warSplit.ok && warSplit.columnBase.length === 49, 'جدولی: ستون�
 assert(warSplit.asas.length > 49, 'جدولی: اساس کامل شامل تاریخ بلندتر از ستون‌هاست');
 assert(warSplit.jamal === 4963 && warSplit.mizan === 7, 'بدون سائل: جمل ۴۹۶۳ / میزان ۷');
 const warSael = E.runClassic({
-  sael: 'مهدی', taleb: '', matloob: '', modda: '',
-  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-  questionDate: warDate,
-  options: { pipeline: 'jadwali', table: 'kabir' }
-});
-assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل مهدی: جمل ۵۰۲۲ / میزان ۱۰');
-assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
-assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
-assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام ۱۰ از ۴۹ ستون');
-assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل بسته');
-assert(warSael.jamalLock.saelJamal === 59, 'سائل مهدی جمل ۵۹');
-assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
-
-assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا کلاسیک');
-assert(E.sumAbjad('مهدی').sum === 59 && E.sumAbjad('نواب').sum === 59, 'مهدی و نواب = ۵۹');
-
-const warNawab = E.runClassic({
   sael: 'نواب', taleb: '', matloob: '', modda: '',
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
   questionDate: warDate,
   options: { pipeline: 'jadwali', table: 'kabir' }
 });
-assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
+assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
+assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
+assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
+assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام ۱۰ از ۴۹ ستون');
+assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل بسته');
+assert(warSael.jamalLock.saelJamal === 59, 'سائل نواب جمل ۵۹');
+assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
+
+assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا کلاسیک');
+assert(E.sumAbjad('نواب').sum === 59 && E.sumAbjad('مهدی').sum === 59, 'نواب و مهدی = ۵۹');
+
+const warAlt59 = E.runClassic({
+  sael: 'مهدی', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(warAlt59.jamal === 5022 && warAlt59.mizan === 10, 'هر سائل جمل ۵۹ همان قفل را می‌بندد');
 
 const lockDiag = E.analyzeJamalLock(4963, {
   sael: '',
@@ -187,7 +187,7 @@ assert(lockDiag.gap === 59 && lockDiag.recipes.length >= 2 && lockDiag.recipes[0
 assert(lockDiag.recipes.some((r) => r.id === 'sael_mahdi' && r.resolved), 'راه بازشده سائل جمل ۵۹');
 assert(lockDiag.recipes.some((r) => r.id === 'alef60_nonclassic' && !r.classic), 'آ=۶۰ غیرکلاسیک و فرعی');
 assert(lockDiag.relevant === true, 'قفل جنگ برای سؤال جنگ relevant است');
-assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'مهدی', 'ثابت هدف قفل با سائل نمونه');
+assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'نواب', 'ثابت هدف قفل با سائل نمونه نواب');
 assert(E.JAMAL_LOCK_TARGET.resolved === true, 'قفل جمل به‌عنوان بازشده علامت خورده');
 
 const scopeWar = E.classifyQuestionScope({
@@ -195,27 +195,27 @@ const scopeWar = E.classifyQuestionScope({
   sael: '', taleb: '', matloob: ''
 });
 assert(scopeWar.id === 'markazi' && !scopeWar.saelRequired, 'جنگ بدون شخص = سؤال مرکزی');
-const scopeWarMahdi = E.classifyQuestionScope({
+const scopeWarSael = E.classifyQuestionScope({
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-  sael: 'مهدی'
+  sael: 'نواب'
 });
-assert(scopeWarMahdi.id === 'mehvari' && scopeWarMahdi.saelRequired, 'جنگ + مهدی = محوری اصولی');
+assert(scopeWarSael.id === 'mehvari' && scopeWarSael.saelRequired, 'جنگ + سائل = محوری اصولی');
 const scopeMeh = E.classifyQuestionScope({
   soal: 'آیا علی با فاطمه ازدواج خواهد کرد',
   sael: 'حسین', questionScope: 'mehvari'
 });
 assert(scopeMeh.id === 'mehvari' && scopeMeh.saelRequired, 'ازدواج/اجبار محوری = شخصی');
 
-const lockMahdi = E.analyzeJamalLock(5022, {
-  sael: 'مهدی',
+const lockNawab = E.analyzeJamalLock(5022, {
+  sael: 'نواب',
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود'
 }, { table: 'kabir' });
-assert(lockMahdi.matched && /جمل ۵۹|۵۰۲۲/.test(lockMahdi.summary + (lockMahdi.hits || []).join('')), 'قفل با سائل جمل ۵۹ matched');
+assert(lockNawab.matched && /جمل ۵۹|۵۰۲۲/.test(lockNawab.summary + (lockNawab.hits || []).join('')), 'قفل با سائل جمل ۵۹ matched');
 
 const mGrid = E.buildMustehsilaGrid('غتخجقنایفذرسلظکعضدوصهشزمبحثط');
 assert(mGrid.rows.length === 4 && mGrid.source.length === 28, 'جدول مستحصله ۴ ردیف از حروف یکتا');
 assert(warSael.mustehsilaGrid && warSael.mustehsilaGrid.rows.length === 4, 'نتیجه جدولی شامل شبکهٔ مستحصله');
-assert(warSael.questionScope && warSael.questionScope.id === 'mehvari', 'جنگ+مهدی در نتیجه محوری است');
+assert(warSael.questionScope && warSael.questionScope.id === 'mehvari', 'جنگ+سائل در نتیجه محوری است');
 assert(warSael.steps.some((s) => s.id === 'question_scope'), 'گام نوع سؤال در مراحل');
 assert(warSael.steps.some((s) => s.id === 'mustehsila_grid'), 'گام جدول مستحصله در مراحل');
 assert(warSael.jamalLock && warSael.jamalLock.matched && warSael.jamalLock.resolvedPath === 'sael_mahdi', 'مسیر قفل sael_mahdi');

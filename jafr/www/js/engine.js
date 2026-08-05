@@ -48,12 +48,12 @@
     'چ': 'ج', 'پ': 'ب', 'ژ': 'ز'
   };
 
-  /** هدف قفل نمونهٔ حرفه‌ای (اسکرین‌شات جنگ) */
+  /** هدف قفل محوری نمونه (جمل ۵۰۲۲ / میزان ۱۰) — سائل با جمل ۵۹ */
   const JAMAL_LOCK_TARGET = {
     jamal: 5022,
     mizan: 10,
     saelJamal: 59,
-    confirmedSael: 'مهدی',
+    confirmedSael: 'نواب',
     resolved: true
   };
 
@@ -427,7 +427,7 @@
    * قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰) — بازشده
    *
    * راه حل تأییدشده:
-   * سائل «مهدی» (جمل ۵۹) + سؤال جنگ کوتاه + تاریخ فارسی بلند
+   * سائل با جمل ۵۹ + سؤال جنگ کوتاه + تاریخ فارسی بلند
    * → اساس کامل جمل ۵۰۲۲ → میزان ۱۰ (محوری اصولی؛ السر اللامع / طوخى)
    *
    * بدون سائل (مرکزی/امور عامه): ۴۹۶۳ / ۷
@@ -442,7 +442,6 @@
     const mizan = computeMizan(jamal, opts);
     const gap = target.jamal - jamal;
     const hits = [];
-    const isMahdi = normalizeText(saelRaw) === 'مهدی' || normalizeText(saelRaw).indexOf('مهدی') >= 0;
     const soalText = [parts && parts.soal, parts && parts.modda].filter(Boolean).join(' ');
     const warLike = /جنگ|نبرد|اسرائیل|اسراییل|آمریکا\s*علیه|علیه\s*ایران/.test(soalText);
     const matched = jamal === target.jamal && mizan === target.mizan;

@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق · نمونه جنگ (اختیاری): سائل جمل ۵۹ → ۵۰۲۲/۱۰';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -582,31 +582,6 @@
     showAlert('info', 'نمونه ازدواج با اطلاعات تکمیلی بارگذاری شد');
   }
 
-  /** نمونهٔ تأییدشدهٔ اسکرین: سائل جمل ۵۹ → جمل ۵۰۲۲ / میزان ۱۰ */
-  function loadWarLockSample() {
-    $('sael').value = 'مهدی';
-    $('taleb').value = '';
-    $('matloob').value = '';
-    $('modda').value = '';
-    $('soal').value = 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود';
-    $('extraEnabled').checked = false;
-    syncExtraUI();
-    ['saelFamily', 'talebFamily', 'matloobFamily', 'questionTime'].forEach((id) => {
-      if ($(id)) $(id).value = '';
-    });
-    $('questionDate').value = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
-    if ($('scopeMehvari')) $('scopeMehvari').checked = true;
-    if ($('modeSingle')) $('modeSingle').checked = true;
-    syncModeUI();
-    if ($('pipeline')) {
-      $('pipeline').value = 'jadwali';
-      syncPipelineUI();
-    }
-    if ($('jadwalModel')) $('jadwalModel').value = 'quarter28';
-    if ($('table')) $('table').value = 'kabir';
-    showAlert('ok', 'نمونه جنگ محوری: سائل جمل ۵۹ → انتظار ۵۰۲۲ / میزان ۱۰');
-  }
-
   // init
   fillMethodList();
   syncModeUI();
@@ -634,7 +609,6 @@
   $('btnRun').addEventListener('click', run);
   $('btnClear').addEventListener('click', clearAll);
   $('btnSample').addEventListener('click', loadSample);
-  if ($('btnSampleWar')) $('btnSampleWar').addEventListener('click', loadWarLockSample);
 
   function copyGenerator() {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
