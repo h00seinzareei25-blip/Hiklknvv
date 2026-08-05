@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق · نمونه جنگ (اختیاری): مهدی → ۵۰۲۲/۱۰';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق · نمونه جنگ (اختیاری): سائل جمل ۵۹ → ۵۰۲۲/۱۰';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -394,7 +394,7 @@
       const lock = result.jamalLock;
       let t = scope ? (`نوع سؤال: ${scope.title} — ${scope.classicNote}`) : '';
       if (lock && lock.matched) {
-        t = (t ? t + ' | ' : '') + 'قفل جمل بسته: ۵۰۲۲ → میزان ۱۰' +
+        t = (t ? t + ' | ' : '') + 'قفل محوری بسته: ۵۰۲۲ → میزان ۱۰' +
           (lock.hits && lock.hits.length ? (' · ' + lock.hits[0]) : '');
       } else if (lock && lock.relevant && lock.summary) {
         t = (t ? t + ' | ' : '') + lock.summary;
@@ -582,7 +582,7 @@
     showAlert('info', 'نمونه ازدواج با اطلاعات تکمیلی بارگذاری شد');
   }
 
-  /** نمونهٔ تأییدشدهٔ اسکرین: سائل مهدی → جمل ۵۰۲۲ / میزان ۱۰ */
+  /** نمونهٔ تأییدشدهٔ اسکرین: سائل جمل ۵۹ → جمل ۵۰۲۲ / میزان ۱۰ */
   function loadWarLockSample() {
     $('sael').value = 'مهدی';
     $('taleb').value = '';
@@ -604,7 +604,7 @@
     }
     if ($('jadwalModel')) $('jadwalModel').value = 'quarter28';
     if ($('table')) $('table').value = 'kabir';
-    showAlert('ok', 'نمونه جنگ قفل‌شده: سائل مهدی → انتظار ۵۰۲۲ / میزان ۱۰');
+    showAlert('ok', 'نمونه جنگ محوری: سائل جمل ۵۹ → انتظار ۵۰۲۲ / میزان ۱۰');
   }
 
   // init

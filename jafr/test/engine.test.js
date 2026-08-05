@@ -183,11 +183,11 @@ const lockDiag = E.analyzeJamalLock(4963, {
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
   modda: 'جنگ'
 }, { table: 'kabir' });
-assert(lockDiag.gap === 59 && lockDiag.recipes.length >= 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: راه مهدی + معادل ۵۹');
-assert(lockDiag.recipes.some((r) => r.id === 'sael_mahdi' && r.resolved), 'راه بازشده سائل مهدی');
+assert(lockDiag.gap === 59 && lockDiag.recipes.length >= 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: راه سائل ۵۹');
+assert(lockDiag.recipes.some((r) => r.id === 'sael_mahdi' && r.resolved), 'راه بازشده سائل جمل ۵۹');
 assert(lockDiag.recipes.some((r) => r.id === 'alef60_nonclassic' && !r.classic), 'آ=۶۰ غیرکلاسیک و فرعی');
 assert(lockDiag.relevant === true, 'قفل جنگ برای سؤال جنگ relevant است');
-assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'مهدی', 'ثابت هدف قفل با مهدی');
+assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'مهدی', 'ثابت هدف قفل با سائل نمونه');
 assert(E.JAMAL_LOCK_TARGET.resolved === true, 'قفل جمل به‌عنوان بازشده علامت خورده');
 
 const scopeWar = E.classifyQuestionScope({
@@ -206,8 +206,11 @@ const scopeMeh = E.classifyQuestionScope({
 });
 assert(scopeMeh.id === 'mehvari' && scopeMeh.saelRequired, 'ازدواج/اجبار محوری = شخصی');
 
-const lockMahdi = E.analyzeJamalLock(5022, { sael: 'مهدی' }, { table: 'kabir' });
-assert(lockMahdi.matched && /مهدی/.test(lockMahdi.summary + (lockMahdi.hits || []).join('')), 'قفل با مهدی matched');
+const lockMahdi = E.analyzeJamalLock(5022, {
+  sael: 'مهدی',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود'
+}, { table: 'kabir' });
+assert(lockMahdi.matched && /جمل ۵۹|۵۰۲۲/.test(lockMahdi.summary + (lockMahdi.hits || []).join('')), 'قفل با سائل جمل ۵۹ matched');
 
 const mGrid = E.buildMustehsilaGrid('غتخجقنایفذرسلظکعضدوصهشزمبحثط');
 assert(mGrid.rows.length === 4 && mGrid.source.length === 28, 'جدول مستحصله ۴ ردیف از حروف یکتا');
