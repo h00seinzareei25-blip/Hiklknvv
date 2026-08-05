@@ -116,6 +116,7 @@ assert(jadwali.jadwal.model === 'quarter28', 'مدل ربع دایره');
 assert(jadwali.jadwal.classicLaqt && jadwali.jadwal.classicLaqt.step === jadwali.mizan, 'لقط کلاسیک با گام میزان');
 assert(jadwali.jadwal.classicLaqt.fromAsas.length > 0, 'لقط کلاسیک از اساس سؤال');
 assert(jadwali.jadwal.selected.length === jadwali.columnBase.length, 'سطر انتخاب هم‌طول ستون‌های سؤال');
+assert(jadwali.jadwal.selectMode === 'category', 'انتخاب پیش‌فرض = دستهٔ کلاسیک');
 assert(jadwali.jadwal.poolABCD && jadwali.jadwal.poolABCD.length === jadwali.columnBase.length * 4, 'مخزن ABCD');
 assert(jadwali.mustehsila.length > 0, 'مستحصله جدولی غیرخالی');
 
@@ -141,6 +142,18 @@ assert(warAsas.length === 49, 'سؤال جنگ = ۴۹ ستون');
 const warLayers = E.buildJadwalLayers(warAsas);
 const warTarget = E.normalizeText('نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت');
 assert(E.coverageAgainst(warTarget, warLayers.poolABCD).complete, 'جواب نمونه تصویر از مخزن ABCD قابل‌ساخت است');
+
+// قفل مستحضره: جدول چهار دسته + پوشش کامل ۲۸ حرف
+assert(E.LETTER_CATEGORIES.length === 4, 'چهار دستهٔ کلاسیک');
+const allCatLetters = E.LETTER_CATEGORIES.map((c) => c.letters).join('');
+assert(allCatLetters.length === 28 && [...E.ABJAD_ORDER].every((ch) => allCatLetters.includes(ch)), 'پوشش کامل ۲۸ حرف در دسته‌ها');
+assert(E.letterCategory('ا').id === 'musawat' && E.letterCategory('ب').id === 'tarfa', 'نمونه دسته ا/ب');
+assert(E.letterCategory('س').id === 'tanzil' && E.letterCategory('ع').id === 'taraqi', 'نمونه دسته س/ع');
+const catSel = E.selectJadwalRow(E.buildJadwalLayers(warAsas, 'tttm'), 10);
+assert(catSel.mode === 'category' && catSel.selected.length === warAsas.length, 'مستحضره دسته‌ای هم‌طول');
+assert(catSel.picks[0].categoryTitle && catSel.picks.every((p) => p.category), 'هر ستون برچسب دسته دارد');
+const mod4Sel = E.selectJadwalRow(E.buildJadwalLayers(warAsas), 10, { selectMode: 'mod4' });
+assert(mod4Sel.mode === 'mod4' && mod4Sel.selected !== catSel.selected, 'mod4 فقط حالت سازگاری است و با کلاسیک فرق دارد');
 
 // تفکیک نقش: میزان از اساس کامل، ستون فقط از سؤال
 const warDate = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';

@@ -559,6 +559,31 @@
   }
 
   /**
+   * جدول کلاسیک حروف مساوات / ترفع / تنزل / ترقی
+   * منبع: المقدمة الجفرية (المعهد العربي لعلم الجفر) + رسائل پنج‌سطری ترفع/تنزل
+   * هر حرف ابجد در دقیقاً یکی از چهار دسته است (۷×۴=۲۸).
+   */
+  const LETTER_CATEGORIES = [
+    { id: 'musawat', title: 'مساوات', letters: 'اجهزطکم', index: 0 },
+    { id: 'tarfa', title: 'ترفع', letters: 'بدوحیلن', index: 1 },
+    { id: 'tanzil', title: 'تنزل', letters: 'سفقشثذظ', index: 2 },
+    { id: 'taraqi', title: 'ترقی', letters: 'عصرتخضغ', index: 3 }
+  ];
+
+  const LETTER_CATEGORY_MAP = (() => {
+    const map = Object.create(null);
+    LETTER_CATEGORIES.forEach((cat) => {
+      [...cat.letters].forEach((ch) => { map[ch] = cat; });
+    });
+    return map;
+  })();
+
+  function letterCategory(ch) {
+    const c = LETTER_CATEGORY_MAP[ch];
+    return c || { id: 'unknown', title: 'نامشخص', letters: '', index: 0 };
+  }
+
+  /**
    * جدول ۹تایی مراتب (آحاد / عشرات / مآت) برای ترفع و مساوات کلاسیک
    * ستون مشترک = همان مرتبهٔ وضعی در ردیف‌های سه‌گانه
    */
@@ -669,41 +694,103 @@
   }
 
   /**
-   * سطر انتخاب با کلید میزان روی ۴ ردیف A/B/C/D
+   * سطر انتخاب / مستحضره با کلید میزان
    *
-   * کلاسیکِ معتبر در کتب:
-   * - میزان کلید سنجش حروف است (بدون آن مستحصله ناطق نمی‌شود)
-   * - لقط: برداشتن هر Nاُم حرف (اینجا N=میزان) — هم‌خانوادهٔ تخلیص لقط
-   * - ترفع/تنزل/ترقی/مساوات به‌عنوان دسته‌بندی حروف برای سنجش با میزان
+   * قفل کلاسیک (بازشده از کتب):
+   * 1) حروف سؤال در چهار دستهٔ ثابت مساوات/ترفع/تنزل/ترقی طبقه‌بندی می‌شوند
+   *    (المقدمة الجفرية؛ جفر پنج‌سطری ترفع و ترقی و تنزل و مساوات).
+   * 2) برای هر ستون، حرف از ردیفِ همان دسته برداشته می‌شود
+   *    (در مدل tttm ردیف‌ها همان اعمال‌اند؛ وگرنه اعمال کلاسیک از اساس ساخته می‌شود).
+   * 3) میزان «دندانهٔ کلید» سنجش است؛ لقط هر N=میزان حرف روی همین سطر جداگانه اعمال می‌شود
+   *    (مستحصله در علم جفر — بدون میزان ناطق نمی‌شود).
    *
-   * فرمول نرم‌افزاری ستون i → ردیف ((i×میزان)%4):
-   * در رسائل نام‌دار به‌عنوان قاعدهٔ منقول یافت نشد؛ تقریب مهندسی UI جدولی است.
+   * فرمول نرم‌افزاری قدیم ((i×میزان)%4): در رسائل نام‌دار یافت نشد؛
+   * فقط با options.selectMode='mod4' برای سازگاری با UIهای دیجیتالی نگه داشته شده.
    */
-  function selectJadwalRow(layers, mizan) {
-    const abcd = [
-      (layers && layers.A) || '',
-      (layers && layers.B) || '',
-      (layers && layers.C) || '',
-      (layers && layers.D) || ''
-    ];
-    const ids = ['A', 'B', 'C', 'D'];
-    const n = abcd[0].length;
+  function selectJadwalRow(layers, mizan, opts) {
+    const mode = (opts && opts.selectMode) || 'category';
+    const base = (layers && layers.A) || '';
+    const n = base.length;
     const M = Math.max(1, mizan | 0);
+    const ids = ['A', 'B', 'C', 'D'];
+
+    // ردیف‌های عملیاتی کلاسیک از اساس ستون
+    const classicRows = [
+      base,                         // مساوات · اساس
+      applyTarfaGrid(base),         // ترفع
+      applyTanzilCircle(base),      // تنزل
+      applyTaraqi(base)             // ترقی
+    ];
+
+    // اگر مدل tttm است، از همان لایه‌های نمایشی با نگاشت دسته→ردیف استفاده کن
+    const useTttm = layers && layers.model === 'tttm';
+    const tttmByCat = useTttm ? [
+      layers.A || '', // مساوات
+      layers.C || '', // ترفع
+      layers.D || '', // تنزل
+      layers.B || ''  // ترقی
+    ] : null;
+    const sourceRows = tttmByCat || classicRows;
+    const sourceIds = useTttm ? ['A', 'C', 'D', 'B'] : ['Mus', 'Tarfa', 'Tanz', 'Taraqi'];
+
     let selected = '';
     const picks = [];
     for (let i = 0; i < n; i++) {
-      const rowIdx = ((i + 1) * M) % 4;
-      const ch = abcd[rowIdx][i] || '';
+      const chBase = base[i] || '';
+      let rowIdx;
+      let rowId;
+      let ch;
+      if (mode === 'mod4') {
+        const abcd = [
+          (layers && layers.A) || '',
+          (layers && layers.B) || '',
+          (layers && layers.C) || '',
+          (layers && layers.D) || ''
+        ];
+        rowIdx = ((i + 1) * M) % 4;
+        rowId = ids[rowIdx];
+        ch = abcd[rowIdx][i] || '';
+      } else {
+        const cat = letterCategory(chBase);
+        rowIdx = cat.index | 0;
+        rowId = sourceIds[rowIdx];
+        ch = sourceRows[rowIdx][i] || '';
+        picks.push({
+          col: i + 1,
+          row: rowId,
+          ch,
+          category: cat.id,
+          categoryTitle: cat.title,
+          base: chBase
+        });
+        selected += ch;
+        continue;
+      }
       selected += ch;
-      picks.push({ col: i + 1, row: ids[rowIdx], ch });
+      picks.push({ col: i + 1, row: rowId, ch, base: chBase });
     }
+
     let priority = selected;
+    const poolRows = [
+      (layers && layers.A) || classicRows[0],
+      (layers && layers.B) || classicRows[3],
+      (layers && layers.C) || classicRows[1],
+      (layers && layers.D) || classicRows[2]
+    ];
     for (let i = 0; i < n; i++) {
       if ((i + 1) % M === 0) {
-        for (let r = 0; r < 4; r++) priority += abcd[r][i] || '';
+        for (let r = 0; r < 4; r++) priority += poolRows[r][i] || '';
       }
     }
-    return { selected, picks, priority };
+    return {
+      selected,
+      picks,
+      priority,
+      mode: mode === 'mod4' ? 'mod4' : 'category',
+      classicNote: mode === 'mod4'
+        ? 'انتخاب mod4 نرم‌افزاری (غیرمنقول در رسائل نام‌دار)'
+        : 'مستحضره کلاسیک: دستهٔ حرف (مساوات/ترفع/تنزل/ترقی) → ردیف همان عمل؛ میزان برای لقط'
+    };
   }
 
   /**
@@ -1122,8 +1209,8 @@
           ? 'مساوات | ترقی(+۱) | ترفع(۹↑) | تنزل(−۱)'
           : 'A+0 | B+7 | C+14 | D+21',
         note: jadwalModel === 'tttm'
-          ? 'چهارگان کلاسیک کتب جفر + نظیرهٔ هر سطر؛ انتخاب روی همین ۴ سطر با کلید میزان'
-          : 'A خام، B یک‌ربع، C دو ربع (=نظیره)، D سه ربع؛ سطرهای نظیره همان جابه‌جایی +۱۴ هستند'
+          ? 'چهارگان کلاسیک کتب جفر + نظیرهٔ هر سطر؛ مستحضره از دستهٔ حرف (مساوات/ترفع/تنزل/ترقی)'
+          : 'A خام، B یک‌ربع، C دو ربع (=نظیره)، D سه ربع؛ مستحضره از دستهٔ کلاسیک حرف (نه از ربع)'
       });
       layers.rows.forEach((row) => {
         steps.push({
@@ -1135,13 +1222,13 @@
         });
       });
 
-      const sel = selectJadwalRow(layers, mizan);
+      const sel = selectJadwalRow(layers, mizan, opts);
       steps.push({
         id: 'jadwal_select',
-        title: 'سطر انتخاب (با کلید میزان روی A–D)',
-        input: `میزان=${mizan} | قاعدهٔ UI: ردیف ستون i = (i×میزان) mod 4 میان A/B/C/D`,
+        title: 'سطر انتخاب / مستحضره',
+        input: `میزان=${mizan} | حالت=${sel.mode}`,
         output: sel.selected,
-        note: 'لقط هر Nاُم حرف کلاسیک است؛ خودِ فرمول %4 در رسائل نام‌دار یافت نشد (تقریب نرم‌افزاری). نطق از مخزن A–D؛ رنگ پس از نطق'
+        note: (sel.classicNote || '') + ' · میزان برای لقط روی همین سطر · نطق از مخزن A–D'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
@@ -1262,6 +1349,8 @@
           layers: layers.rows.map((r) => ({ id: r.id, title: r.title, str: r.str })),
           selected: sel.selected,
           picks: sel.picks,
+          selectMode: sel.mode,
+          selectNote: sel.classicNote,
           priority,
           mizanExtract,
           classicLaqt,
@@ -2321,7 +2410,8 @@
         jadwalLines.push(`- ستون‌های جدول (فقط سؤال): ${result.jadwal.columnCount || String(result.columnBase || '').length}`);
         jadwalLines.push(`- پایه ستون: ${result.jadwal.columnBase || result.columnBase}`);
       }
-      jadwalLines.push(`- سطر انتخاب (تقریب): ${result.jadwal.selected}`);
+      jadwalLines.push(`- سطر انتخاب / مستحضره (${result.jadwal.selectMode || 'category'}): ${result.jadwal.selected}`);
+      if (result.jadwal.selectNote) jadwalLines.push(`- قاعدهٔ انتخاب: ${result.jadwal.selectNote}`);
       jadwalLines.push(`- لقط میزانی از انتخاب: ${result.jadwal.mizanExtract}`);
       if (result.jadwal.classicLaqt) {
         jadwalLines.push(`- لقط کلاسیک (گام=${result.jadwal.classicLaqt.step}): ${result.jadwal.classicLaqt.pooled}`);
@@ -2525,6 +2615,7 @@
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
     classifyQuestionScope, buildMustehsilaGrid,
+    LETTER_CATEGORIES, letterCategory,
     buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
