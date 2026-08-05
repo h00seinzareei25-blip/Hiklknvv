@@ -1,6 +1,6 @@
-v1 (frozen)
-tag: jafr-v1
-branch: cursor/jafr-android-app-e707
-apk: dist/jafr-workbench-v1-debug.apk
+v2 (development)
+base: jafr-v1
+branch: cursor/jafr-v2-e707
+apk: dist/jafr-workbench-debug.apk
 
-Next development: cursor/jafr-v2-e707
+Do not modify v1 tag/branch; continue work here.
