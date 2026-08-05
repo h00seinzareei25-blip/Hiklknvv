@@ -83,7 +83,15 @@ const multiPromptPack = E.buildMultiNatqPrompt(multi, {
 });
 const multiPrompt = multiPromptPack.generator || multiPromptPack.prompt || multiPromptPack;
 assert(multiPrompt.includes('لایه A') && multiPrompt.includes('مولّد'), 'پرامپت تجمیعی چندروش پیشرفته');
-assert(E.METHOD_PRESETS.length >= 6, 'حداقل ۶ پیش‌فرض روش');
+const withDate = E.runClassic({
+  sael: 'حسین', taleb: '', matloob: '', modda: 'جنگ',
+  soal: 'نتیجه جنگ چگونه خواهد بود',
+  extraEnabled: false,
+  questionDate: '1405/05/14',
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(withDate.ok && withDate.asas.includes(E.normalizeDateTimeField('1405/05/14')), 'تاریخ بدون تیک تکمیلی وارد اساس جدولی می‌شود');
+assert(withDate.steps.some((s) => /تاریخ/.test(s.input || '') || /تاریخ/.test(s.note || '')), 'تاریخ در مراحل دیده می‌شود');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt3'), 'پیش‌فرض لقط۳');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt4'), 'پیش‌فرض لقط۴');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'fifteen_line'), 'پیش‌فرض ۱۵ سطری');

@@ -51,9 +51,20 @@
         <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
       </div>
 
+      <div id="mizanDateBox" class="extra-box" style="margin-top:10px">
+        <div class="field">
+          <label for="questionDate">تاریخ سؤال (شمسی · برای میزان/جدولی)</label>
+          <div class="date-row">
+            <input id="questionDate" type="text" placeholder="مثال: 1405/05/14" autocomplete="off">
+            <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
+          </div>
+        </div>
+        <p class="hint">در جفر جدولی این تاریخ وارد اساس و میزان می‌شود. پیش‌فرض: امروز شمسی (قابل ویرایش).</p>
+      </div>
+
       <div class="check" style="margin-top:8px">
         <input id="extraEnabled" type="checkbox">
-        <span>اطلاعات تکمیلی (فامیلی، تاریخ، ساعت)</span>
+        <span>اطلاعات تکمیلی (فامیلی، ساعت)</span>
       </div>
 
       <div id="extraFields" class="extra-box hidden">
@@ -71,15 +82,11 @@
             <input id="matloobFamily" type="text" placeholder="اختیاری" autocomplete="off">
           </div>
           <div class="field">
-            <label for="questionDate">تاریخ سؤال</label>
-            <input id="questionDate" type="text" placeholder="مثال: 1404/05/13" autocomplete="off">
-          </div>
-          <div class="field">
             <label for="questionTime">ساعت سؤال</label>
             <input id="questionTime" type="text" placeholder="مثال: 14:30" autocomplete="off">
           </div>
         </div>
-        <p class="hint">اگر فعال باشد، فامیلی‌ها به نام‌ها و تاریخ/ساعت (با تبدیل رقم به واژه) به اساس اضافه می‌شوند.</p>
+        <p class="hint">فامیلی‌ها به نام‌ها و ساعت (با تبدیل رقم به واژه) به اساس اضافه می‌شوند. تاریخ جداگانه بالاتر است.</p>
       </div>
     </section>
 

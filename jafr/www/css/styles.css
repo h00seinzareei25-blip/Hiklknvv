@@ -316,6 +316,14 @@ textarea { min-height: 84px; resize: vertical; }
   border-radius: 12px;
   background: #f7faf7;
 }
+.date-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.date-row input {
+  flex: 1;
+}
 .hint {
   margin: 8px 0 0;
   font-size: 12.5px;

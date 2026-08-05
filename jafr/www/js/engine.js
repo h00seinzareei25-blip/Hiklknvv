@@ -551,7 +551,8 @@
     const saelRaw = joinName(input.sael, input.saelFamily, extraEnabled);
     const talebRaw = joinName(input.taleb, input.talebFamily, extraEnabled);
     const matloobRaw = joinName(input.matloob, input.matloobFamily, extraEnabled);
-    const dateRaw = extraEnabled ? String(input.questionDate || '').trim() : '';
+    // تاریخ همیشه اگر پر باشد وارد اساس می‌شود (مهم برای میزان/جدولی)
+    const dateRaw = String(input.questionDate || '').trim();
     const timeRaw = extraEnabled ? String(input.questionTime || '').trim() : '';
 
     const parts = {
@@ -566,10 +567,8 @@
 
     // نرمال‌سازی همه اجزا با گزارش تجمیعی
     const allRawParts = [saelRaw, talebRaw, matloobRaw, input.modda, input.soal];
-    if (extraEnabled) {
-      if (dateRaw) allRawParts.push(expandDigitsToWords(dateRaw));
-      if (timeRaw) allRawParts.push(expandDigitsToWords(timeRaw));
-    }
+    if (dateRaw) allRawParts.push(expandDigitsToWords(dateRaw));
+    if (timeRaw) allRawParts.push(expandDigitsToWords(timeRaw));
     const allRaw = allRawParts.filter(Boolean).join(' ');
     const fullNorm = {};
     normalizeText(allRaw, fullNorm);
@@ -580,7 +579,8 @@
       input: allRaw,
       output: fullNorm.after,
       note: [
-        extraEnabled ? 'اطلاعات تکمیلی فعال است' : 'اطلاعات تکمیلی غیرفعال',
+        dateRaw ? ('تاریخ:' + dateRaw) : 'بدون تاریخ',
+        extraEnabled ? 'اطلاعات تکمیلی فعال است' : 'فامیلی/ساعت تکمیلی غیرفعال',
         fullNorm.mapped.length ? `تبدیل‌ها: ${fullNorm.mapped.slice(0, 12).join('، ')}${fullNorm.mapped.length > 12 ? '…' : ''}` : 'بدون تبدیل معادل',
         fullNorm.rejected.length ? `حروف ردشده: ${[...new Set(fullNorm.rejected)].join(' ')}` : 'بدون حرف ردشده'
       ].join(' | ')
@@ -592,18 +592,16 @@
       `طالب:${parts.taleb}`,
       `مطلوب:${parts.matloob}`,
       `مدعا:${parts.modda}`,
-      `سؤال:${parts.soal}`
+      `سؤال:${parts.soal}`,
+      `تاریخ:${parts.date || '—'}`
     ];
-    if (extraEnabled) {
-      asasInputNote.push(`تاریخ:${parts.date || '—'}`);
-      asasInputNote.push(`ساعت:${parts.time || '—'}`);
-    }
+    if (extraEnabled) asasInputNote.push(`ساعت:${parts.time || '—'}`);
     steps.push({
       id: 'asas_raw',
       title: 'ساخت اساس (سطر پایه)',
       input: asasInputNote.join(' | '),
       output: asas,
-      note: `طول اساس: ${asas.length} حرف` + (extraEnabled ? ' (با اطلاعات تکمیلی)' : '')
+      note: `طول اساس: ${asas.length} حرف` + (dateRaw ? ' (با تاریخ)' : '') + (extraEnabled ? ' (با تکمیلی)' : '')
     });
 
     if (!asas.length) {
@@ -955,11 +953,11 @@
       `- مدعا: ${meta.modda || '—'}`,
       `- سؤال: ${meta.soal || '—'}`
     ];
+    if (meta.questionDate) lines.push(`- تاریخ سؤال: ${meta.questionDate}`);
     if (meta.extraEnabled) {
       lines.push(`- فامیلی سائل: ${meta.saelFamily || '—'}`);
       lines.push(`- فامیلی طالب: ${meta.talebFamily || '—'}`);
       lines.push(`- فامیلی مطلوب: ${meta.matloobFamily || '—'}`);
-      lines.push(`- تاریخ سؤال: ${meta.questionDate || '—'}`);
       lines.push(`- ساعت سؤال: ${meta.questionTime || '—'}`);
     }
     return lines;
@@ -1496,8 +1494,9 @@
   }
 
   function hasExtraData(input) {
-    return !!(input && input.extraEnabled && (
-      input.saelFamily || input.talebFamily || input.matloobFamily || input.questionDate || input.questionTime
+    return !!(input && (
+      input.questionDate ||
+      (input.extraEnabled && (input.saelFamily || input.talebFamily || input.matloobFamily || input.questionTime))
     ));
   }
 

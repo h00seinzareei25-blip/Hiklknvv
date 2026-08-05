@@ -54,6 +54,29 @@
     }
   }
 
+  function todayShamsi() {
+    try {
+      const parts = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      const get = (t) => (parts.find((p) => p.type === t) || {}).value || '';
+      const y = get('year');
+      const m = String(get('month')).padStart(2, '0');
+      const d = String(get('day')).padStart(2, '0');
+      return y && m && d ? (y + '/' + m + '/' + d) : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function ensureTodayDate(force) {
+    const el = $('questionDate');
+    if (!el) return;
+    if (force || !el.value.trim()) el.value = todayShamsi();
+  }
+
   function syncExtraUI() {
     $('extraFields').classList.toggle('hidden', !$('extraEnabled').checked);
   }
@@ -85,6 +108,7 @@
 
   function metaFromForm() {
     const extraEnabled = $('extraEnabled').checked;
+    const questionDate = ($('questionDate') && $('questionDate').value.trim()) || '';
     return {
       sael: $('sael').value.trim(),
       taleb: $('taleb').value.trim(),
@@ -95,7 +119,7 @@
       saelFamily: extraEnabled ? $('saelFamily').value.trim() : '',
       talebFamily: extraEnabled ? $('talebFamily').value.trim() : '',
       matloobFamily: extraEnabled ? $('matloobFamily').value.trim() : '',
-      questionDate: extraEnabled ? $('questionDate').value.trim() : '',
+      questionDate,
       questionTime: extraEnabled ? $('questionTime').value.trim() : '',
       reportDate: new Date().toLocaleString('fa-IR')
     };
@@ -390,6 +414,7 @@
       .forEach((id) => { $(id).value = ''; });
     $('extraEnabled').checked = false;
     syncExtraUI();
+    ensureTodayDate(true);
     lastBundle = null;
     if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
     ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
@@ -419,11 +444,18 @@
   fillMethodList();
   syncModeUI();
   syncExtraUI();
+  ensureTodayDate(true);
 
   $('extraEnabled').addEventListener('change', syncExtraUI);
   $('modeSingle').addEventListener('change', syncModeUI);
   $('modeMulti').addEventListener('change', syncModeUI);
   if ($('pipeline')) $('pipeline').addEventListener('change', syncPipelineUI);
+  if ($('btnTodayDate')) {
+    $('btnTodayDate').addEventListener('click', () => {
+      ensureTodayDate(true);
+      showAlert('ok', 'تاریخ امروز شمسی گذاشته شد: ' + ($('questionDate').value || '—'));
+    });
+  }
   $('btnSelectDefault').addEventListener('click', () => {
     setMethodSelection(['jadwali_mizan', 'classic_bayyinat', 'classic_malfuzi']);
   });
