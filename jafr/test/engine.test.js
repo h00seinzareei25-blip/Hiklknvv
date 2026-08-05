@@ -163,6 +163,38 @@ assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل مهدی: 
 assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
 assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
 assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام ۱۰ از ۴۹ ستون');
+assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل بسته');
+assert(warSael.jamalLock.saelJamal === 59, 'سائل مهدی جمل ۵۹');
+assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
+
+// فرضیهٔ دوم قفل: آ=۶۰ بدون سائل
+assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا استاندارد');
+assert(E.normalizeText('آمریکا', {}, { alefMaddaMode: 'sin' }) === 'سمریکا', 'آ→س در حالت قفل');
+assert(E.sumAbjad('مهدی').sum === 59 && E.sumAbjad('نواب').sum === 59, 'مهدی و نواب = ۵۹');
+const warAlef60 = E.runClassic({
+  sael: '', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir', alefMaddaMode: 'sin' }
+});
+assert(warAlef60.jamal === 5022 && warAlef60.mizan === 10, 'با آ=۶۰ بدون سائل: جمل ۵۰۲۲ / میزان ۱۰');
+assert(warAlef60.columnBase.length === 49, 'آ=۶۰ عرض ستون را عوض نمی‌کند');
+assert(warAlef60.jamalLock && warAlef60.jamalLock.alefMaddaMode === 'sin', 'حالت آ=۶۰ در قفل ثبت شود');
+assert(warAlef60.normalize.mapped.some((m) => /آ→س/.test(m)), 'گزارش نرمال‌سازی آ→س');
+
+const warNawab = E.runClassic({
+  sael: 'نواب', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
+
+const lockDiag = E.analyzeJamalLock(4963, { sael: '' }, { table: 'kabir' });
+assert(lockDiag.gap === 59 && lockDiag.recipes.length === 2, 'تحلیل فاصلهٔ قفل = ۵۹ با دو دستور');
+assert(E.JAMAL_LOCK_TARGET.jamal === 5022, 'ثابت هدف قفل');
+assert(E.describeOptions({ pipeline: 'jadwali', alefMaddaMode: 'sin' }).includes('آ=۶۰'), 'توضیح گزینه آ=۶۰');
+
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');

@@ -31,7 +31,7 @@
       <div class="grid">
         <div class="field">
           <label for="sael">سائل</label>
-          <input id="sael" type="text" placeholder="نام پرسنده · در میزان جدولی وارد می‌شود" autocomplete="off">
+          <input id="sael" type="text" placeholder="نام پرسنده · جمل ۵۹ (مهدی/نواب) قفل ۵۰۲۲ را می‌بندد" autocomplete="off">
         </div>
         <div class="field">
           <label for="taleb">طالب</label>
@@ -59,7 +59,7 @@
             <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
           </div>
         </div>
-        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند.</p>
+        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. قفل نمونهٔ حرفه‌ای: ۵۰۲۲/۱۰ ≈ سائل با جمل ۵۹ (کلاسیک) یا حالت آ=۶۰ (غیرکلاسیک).</p>
       </div>
 
       <div class="check" style="margin-top:8px">
@@ -113,6 +113,15 @@
         </select>
       </div>
 
+      <div class="field">
+        <label for="alefMaddaMode">حرف آ (الف ممدود)</label>
+        <select id="alefMaddaMode">
+          <option value="alif" selected>آ = ا = ۱ (استاندارد کلاسیک)</option>
+          <option value="sin">آ = س = ۶۰ (فرضیهٔ قفل اسکرین · غیرکلاسیک)</option>
+        </select>
+      </div>
+      <p class="hint">تحقیق قفل ۵۰۲۲: با آ=۱ باید سائلِ ۵۹ (مهدی/نواب) باشد؛ با آ=۶۰ بدون سائل هم ۵۰۲۲ می‌شود. سنت خواجه نصیر طرف سائل است.</p>
+
       <div id="singleSettings" class="opts">
         <div class="field">
           <label for="pipeline">زنجیره محاسبه</label>
@@ -122,7 +131,7 @@
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون‌ها فقط از سؤال → لایه‌ها → لقط میزانی کلاسیک → نطق جمله‌ای.</p>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون‌ها فقط از سؤال → لایه‌ها → لقط میزانی کلاسیک → نطق جمله‌ای. قفل ۵۰۲۲/۱۰: سائلِ ۵۹ یا آ=۶۰.</p>
         <div id="jadwalOpts">
           <div class="field">
             <label for="jadwalModel">مدل لایه‌های جدولی</label>

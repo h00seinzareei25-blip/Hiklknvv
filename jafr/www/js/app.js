@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · لایه‌ها + لقط میزانی کلاسیک → نطق یک‌خطی + تفسیر AI.';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · لایه‌ها + لقط میزانی کلاسیک → نطق یک‌خطی + تفسیر AI. قفل ۵۰۲۲/۱۰: سائلِ ۵۹ (کلاسیک) یا آ=۶۰ (غیرکلاسیک).';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -146,6 +146,7 @@
     const pipeline = $('pipeline') ? $('pipeline').value : 'classic';
     const opts = {
       table: $('table').value,
+      alefMaddaMode: ($('alefMaddaMode') && $('alefMaddaMode').value) === 'sin' ? 'sin' : 'alif',
       bastMode: $('bastMode').value,
       takseer: $('takseer').value,
       takhlis: $('takhlis').value,
@@ -253,7 +254,7 @@
     $('compareCard').classList.remove('hidden');
   }
 
-  function showProfileHint(meta) {
+  function showProfileHint(meta, result) {
     const el = $('profileHint');
     if (!el || !JafrEngine.detectQuestionProfile) return;
     const p = JafrEngine.detectQuestionProfile(meta || {});
@@ -261,9 +262,16 @@
     let mode = 'چندخوانشی';
     if (p.id === 'yesno') mode = 'قطبی (آری/خیر/مبهم)';
     else if (p.id === 'choice') mode = 'انتخاب بین گزینه‌ها';
-    el.textContent = `پروفایل نطق: ${p.title} → ${mode}` +
+    let text = `پروفایل نطق: ${p.title} → ${mode}` +
       (topic && topic.title ? ` | موضوع کمکی: ${topic.title}` : '') +
       ' | اگر «آیا / یا نه» ننوشته باشی معمولاً چندخوانشی است.';
+    if (result && result.jamalLock) {
+      const jl = result.jamalLock;
+      text += jl.matched
+        ? ` | قفل جمل: بسته (${jl.jamal}/${jl.mizan})`
+        : ` | قفل جمل: ${jl.summary}`;
+    }
+    el.textContent = text;
   }
 
   function showPrimary(result, keepCompare) {
@@ -320,7 +328,11 @@
         showAlert('error', 'در حالت چندروش، حداقل یک روش را تیک بزنید');
         return;
       }
-      const bundle = JafrEngine.runMany(input, ids, { table: baseOpts.table, isqatEnabled: baseOpts.isqatEnabled });
+      const bundle = JafrEngine.runMany(input, ids, {
+        table: baseOpts.table,
+        isqatEnabled: baseOpts.isqatEnabled,
+        alefMaddaMode: baseOpts.alefMaddaMode
+      });
       if (!bundle.ok) {
         lastBundle = null;
         ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard'].forEach((id) => $(id).classList.add('hidden'));
@@ -347,7 +359,7 @@
       $('resultTitle').textContent = 'نتیجه مستحصله (روش ۱ + مقایسه)';
       $('mustLabel').textContent = 'مستحصله روش ۱ (برای مرور سریع)';
       showPrimary(bundle.primary, true);
-      showProfileHint(meta);
+      showProfileHint(meta, bundle.primary);
       renderCompare(bundle.results, bundle.sharedUnique);
       renderStability(stability);
       renderMethodTabs(bundle.results);
@@ -402,7 +414,7 @@
     $('resultTitle').textContent = 'نتیجه مستحصله';
     $('mustLabel').textContent = 'مستحصله';
     showPrimary(result, false);
-    showProfileHint(meta);
+    showProfileHint(meta, result);
     renderStability(stability);
     renderMethodTabs(null);
     renderSteps(result.steps);

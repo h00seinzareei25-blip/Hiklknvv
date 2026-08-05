@@ -39,15 +39,17 @@
     'ذ': 'ذال', 'ض': 'ضاد', 'ظ': 'ظا', 'غ': 'غین'
   };
 
-  /** معادل حروف غیر ابجد */
+  /** معادل حروف غیر ابجد (آ جداگانه با alefMaddaMode کنترل می‌شود) */
   const EQUIV = {
-    'آ': 'ا', 'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا', 'ء': 'ا', 'ؤ': 'ا', 'ئ': 'ا',
+    'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا', 'ء': 'ا', 'ؤ': 'ا', 'ئ': 'ا',
     'ة': 'ه', 'ۀ': 'ه', 'ه‌': 'ه',
-    'ي': 'ی', 'ى': 'ی', 'ئ': 'ا',
-    'ك': 'ک', 'گ': 'ک', 'ك': 'ک',
-    'چ': 'ج', 'پ': 'ب', 'ژ': 'ز',
-    'ة': 'ه', 'ؤ': 'ا'
+    'ي': 'ی', 'ى': 'ی',
+    'ك': 'ک', 'گ': 'ک',
+    'چ': 'ج', 'پ': 'ب', 'ژ': 'ز'
   };
+
+  /** هدف قفل نمونهٔ حرفه‌ای (اسکرین‌شات جنگ) */
+  const JAMAL_LOCK_TARGET = { jamal: 5022, mizan: 10, saelJamal: 59 };
 
   const TABLES = {
     kabir: ABJAD_KABIR,
@@ -59,11 +61,18 @@
     return ABJAD_ORDER.indexOf(ch);
   }
 
-  function normalizeText(text, report) {
+  /**
+   * نرمال‌سازی حروف ابجدی
+   * @param {string} text
+   * @param {object} [report]
+   * @param {object} [normOpts] — alefMaddaMode: 'alif' (پیش‌فرض، آ→ا=۱) | 'sin' (آ→س=۶۰، فرضیهٔ قفل غیرکلاسیک)
+   */
+  function normalizeText(text, report, normOpts) {
     const raw = String(text || '');
     const kept = [];
     const rejected = [];
     const mapped = [];
+    const alefMode = (normOpts && normOpts.alefMaddaMode) === 'sin' ? 'sin' : 'alif';
 
     for (const ch of raw) {
       if (/\s/.test(ch)) continue;
@@ -80,7 +89,16 @@
       if (/[،؛؟!.:«»"'\-_/\\()\[\]{}…]/.test(ch)) continue;
 
       let c = ch;
-      if (EQUIV[c]) {
+      // آ: استاندارد کلاسیک = ا(۱)؛ فرضیهٔ حسابی قفل اسکرین = س(۶۰)
+      if (c === 'آ') {
+        if (alefMode === 'sin') {
+          mapped.push('آ→س(۶۰)');
+          c = 'س';
+        } else {
+          mapped.push('آ→ا');
+          c = 'ا';
+        }
+      } else if (EQUIV[c]) {
         mapped.push(`${ch}→${EQUIV[c]}`);
         c = EQUIV[c];
       }
@@ -100,6 +118,7 @@
       report.mapped = mapped;
       report.before = raw;
       report.after = kept.join('');
+      report.alefMaddaMode = alefMode;
     }
     return kept.join('');
   }
@@ -348,9 +367,65 @@
     return String(text || '').replace(/[0-9۰-۹٠-٩]/g, (d) => DIGIT_WORDS[d] || '');
   }
 
-  function normalizeDateTimeField(text, report) {
+  function normalizeDateTimeField(text, report, normOpts) {
     const expanded = expandDigitsToWords(text);
-    return normalizeText(expanded, report);
+    return normalizeText(expanded, report, normOpts);
+  }
+
+  /**
+   * تحلیل قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰)
+   * دو راه تمیز تحقیق‌شده:
+   *  ۱) سائل با جمل ۵۹ (مهدی / نواب) — مطابق خواجه نصیر [کلاسیک]
+   *  ۲) آ=۶۰ به‌جای ۱ — فقط حسابی، بدون منبع کلاسیک
+   */
+  function analyzeJamalLock(jamalSum, parts, opts) {
+    const target = JAMAL_LOCK_TARGET;
+    const table = (opts && opts.table) || 'kabir';
+    const mode = (opts && opts.alefMaddaMode) === 'sin' ? 'sin' : 'alif';
+    const saelSum = sumAbjad((parts && parts.sael) || '', table).sum;
+    const jamal = jamalSum | 0;
+    const mizan = computeMizan(jamal, opts);
+    const gap = target.jamal - jamal;
+    const hits = [];
+    if (jamal === target.jamal && mizan === target.mizan) {
+      hits.push('منطبق با هدف ۵۰۲۲ / میزان ۱۰');
+    }
+    if (saelSum === target.saelJamal) {
+      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — فرضیهٔ کلاسیک خواجه نصیر');
+    }
+    if (mode === 'sin') {
+      hits.push('حالت آ=۶۰ فعال — فرضیهٔ غیرکلاسیک/حسابی');
+    }
+    const recipes = [
+      {
+        id: 'sael59',
+        title: 'سائل با جمل ۵۹',
+        classic: true,
+        note: 'اساس کامل + مهدی یا نواب → ۵۰۲۲؛ ستون‌ها همچنان فقط از سؤال'
+      },
+      {
+        id: 'alef60',
+        title: 'آ = ۶۰',
+        classic: false,
+        note: 'بدون سائل، اگر آ مثل س حساب شود → ۵۰۲۲؛ منابع کلاسیک آ را ۱ می‌گیرند'
+      }
+    ];
+    const summary = gap === 0
+      ? `قفل جمل بسته شد (${target.jamal} → میزان ${target.mizan})`
+      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — سائلِ ۵۹ یا حالت آ=۶۰`;
+    return {
+      targetJamal: target.jamal,
+      targetMizan: target.mizan,
+      jamal,
+      mizan,
+      gap,
+      saelJamal: saelSum,
+      alefMaddaMode: mode,
+      matched: jamal === target.jamal,
+      hits,
+      recipes,
+      summary
+    };
   }
 
   function joinName(first, family, extraEnabled) {
@@ -625,10 +700,11 @@
 
   function describeOptions(opts) {
     if (opts && opts.pipeline === 'jadwali') {
+      const alef = (opts.alefMaddaMode === 'sin') ? ' · آ=۶۰' : '';
       if (opts.jadwalModel === 'tttm' || opts.jadwalModel === 'tarfa_tanzil') {
-        return 'جفر جدولی · ترفع/ترقی/تنزل/مساوات';
+        return 'جفر جدولی · ترفع/ترقی/تنزل/مساوات' + alef;
       }
-      return 'جفر جدولی میزان‌دار (ربع دایره)';
+      return 'جفر جدولی میزان‌دار (ربع دایره)' + alef;
     }
     if (opts && opts.pipeline === 'fifteen') return 'جفر ۱۵ سطری';
     const bastMap = { bayyinat: 'بینات', malfuzi: 'ملفوظی', zabarBayyinat: 'زبر و بینات', none: 'بدون بسط' };
@@ -640,7 +716,8 @@
       `×${opts.takseerRounds || 1}`,
       takhMap[opts.takhlis] || opts.takhlis,
       opts.mazjNazira ? 'مزج' : 'بدون‌مزج',
-      opts.removeDupAsas ? 'حذف‌مکرر' : null
+      opts.removeDupAsas ? 'حذف‌مکرر' : null,
+      opts.alefMaddaMode === 'sin' ? 'آ=۶۰' : null
     ].filter(Boolean).join(' · ');
   }
 
@@ -659,11 +736,13 @@
       isqatEnabled: false,
       isqatBase: 9,
       isqatKeepZero: false,
-      takseerRounds: 1
+      takseerRounds: 1,
+      alefMaddaMode: 'alif' // alif: آ→ا=۱ | sin: آ→س=۶۰ (فرضیهٔ قفل غیرکلاسیک)
     }, input.options || {});
 
     const extraEnabled = !!input.extraEnabled;
     const steps = [];
+    const normOpts = { alefMaddaMode: opts.alefMaddaMode === 'sin' ? 'sin' : 'alif' };
 
     const saelRaw = joinName(input.sael, input.saelFamily, extraEnabled);
     const talebRaw = joinName(input.taleb, input.talebFamily, extraEnabled);
@@ -673,13 +752,13 @@
     const timeRaw = extraEnabled ? String(input.questionTime || '').trim() : '';
 
     const parts = {
-      sael: normalizeText(saelRaw, {}),
-      taleb: normalizeText(talebRaw, {}),
-      matloob: normalizeText(matloobRaw, {}),
-      modda: normalizeText(input.modda, {}),
-      soal: normalizeText(input.soal, {}),
-      date: dateRaw ? normalizeDateTimeField(dateRaw, {}) : '',
-      time: timeRaw ? normalizeDateTimeField(timeRaw, {}) : ''
+      sael: normalizeText(saelRaw, {}, normOpts),
+      taleb: normalizeText(talebRaw, {}, normOpts),
+      matloob: normalizeText(matloobRaw, {}, normOpts),
+      modda: normalizeText(input.modda, {}, normOpts),
+      soal: normalizeText(input.soal, {}, normOpts),
+      date: dateRaw ? normalizeDateTimeField(dateRaw, {}, normOpts) : '',
+      time: timeRaw ? normalizeDateTimeField(timeRaw, {}, normOpts) : ''
     };
 
     // نرمال‌سازی همه اجزا با گزارش تجمیعی
@@ -688,7 +767,7 @@
     if (timeRaw) allRawParts.push(expandDigitsToWords(timeRaw));
     const allRaw = allRawParts.filter(Boolean).join(' ');
     const fullNorm = {};
-    normalizeText(allRaw, fullNorm);
+    normalizeText(allRaw, fullNorm, normOpts);
 
     steps.push({
       id: 'normalize',
@@ -698,6 +777,7 @@
       note: [
         dateRaw ? ('تاریخ:' + dateRaw) : 'بدون تاریخ',
         extraEnabled ? 'اطلاعات تکمیلی فعال است' : 'فامیلی/ساعت تکمیلی غیرفعال',
+        normOpts.alefMaddaMode === 'sin' ? 'آ→س(۶۰) فعال' : 'آ→ا(۱) استاندارد',
         fullNorm.mapped.length ? `تبدیل‌ها: ${fullNorm.mapped.slice(0, 12).join('، ')}${fullNorm.mapped.length > 12 ? '…' : ''}` : 'بدون تبدیل معادل',
         fullNorm.rejected.length ? `حروف ردشده: ${[...new Set(fullNorm.rejected)].join(' ')}` : 'بدون حرف ردشده'
       ].join(' | ')
@@ -744,11 +824,13 @@
 
     const jamal = sumAbjad(asas, opts.table);
     const madkhal = reduceToUnits(jamal.sum);
+    const jamalLock = analyzeJamalLock(jamal.sum, parts, opts);
     let jamalNote = `جمع جمل (${opts.table}): ${jamal.sum} | مدخل/رد به آحاد: ${madkhal.steps.join(' ← ')}`;
     if (opts.isqatEnabled) {
       const iq = isqat(jamal.sum, opts.isqatBase, opts.isqatKeepZero);
       jamalNote += ` | اسقاط ${opts.isqatBase}: ${iq}`;
     }
+    if (normOpts.alefMaddaMode === 'sin') jamalNote += ' | آ=۶۰';
     steps.push({
       id: 'jamal',
       title: 'حساب ابجد و مداخل',
@@ -756,6 +838,20 @@
       output: String(jamal.sum),
       note: jamalNote,
       detail: jamal.detail
+    });
+    steps.push({
+      id: 'jamal_lock',
+      title: 'قفل جمل (تحقیق نمونهٔ حرفه‌ای)',
+      input: [
+        `جمل=${jamal.sum}`,
+        `سائل=${parts.sael || '—'}(${sumAbjad(parts.sael, opts.table).sum})`,
+        normOpts.alefMaddaMode === 'sin' ? 'آ→س(۶۰)' : 'آ→ا(۱)'
+      ].join(' | '),
+      output: jamalLock.summary,
+      note: jamalLock.recipes
+        .map((r) => `${r.title}${r.classic ? ' [کلاسیک]' : ' [غیرکلاسیک]'}: ${r.note}`)
+        .concat(jamalLock.hits.length ? ['· ' + jamalLock.hits.join('؛ ')] : [])
+        .join(' · ')
     });
 
     // --- جفر جدولی میزان‌دار (الویت کاربر) ---
@@ -776,7 +872,7 @@
         note: [
           `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (منازل/دایره ابجد)`,
           'جمل از اساس کامل است (سائل/طالب/مطلوب/مدعا/سؤال/تاریخ)',
-          'نمونه شناخته‌شده: ۵۰۲۲ → ۱۰'
+          'قفل نمونه: ۵۰۲۲ → ۱۰ — یا سائلِ ۵۹ (کلاسیک) یا آ=۶۰ (غیرکلاسیک)'
         ].join(' | ')
       });
 
@@ -884,6 +980,7 @@
         nazira: layers.nA,
         jamal: jamal.sum,
         mizan,
+        jamalLock,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
         mustehsila,
@@ -894,7 +991,8 @@
         options: Object.assign({}, opts, {
           natqStyle: 'sentence',
           pipeline: 'jadwali',
-          jadwalModel
+          jadwalModel,
+          alefMaddaMode: normOpts.alefMaddaMode
         }),
         normalize: fullNorm,
         extraEnabled,
@@ -980,6 +1078,7 @@
         asas,
         nazira: L[2],
         jamal: jamal.sum,
+        jamalLock,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
         mustehsila,
@@ -1096,6 +1195,7 @@
       asas,
       nazira: naz,
       jamal: jamal.sum,
+      jamalLock,
       madkhal: madkhal.value,
       madkhalSteps: madkhal.steps,
       mustehsila,
@@ -2108,7 +2208,7 @@
   }
 
   global.JafrEngine = {
-    ABJAD_ORDER, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS,
+    ABJAD_ORDER, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS, JAMAL_LOCK_TARGET,
     normalizeText, normalizeDateTimeField, expandDigitsToWords,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
@@ -2116,7 +2216,7 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
-    computeMizan, buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
+    computeMizan, analyzeJamalLock, buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
   };
