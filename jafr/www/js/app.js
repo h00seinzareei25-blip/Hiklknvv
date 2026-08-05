@@ -43,7 +43,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: A/B/C/D ربع دایره → مخزن حروف → نطق یک‌خطی کلاسیک (مثل «نادم شوند که…») + تفسیر AI. میزان = جمل mod ۲۸.';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · A/B/C/D ربع دایره → نطق یک‌خطی + تفسیر AI. میزان = جمل mod ۲۸.';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -265,7 +265,10 @@
     $('statJamal').textContent = String(result.jamal);
     if ($('statMizan')) $('statMizan').textContent = result.mizan != null ? String(result.mizan) : '—';
     $('statMadkhal').textContent = String(result.madkhal);
-    $('statCount').textContent = String(result.letterCount);
+    const colN = result.jadwal && result.jadwal.columnCount;
+    $('statCount').textContent = colN != null
+      ? `${result.letterCount} (ستون:${colN})`
+      : String(result.letterCount);
     $('mustehsilaBox').textContent = result.mustehsila || '—';
     $('uniqueBox').textContent = result.mustehsilaUnique || '—';
     $('resultCard').classList.remove('hidden');

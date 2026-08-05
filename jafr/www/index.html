@@ -31,7 +31,7 @@
       <div class="grid">
         <div class="field">
           <label for="sael">سائل</label>
-          <input id="sael" type="text" placeholder="نام پرسنده" autocomplete="off">
+          <input id="sael" type="text" placeholder="نام پرسنده · در میزان جدولی وارد می‌شود" autocomplete="off">
         </div>
         <div class="field">
           <label for="taleb">طالب</label>
@@ -59,7 +59,7 @@
             <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
           </div>
         </div>
-        <p class="hint">در جفر جدولی این تاریخ وارد اساس و میزان می‌شود. پیش‌فرض: امروز شمسی (قابل ویرایش).</p>
+        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند.</p>
       </div>
 
       <div class="check" style="margin-top:8px">
@@ -122,7 +122,7 @@
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="pipelineHint">جدولی: حروف سؤال در ستون‌ها → لایه‌های A–D + نظیره → میزان (جمل mod ۲۸) → سطر انتخاب → لقط میزانی. نطق جمله‌ای. تقریب عملیاتی قابل‌ممیزی است.</p>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون‌ها فقط از سؤال → لایه‌های A–D + نظیره → سطر انتخاب → لقط میزانی. نطق جمله‌ای.</p>
         <div id="classicOpts" class="hidden">
           <div class="field">
             <label for="bastMode">بسط / بینات</label>

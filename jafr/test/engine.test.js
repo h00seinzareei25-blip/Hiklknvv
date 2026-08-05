@@ -107,8 +107,8 @@ const jadwali = E.runClassic({
 assert(jadwali.ok && jadwali.mizan > 0, 'اجرای جدولی میزان‌دار');
 assert(jadwali.jadwal && jadwali.jadwal.layers.length === 8, '۸ لایه جدولی');
 assert(jadwali.jadwal.model === 'quarter28', 'مدل ربع دایره');
-assert(jadwali.jadwal.selected.length === jadwali.asas.length, 'سطر انتخاب هم‌طول اساس');
-assert(jadwali.jadwal.poolABCD && jadwali.jadwal.poolABCD.length === jadwali.asas.length * 4, 'مخزن ABCD');
+assert(jadwali.jadwal.selected.length === jadwali.columnBase.length, 'سطر انتخاب هم‌طول ستون‌های سؤال');
+assert(jadwali.jadwal.poolABCD && jadwali.jadwal.poolABCD.length === jadwali.columnBase.length * 4, 'مخزن ABCD');
 assert(jadwali.mustehsila.length > 0, 'مستحصله جدولی غیرخالی');
 const layersQ = E.buildJadwalLayers(E.normalizeText('نتیجه نهایی جنگ'));
 assert(layersQ.C === layersQ.nA && layersQ.D === layersQ.nB, 'C=نظیرهA و D=نظیرهB');
@@ -117,6 +117,27 @@ assert(warAsas.length === 49, 'سؤال جنگ = ۴۹ ستون');
 const warLayers = E.buildJadwalLayers(warAsas);
 const warTarget = E.normalizeText('نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت');
 assert(E.coverageAgainst(warTarget, warLayers.poolABCD).complete, 'جواب نمونه تصویر از مخزن ABCD قابل‌ساخت است');
+
+// تفکیک نقش: میزان از اساس کامل، ستون فقط از سؤال
+const warDate = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
+const warSplit = E.runClassic({
+  sael: '', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(warSplit.ok && warSplit.columnBase.length === 49, 'جدولی: ستون‌ها فقط سؤال = ۴۹');
+assert(warSplit.asas.length > 49, 'جدولی: اساس کامل شامل تاریخ بلندتر از ستون‌هاست');
+assert(warSplit.jamal === 4963 && warSplit.mizan === 7, 'بدون سائل: جمل ۴۹۶۳ / میزان ۷');
+const warSael = E.runClassic({
+  sael: 'مهدی', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل مهدی: جمل ۵۰۲۲ / میزان ۱۰');
+assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
+assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');

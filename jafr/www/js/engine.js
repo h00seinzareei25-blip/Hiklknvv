@@ -643,20 +643,36 @@
 
     // --- جفر جدولی میزان‌دار (الویت کاربر) ---
     if (opts.pipeline === 'jadwali') {
+      // تفکیک نقش‌ها (مطابق نمونهٔ حرفه‌ای + سنت خواجه نصیر):
+      // جمل/میزان ← اساس کامل (سائل+طالب+مطلوب+مدعا+سؤال+تاریخ[+ساعت])
+      // ستون‌های جدول ← فقط حروف سؤال (بدون تاریخ/فیلدهای اضافه)
+      const columnBase = parts.soal || asas;
       const mizan = computeMizan(jamal.sum, opts);
       steps.push({
         id: 'mizan',
         title: 'میزان جدولی',
         input: String(jamal.sum),
         output: String(mizan),
-        note: `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (دایره ابجد). نمونه شناخته‌شده: ۵۰۲۲ → ۱۰`
+        note: [
+          `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (منازل/دایره ابجد)`,
+          'جمل از اساس کامل است (سائل/طالب/مطلوب/مدعا/سؤال/تاریخ)',
+          'نمونه شناخته‌شده: ۵۰۲۲ → ۱۰'
+        ].join(' | ')
       });
 
-      const layers = buildJadwalLayers(asas);
+      steps.push({
+        id: 'jadwal_columns',
+        title: 'پایهٔ ستون‌های جدول',
+        input: asasInputNote.join(' | '),
+        output: columnBase,
+        note: `فقط حروف سؤال · ${columnBase.length} ستون (تاریخ و نام‌ها در میزان‌اند نه در عرض جدول)`
+      });
+
+      const layers = buildJadwalLayers(columnBase);
       steps.push({
         id: 'jadwal_model',
         title: 'مدل لایه‌ها · ربع دایره ۲۸',
-        input: asas,
+        input: columnBase,
         output: 'A+0 | B+7 | C+14 | D+21',
         note: 'A خام، B یک‌ربع، C دو ربع (=نظیره)، D سه ربع؛ سطرهای نظیره همان جابه‌جایی +۱۴ هستند'
       });
@@ -664,7 +680,7 @@
         steps.push({
           id: 'jadwal_' + row.id,
           title: 'جدول · ' + row.title,
-          input: asas.length > 80 ? (asas.slice(0, 80) + '…') : asas,
+          input: columnBase.length > 80 ? (columnBase.slice(0, 80) + '…') : columnBase,
           output: row.str,
           note: `طول ${row.str.length} ستون`
         });
@@ -714,7 +730,7 @@
         title: 'مستحصله نهایی (جدولی)',
         input: `اولویت:${priority.length} | مخزنABCD:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | مدل=ربع۲۸ | نطق یک‌خطی را فقط از مخزن A+B+C+D بساز`
+        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=ربع۲۸ | نطق یک‌خطی را فقط از مخزن A+B+C+D بساز`
       });
 
       const methodLabel = opts.methodLabel || 'جفر جدولی میزان‌دار';
@@ -724,6 +740,7 @@
         methodId: opts.methodId || 'jadwali_mizan',
         parts,
         asas,
+        columnBase,
         nazira: layers.nA,
         jamal: jamal.sum,
         mizan,
@@ -740,6 +757,8 @@
         jadwal: {
           mizan,
           model: layers.model || 'quarter28',
+          columnBase,
+          columnCount: columnBase.length,
           layers: layers.rows.map((r) => ({ id: r.id, title: r.title, str: r.str })),
           selected: sel.selected,
           picks: sel.picks,
@@ -1763,7 +1782,12 @@
     if (result.jadwal) {
       jadwalLines.push('## جزئیات جفر جدولی میزان‌دار');
       jadwalLines.push(`- مدل لایه: ربع دایره ۲۸ (A+0, B+7, C+14, D+21)`);
+      jadwalLines.push(`- جمل (اساس کامل · سائل/سؤال/تاریخ): ${result.jamal}`);
       jadwalLines.push(`- میزان: ${result.mizan != null ? result.mizan : result.jadwal.mizan}`);
+      if (result.jadwal.columnCount != null || result.columnBase) {
+        jadwalLines.push(`- ستون‌های جدول (فقط سؤال): ${result.jadwal.columnCount || String(result.columnBase || '').length}`);
+        jadwalLines.push(`- پایه ستون: ${result.jadwal.columnBase || result.columnBase}`);
+      }
       jadwalLines.push(`- سطر انتخاب (تقریب): ${result.jadwal.selected}`);
       jadwalLines.push(`- لقط میزانی: ${result.jadwal.mizanExtract}`);
       jadwalLines.push(`- اولویت حروف (انتخاب+میزان): ${result.jadwal.priority || result.jadwal.selected}`);
