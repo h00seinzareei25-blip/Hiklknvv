@@ -232,7 +232,9 @@ const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیج
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');
 assert(jadPrompt.generator.includes('نادم شوند') && jadPrompt.generator.includes('تفسیر هوش مصنوعی'), 'الگوی نطق یک‌خطی + تفسیر در پرامپت');
+assert(jadPrompt.generator.includes('نام طرفین') && jadPrompt.generator.includes('ویرگول'), 'قواعد سبک کلاسیک نطق (بدون نام طرفین / ویرگول خبری)');
 assert(jadPrompt.judge.includes('نطق یک‌خطی نهایی') && jadPrompt.judge.includes('تفسیر هوش مصنوعی'), 'داور خواهان نطق یک‌خطی + تفسیر است');
+assert(jadPrompt.judge.includes('بدون نام طرفین') || jadPrompt.judge.includes('نام طرفین سیاسی'), 'داور سبک کلاسیک را اصلاح می‌کند');
 
 assert(E.takhlisLaqt('ابجدهوزحطی', 3) === 'ادزی', 'لقط گام ۳');
 assert(E.takhlisLaqt('ابجدهوزحطیکل', 4) === 'اهط', 'لقط گام ۴');
