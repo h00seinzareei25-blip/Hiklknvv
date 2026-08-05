@@ -155,6 +155,22 @@ assert(catSel.picks[0].categoryTitle && catSel.picks.every((p) => p.category), '
 const mod4Sel = E.selectJadwalRow(E.buildJadwalLayers(warAsas), 10, { selectMode: 'mod4' });
 assert(mod4Sel.mode === 'mod4' && mod4Sel.selected !== catSel.selected, 'mod4 فقط حالت سازگاری است و با کلاسیک فرق دارد');
 
+// اعداد مقرره + بذر نطق (توابع مستقل)
+assert(E.muqarraraOf('ا') === 2 && E.muqarraraOf('ب') === 110 && E.muqarraraOf('ع') === 140, 'اعداد مقررهٔ نمونه');
+assert(E.muqarraraOf('س') === 120 && E.muqarraraOf('غ') === 2000, 'اعداد مقرره تنزل/ترقی');
+assert(E.muqarraraOf('ظ') === 1800 && E.muqarraraOf('ص') === 160, 'ظ=۱۸۰۰ اصلاح‌شده؛ ص=ترقی۱۶۰');
+assert(Object.keys(E.LETTER_MUQARRARA).length === 28, '۲۸ عدد مقرره برای ۲۸ حرف');
+assert(E.measureLetterByMuqarrara('ا', 10) === 'ل', 'سنجش ا+۱۰ → ل');
+assert(E.ABJAD_QUTB.length === 28 && E.ABJAD_QUTB[0] === 'س' && E.ABJAD_QUTB[3] === 'ل', 'دایره ابجد قطب سوالعظیم…');
+assert(E.mapNaziraQutb('س').length === 1, 'نظیره قطب یک حرفی');
+// مثال جهاان۲۲: مستحصله→نظیره→مؤخرصدر = بضدمهاجرین
+const exM = 'لظسوغخفقصع';
+assert(E.takseerMuakhkharSadr(E.mapNazira(exM)) === 'بضدمهاجرین', 'مسیر کلاسیک نطق: بضد مهاجرین');
+const seed = E.buildClassicalNatqSeed('غتخجقنا', { pool: warLayers.poolABCD, bank: ['خوف', 'سخت', 'بقا', 'نادم'] });
+assert(seed.afterTakseer && seed.afterNazira && seed.draftLine, 'بذر نطق کلاسیک تولید می‌شود');
+assert(seed.qutbPath && seed.qutbPath.readingLine && seed.readingLine, 'مسیر قطب و قمری هر دو موجودند');
+assert(E.segmentReadingLine('بضدمهاجرین', ['بضد', 'مهاجرین']).readable === 'بضد مهاجرین', 'بخش‌بندی متصل حروف');
+
 // تفکیک نقش: میزان از اساس کامل، ستون فقط از سؤال
 const warDate = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
 const warSplit = E.runClassic({
@@ -179,6 +195,9 @@ assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام 
 assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل بسته');
 assert(warSael.jamalLock.saelJamal === 59, 'سائل نواب جمل ۵۹');
 assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
+assert(warSael.natqSeed && warSael.natqSeed.draftLine, 'نتیجهٔ جنگ شامل بذر نطق است');
+assert(warSael.measuredSelected && warSael.measuredSelected.length === warSael.jadwal.selected.length, 'سنجش مقرره هم‌طول مستحضره');
+assert(warSael.steps.some((s) => s.id === 'muqarrara_measure') && warSael.steps.some((s) => s.id === 'natq_seed'), 'گام‌های مقرره و بذر نطق');
 
 assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا کلاسیک');
 assert(E.sumAbjad('نواب').sum === 59 && E.sumAbjad('مهدی').sum === 59, 'نواب و مهدی = ۵۹');

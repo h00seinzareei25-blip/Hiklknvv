@@ -5,10 +5,25 @@
 (function (global) {
   'use strict';
 
-  /** ترتیب دایره ابجد کبیر (۲۸ حرف) */
+  /** ترتیب دایره ابجد کبیر / قمری (۲۸ حرف) */
   const ABJAD_ORDER = [
     'ا', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ی', 'ک', 'ل', 'م', 'ن',
     'س', 'ع', 'ف', 'ص', 'ق', 'ر', 'ش', 'ت', 'ث', 'خ', 'ذ', 'ض', 'ظ', 'غ'
+  ];
+
+  /**
+   * دایرهٔ ابجد قطب (وهبی) — برای نظیرهٔ خودناطق پس از مستحصله
+   * منبع: أسرار علم الجفر / خودآموز جفر: «سوالعظیم…»
+   */
+  const ABJAD_QUTB = [
+    'س', 'و', 'ا', 'ل', 'ع', 'ظ', 'ی', 'م', 'خ', 'ق', 'ح', 'ز', 'ت', 'ف',
+    'ص', 'ن', 'ذ', 'غ', 'ر', 'ب', 'ش', 'ک', 'ض', 'ط', 'ه', 'ج', 'د', 'ث'
+  ];
+
+  /** ابجد شمسی / ابتث (برای نظیرهٔ شمسی در رسائل) */
+  const ABJAD_SHAMSI = [
+    'ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص',
+    'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ک', 'ل', 'م', 'ن', 'و', 'ه', 'ی'
   ];
 
   /** ابجد کبیر */
@@ -581,6 +596,170 @@
   function letterCategory(ch) {
     const c = LETTER_CATEGORY_MAP[ch];
     return c || { id: 'unknown', title: 'نامشخص', letters: '', index: 0 };
+  }
+
+  /**
+   * اعداد مقررهٔ حروف به تفکیک چهار دسته
+   * منبع: هیئت موسی بن جعفر (ع) همدان — mosabnejafarkhezr.blogfa.com/post/57
+   *
+   * اصلاح نسبت به متن وب:
+   * - تنزل «ص۱۲۰» → «س۱۲۰» (ص در ترقی=۱۶۰؛ س حرف گمشدهٔ تنزل در چهار دسته)
+   * - ظ «۱۸۰» → «۱۸۰۰» (الگوی ۲×کبیر: ث۱۰۰۰ ذ۱۴۰۰ ظ۱۸۰۰)
+   *
+   * کاربرد: سنجش حرف با میزان (عدد مقرره + میزان → طرح ۲۸ → حرف)
+   */
+  const LETTER_MUQARRARA = {
+    // مساوات
+    ا: 2, ج: 4, ه: 6, ز: 8, ط: 10, ک: 30, م: 50,
+    // ترفع
+    ب: 110, د: 58, و: 24, ح: 16, ی: 24, ل: 35, ن: 110,
+    // تنزل (اصلاح‌شده)
+    س: 120, ف: 160, ق: 200, ش: 600, ث: 1000, ذ: 1400, ظ: 1800,
+    // ترقی
+    ع: 140, ص: 160, ر: 400, ت: 800, خ: 1200, ض: 1600, غ: 2000
+  };
+
+  /** عدد عنصر اربعه (مستحصلہ تکمیل آرزو) */
+  const ELEMENT_MUQARRARA = { fire: 8, air: 7, water: 6, earth: 5 };
+
+  function muqarraraOf(ch) {
+    if (LETTER_MUQARRARA[ch] != null) return LETTER_MUQARRARA[ch];
+    return sumAbjad(ch, 'kabir').sum;
+  }
+
+  /**
+   * سنجش حرف با عدد مقرره + میزان → طرح ۲۸ → حرف وضعی
+   */
+  function measureLetterByMuqarrara(ch, mizan) {
+    const mq = muqarraraOf(ch);
+    const M = Math.max(0, mizan | 0);
+    let r = (mq + M) % 28;
+    if (r === 0) r = 28;
+    return ABJAD_ORDER[r - 1] || ch;
+  }
+
+  function measureStringByMuqarrara(str, mizan) {
+    return [...String(str || '')].map((ch) => measureLetterByMuqarrara(ch, mizan)).join('');
+  }
+
+  /** نظیره روی دایرهٔ دلخواه (±۱۴) */
+  function naziraInCircle(ch, order) {
+    const circle = order || ABJAD_ORDER;
+    const i = circle.indexOf(ch);
+    if (i < 0) return ch;
+    return circle[(i + 14) % circle.length];
+  }
+
+  function mapNaziraInCircle(str, order) {
+    return [...String(str || '')].map((ch) => naziraInCircle(ch, order)).join('');
+  }
+
+  function mapNaziraQutb(str) {
+    return mapNaziraInCircle(str, ABJAD_QUTB);
+  }
+
+  function mapNaziraShamsi(str) {
+    return mapNaziraInCircle(str, ABJAD_SHAMSI);
+  }
+
+  /**
+   * خوانش متصل: حروف را بدون جابه‌جایی با تطبیق حریصانهٔ واژه‌های بانک بخش می‌کند
+   * («حاصلہ حروف کو ملا کر پڑھیں» — مستحصلہ تکمیل آرزو)
+   */
+  function segmentReadingLine(letterLine, bank) {
+    const s = String(letterLine || '');
+    const norms = [];
+    const seen = new Set();
+    (bank || []).forEach((w) => {
+      const n = normalizeText(w);
+      if (n.length >= 2 && n.length <= 12 && !seen.has(n)) {
+        seen.add(n);
+        norms.push(n);
+      }
+    });
+    norms.sort((a, b) => b.length - a.length || a.localeCompare(b));
+    const parts = [];
+    let i = 0;
+    while (i < s.length) {
+      let hit = null;
+      for (const w of norms) {
+        if (s.slice(i, i + w.length) === w) {
+          hit = w;
+          break;
+        }
+      }
+      if (hit) {
+        parts.push(hit);
+        i += hit.length;
+      } else {
+        parts.push(s[i]);
+        i += 1;
+      }
+    }
+    const words = parts.filter((p) => p.length >= 2);
+    return {
+      parts,
+      words,
+      joined: parts.join(''),
+      readable: words.join(' '),
+      coverageRatio: s.length ? words.join('').length / s.length : 0
+    };
+  }
+
+  /**
+   * بذر نطق کلاسیک از مستحصله
+   * A) مشهور: مستحصله → مؤخرصدر → نظیرهٔ قمری → خواندن
+   * B) خودناطق تکمیل آرزو: نظیرهٔ قطب → مؤخرصدر×۲ → نظیرهٔ قمری → خواندن
+   * C) واژه‌پوش از مخزن A–D (کمکی)
+   */
+  function buildClassicalNatqSeed(mustehsila, opts) {
+    const src = String(mustehsila || '');
+    const takseer = takseerMuakhkharSadr(src);
+    const naziraLine = mapNazira(takseer);
+    const qutbOnce = mapNaziraQutb(src);
+    const qutbTakseer1 = takseerMuakhkharSadr(qutbOnce);
+    const qutbTakseer2 = takseerMuakhkharSadr(qutbTakseer1);
+    const qutbRead = mapNazira(qutbTakseer2);
+    const pool = (opts && opts.pool) || src;
+    const bank = ((opts && opts.bank) || []).concat(CORE_LEXICON || []);
+    const words = [];
+    const seen = new Set();
+    bank.forEach((w) => {
+      const norm = normalizeText(w);
+      if (norm.length < 2 || norm.length > 10) return;
+      if (seen.has(norm)) return;
+      const cov = coverageAgainst(norm, pool);
+      if (cov.complete || cov.ratio >= 0.85) {
+        seen.add(norm);
+        words.push({ word: norm, coverage: cov.ratio, complete: !!cov.complete });
+      }
+    });
+    words.sort((a, b) => (b.complete - a.complete) || (b.coverage - a.coverage) || (a.word.length - b.word.length));
+    const top = words.filter((w) => w.complete).slice(0, 12);
+    const lexDraft = top.length ? top.slice(0, 8).map((w) => w.word).join(' ') : '';
+    const segA = segmentReadingLine(naziraLine, bank);
+    const segB = segmentReadingLine(qutbRead, bank);
+    const bestSeg = segB.coverageRatio > segA.coverageRatio ? segB : segA;
+    // واژه‌پوش مخزن اولویت دارد؛ بخش‌بندی متصل فقط اگر پوشش معنادار باشد
+    const draftLine = lexDraft
+      || (bestSeg.coverageRatio >= 0.35 ? bestSeg.readable : '')
+      || naziraLine;
+    return {
+      source: src,
+      afterTakseer: takseer,
+      afterNazira: naziraLine,
+      readingLine: naziraLine,
+      qutbPath: {
+        afterQutbNazira: qutbOnce,
+        afterTakseer1: qutbTakseer1,
+        afterTakseer2: qutbTakseer2,
+        readingLine: qutbRead
+      },
+      segmented: { qamari: segA, qutb: segB, best: bestSeg },
+      candidateWords: words.slice(0, 24),
+      draftLine,
+      classicNote: 'A: مستحصله→مؤخرصدر→نظیره قمری | B: نظیره قطب→مؤخرصدر×۲→نظیره قمری | خوانش متصل بدون جابه‌جایی'
+    };
   }
 
   /**
@@ -1302,6 +1481,34 @@
         output: mustehsila,
         note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | در کتب مستحصله «سطر» است؛ شبکهٔ فشرده فقط نمایش است`
       });
+
+      // سنجش مقرره + بذر نطق کلاسیک
+      const measuredSelected = measureStringByMuqarrara(sel.selected, mizan);
+      steps.push({
+        id: 'muqarrara_measure',
+        title: 'سنجش با اعداد مقرره + میزان',
+        input: `مستحضره + میزان ${mizan}`,
+        output: measuredSelected,
+        note: 'عدد مقررهٔ حرف (جدول چهار دسته) + میزان → طرح ۲۸ → حرف؛ منبع: رسالهٔ ۲۸ عمل / هیئت موسی بن جعفر'
+      });
+      const topic = detectTopic(Object.assign({}, input, parts));
+      const natqSeed = buildClassicalNatqSeed(mustehsila, {
+        pool: poolABCD,
+        bank: (topic && topic.bank) || []
+      });
+      steps.push({
+        id: 'natq_seed',
+        title: 'بذر نطق کلاسیک (قمری + قطب خودناطق)',
+        input: mustehsila,
+        output: natqSeed.readingLine || natqSeed.afterNazira,
+        note: [
+          'A قمری: ' + natqSeed.afterNazira,
+          'B قطب: ' + ((natqSeed.qutbPath && natqSeed.qutbPath.readingLine) || '—'),
+          'خوانش/پیشنهاد: ' + natqSeed.draftLine,
+          natqSeed.classicNote
+        ].join(' · ')
+      });
+
       steps.push({
         id: 'mustehsila_grid',
         title: 'جدول مستحصله (نمایش فشرده)',
@@ -1331,6 +1538,8 @@
         mustehsila,
         mustehsilaUnique: uniqueLetters(mustehsila),
         mustehsilaGrid,
+        measuredSelected,
+        natqSeed,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
@@ -1351,6 +1560,8 @@
           picks: sel.picks,
           selectMode: sel.mode,
           selectNote: sel.classicNote,
+          measuredSelected,
+          natqSeed,
           priority,
           mizanExtract,
           classicLaqt,
@@ -2412,6 +2623,23 @@
       }
       jadwalLines.push(`- سطر انتخاب / مستحضره (${result.jadwal.selectMode || 'category'}): ${result.jadwal.selected}`);
       if (result.jadwal.selectNote) jadwalLines.push(`- قاعدهٔ انتخاب: ${result.jadwal.selectNote}`);
+      if (result.measuredSelected || result.jadwal.measuredSelected) {
+        jadwalLines.push(`- سنجش مقرره+میزان: ${result.measuredSelected || result.jadwal.measuredSelected}`);
+      }
+      if (result.natqSeed || result.jadwal.natqSeed) {
+        const ns = result.natqSeed || result.jadwal.natqSeed;
+        jadwalLines.push(`- بذر نطق A (مؤخرصدر→نظیره قمری): ${ns.afterNazira || ns.readingLine}`);
+        if (ns.qutbPath && ns.qutbPath.readingLine) {
+          jadwalLines.push(`- بذر نطق B (قطب→مؤخرصدر×۲→قمری): ${ns.qutbPath.readingLine}`);
+        }
+        jadwalLines.push(`- خوانش/پیشنهاد یک‌خطی: ${ns.draftLine}`);
+        if (ns.segmented && ns.segmented.best && ns.segmented.best.readable) {
+          jadwalLines.push(`- بخش‌بندی متصل حروف: ${ns.segmented.best.readable}`);
+        }
+        if (ns.candidateWords && ns.candidateWords.length) {
+          jadwalLines.push(`- واژه‌های پوش‌شده از مخزن: ${ns.candidateWords.filter((w) => w.complete).slice(0, 12).map((w) => w.word).join('، ')}`);
+        }
+      }
       jadwalLines.push(`- لقط میزانی از انتخاب: ${result.jadwal.mizanExtract}`);
       if (result.jadwal.classicLaqt) {
         jadwalLines.push(`- لقط کلاسیک (گام=${result.jadwal.classicLaqt.step}): ${result.jadwal.classicLaqt.pooled}`);
@@ -2605,7 +2833,7 @@
   }
 
   global.JafrEngine = {
-    ABJAD_ORDER, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS, JAMAL_LOCK_TARGET,
+    ABJAD_ORDER, ABJAD_QUTB, ABJAD_SHAMSI, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS, JAMAL_LOCK_TARGET,
     normalizeText, normalizeDateTimeField, expandDigitsToWords,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
@@ -2615,7 +2843,9 @@
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
     classifyQuestionScope, buildMustehsilaGrid,
-    LETTER_CATEGORIES, letterCategory,
+    LETTER_CATEGORIES, letterCategory, LETTER_MUQARRARA, ELEMENT_MUQARRARA,
+    muqarraraOf, measureLetterByMuqarrara, measureStringByMuqarrara, buildClassicalNatqSeed,
+    naziraInCircle, mapNaziraInCircle, mapNaziraQutb, mapNaziraShamsi, segmentReadingLine,
     buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
