@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · لایه‌ها + لقط میزانی کلاسیک → نطق یک‌خطی + تفسیر AI. قفل ۵۰۲۲/۱۰: سائلِ ۵۹ (کلاسیک) یا آ=۶۰ (غیرکلاسیک).';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ = جاروی چندباره پس از نطق (قفل نطق باز). قفل جمل ۵۰۲۲: سائلِ ۵۹ یا آ=۶۰.';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -270,6 +270,12 @@
       text += jl.matched
         ? ` | قفل جمل: بسته (${jl.jamal}/${jl.mizan})`
         : ` | قفل جمل: ${jl.summary}`;
+    }
+    if (result && result.natqLock && result.natqLock.unlocked) {
+      text += ' | قفل نطق: باز (مخزن‌آزاد + رنگ پس از نطق)';
+      if (result.natqLock.reference && result.natqLock.reference.highlight && result.natqLock.reference.highlight.complete) {
+        text += ` · نمونه ${result.natqLock.reference.highlight.sweeps} جارو`;
+      }
     }
     el.textContent = text;
   }

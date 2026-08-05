@@ -629,6 +629,112 @@
     };
   }
 
+  /**
+   * مسیر رنگ/هایلایت پس از نطق: جاروی چندبارهٔ چپ→راست روی سطرهای A–D
+   * (قفل بازشده: رنگ فرمول استخراج نیست؛ خانه‌های مصرف‌شدهٔ جمله را نشان می‌دهد)
+   */
+  function planNatqHighlight(natqText, layers, opts) {
+    const rowIds = ['A', 'B', 'C', 'D'];
+    const rows = rowIds.map((id) => String((layers && layers[id]) || ''));
+    const n = rows[0] ? rows[0].length : 0;
+    const needle = normalizeText(natqText, {}, (opts && opts.normOpts) || {});
+    const pool = rows.join('');
+    const coverPool = coverageAgainst(needle, pool);
+    if (!needle || !n) {
+      return {
+        ok: false,
+        complete: false,
+        mode: 'multiSweep',
+        needle,
+        matched: 0,
+        sweeps: 0,
+        picks: [],
+        coverPool,
+        summary: 'بدون متن نطق یا جدول'
+      };
+    }
+    const maxSweeps = (opts && opts.maxSweeps > 0) ? (opts.maxSweeps | 0) : 12;
+    let ti = 0;
+    const picks = [];
+    let sweep = 0;
+    while (ti < needle.length && sweep < maxSweeps) {
+      let progress = false;
+      for (let c = 0; c < n && ti < needle.length; c++) {
+        for (let r = 0; r < 4; r++) {
+          if (rows[r][c] === needle[ti]) {
+            picks.push({
+              ch: needle[ti],
+              row: rowIds[r],
+              col: c + 1,
+              sweep,
+              index: c
+            });
+            ti++;
+            progress = true;
+            break;
+          }
+        }
+      }
+      if (!progress) break;
+      sweep++;
+    }
+    const complete = ti === needle.length;
+    return {
+      ok: complete,
+      complete,
+      mode: 'multiSweep',
+      needle,
+      matched: ti,
+      sweeps: sweep,
+      picks,
+      coverPool,
+      summary: complete
+        ? `مسیر رنگ کامل با ${sweep} جاروی چپ→راست روی A–D (${picks.length} خانه)`
+        : `مسیر ناقص ${ti}/${needle.length} پس از ${sweep} جارو`
+    };
+  }
+
+  /**
+   * مدل باز قفل نطق (تحقیق + سؤال از جفر + تطبیق اسکرین):
+   * نطق = جمله آزاد از مخزن چهار لایه؛ رنگ = جاروی چندباره بعد از نطق
+   */
+  function analyzeNatqLock(layers, opts) {
+    const pool = (layers && layers.poolABCD) || (
+      String((layers && layers.A) || '') +
+      String((layers && layers.B) || '') +
+      String((layers && layers.C) || '') +
+      String((layers && layers.D) || '')
+    );
+    const rules = [
+      'نطق یک‌خطی فقط از حروف مخزن A+B+C+D با ترتیب آزاد (نه اجبار ترتیب ستون)',
+      'رنگ/هایلایت فرمول استخراج نیست؛ بعد از نطق با جاروی چندبارهٔ چپ→راست مشخص می‌شود',
+      'لقط/سطر انتخاب تقریب کمکی است نه کلید قفل رنگ نرم‌افزار'
+    ];
+    const out = {
+      unlocked: true,
+      id: 'pool_free_order_plus_multisweep_highlight',
+      title: 'قفل نطق باز',
+      rules,
+      poolUnique: uniqueLetters(pool),
+      summary: 'قفل نطق باز: مخزن‌آزاد + رنگ پس‌از‌نطق (جاروی چندباره)',
+      reference: null
+    };
+    const ref = opts && opts.referenceNatq ? String(opts.referenceNatq) : '';
+    if (ref) {
+      const normalized = normalizeText(ref, {}, (opts && opts.normOpts) || {});
+      out.reference = {
+        text: ref,
+        normalized,
+        poolCover: coverageAgainst(normalized, pool),
+        highlight: planNatqHighlight(ref, layers, opts)
+      };
+      if (out.reference.highlight.complete && out.reference.poolCover.complete) {
+        out.summary += ` · نمونه مرجع با ${out.reference.highlight.sweeps} جارو کامل شد`;
+      }
+    }
+    return out;
+  }
+
   /** پیش‌فرض‌های چندروش */
   const METHOD_PRESETS = [
     {
@@ -914,11 +1020,24 @@
         title: 'سطر انتخاب (با کلید میزان روی A–D)',
         input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 4 میان A/B/C/D`,
         output: sel.selected,
-        note: 'هایلایت مرجع گزینشی‌تر است؛ این سطر تقریب قاعده‌مند. نطق یک‌خطی از مخزن A+B+C+D با اولویت حروف انتخاب/میزان'
+        note: 'سطر انتخاب تقریب کمکی است. قفل نطق باز: جمله آزاد از مخزن A+B+C+D؛ رنگ = جاروی چندباره پس از نطق'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
       const classicLaqt = buildClassicLaqtBundle(columnBase, layers, sel.selected, mizan);
+      const refNatq = opts.referenceNatq ||
+        'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
+      // برای سؤال جنگِ مرجع، مسیر رنگ نمونه را هم گزارش کن؛ وگرنه فقط مدل قفل
+      const warSoalNorm = normalizeText(
+        'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+        {},
+        normOpts
+      );
+      const includeRef = !!opts.referenceNatq || columnBase === warSoalNorm;
+      const natqLock = analyzeNatqLock(layers, {
+        referenceNatq: includeRef ? refNatq : '',
+        normOpts
+      });
       steps.push({
         id: 'jadwal_mizan_extract',
         title: 'لقط میزانی از سطر انتخاب',
@@ -936,6 +1055,17 @@
           `از انتخاب: ${classicLaqt.fromSelected || '—'}`,
           `یکتا: ${classicLaqt.unique}`
         ].join(' | ')
+      });
+      steps.push({
+        id: 'natq_lock',
+        title: 'قفل نطق (باز)',
+        input: 'مخزن A+B+C+D · ترتیب آزاد · رنگ پس از نطق',
+        output: natqLock.summary,
+        note: natqLock.rules.concat(
+          natqLock.reference && natqLock.reference.highlight
+            ? [natqLock.reference.highlight.summary]
+            : []
+        ).join(' · ')
       });
 
       const condensed = takhlisOdd(sel.selected);
@@ -964,7 +1094,7 @@
         title: 'مستحصله نهایی (جدولی)',
         input: `اولویت:${priority.length} | لقط:${classicLaqt.pooled.length} | مخزن:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | نطق یک‌خطی را از مخزن+لقط بساز`
+        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | نطق آزاد از مخزن؛ رنگ پس از نطق`
       });
 
       const methodLabel = opts.methodLabel || (jadwalModel === 'tttm'
@@ -981,6 +1111,7 @@
         jamal: jamal.sum,
         mizan,
         jamalLock,
+        natqLock,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
         mustehsila,
@@ -1009,7 +1140,8 @@
           classicLaqt,
           condensed,
           poolABCD,
-          poolUnique: uniqueLetters(poolABCD)
+          poolUnique: uniqueLetters(poolABCD),
+          natqLock
         }
       };
     }
@@ -1682,11 +1814,12 @@
     ];
     if (sentenceNatq) {
       lines.push('11) محصول اصلی جفر جدولی یک «نطق یک‌خطی کلاسیک» است — نه فقط جدول کاندیدهای مدرن.');
-      lines.push('12) نطق یک‌خطی را فقط از حروف مخزن A+B+C+D بساز (۸–۲۵ کلمه، سبک سنت جدولی: واژه‌های پیاپیِ حرف‌محور).');
+      lines.push('12) نطق یک‌خطی را فقط از حروف مخزن A+B+C+D بساز (۸–۲۵ کلمه؛ ترتیب آزاد، نه اجبار ترتیب ستون).');
       lines.push('13) الگوی مطلوب شبیه این است (فقط سبک؛ عین این جمله را کپی نکن): «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت».');
-      lines.push('14) بعد از نطق یک‌خطی، بخش «تفسیر هوش مصنوعی» را جدا بنویس (۲–۵ جملهٔ فارسی روان).');
-      lines.push('15) جدول کاندید فقط پشتیبان است؛ جواب آخر همان نطق یک‌خطی + تفسیر است.');
-      lines.push('16) حرف خارج از مخزن ممنوع. حروف اولویت (انتخاب/میزان) را بیشتر به‌کار ببر.');
+      lines.push('14) رنگ/هایلایت را کلید استخراج ندان؛ بعد از نطق با جاروی چندبارهٔ جدول خانه‌های مصرف‌شده مشخص می‌شود.');
+      lines.push('15) بعد از نطق یک‌خطی، بخش «تفسیر هوش مصنوعی» را جدا بنویس (۲–۵ جملهٔ فارسی روان).');
+      lines.push('16) جدول کاندید فقط پشتیبان است؛ جواب آخر همان نطق یک‌خطی + تفسیر است.');
+      lines.push('17) حرف خارج از مخزن ممنوع. حروف اولویت (انتخاب/میزان) کمکی‌اند نه زندان ترتیب.');
     } else if (isChoice) {
       lines.push('11) در سؤال انتخابی بانک اصلی فقط گزینه‌های خود سؤال است.');
       lines.push('12) ساخت واژه‌های بی‌ربط از حروف مشترک به‌عنوان جواب اصلی ممنوع است.');
@@ -2046,11 +2179,20 @@
       jadwalLines.push(`- مخزن حروف نطق A+B+C+D: ${result.jadwal.poolABCD}`);
       jadwalLines.push(`- بدون تکرار مخزن: ${result.jadwal.poolUnique}`);
       jadwalLines.push(`- شمارش حروف مخزن: ${letterBag(result.jadwal.poolABCD)}`);
-      jadwalLines.push('## دستور نطق جدولی (مثل سنت تصویر مرجع)');
-      jadwalLines.push('1) از مخزن A+B+C+D یک «نطق یک‌خطی کلاسیک» بساز.');
+      if (result.natqLock || (result.jadwal && result.jadwal.natqLock)) {
+        const nl = result.natqLock || result.jadwal.natqLock;
+        jadwalLines.push(`- قفل نطق: ${nl.summary}`);
+        (nl.rules || []).forEach((rule, i) => jadwalLines.push(`  · ${i + 1}) ${rule}`));
+        if (nl.reference && nl.reference.highlight) {
+          jadwalLines.push(`- مسیر رنگ نمونهٔ مرجع: ${nl.reference.highlight.summary}`);
+        }
+      }
+      jadwalLines.push('## دستور نطق جدولی (قفل باز)');
+      jadwalLines.push('1) از مخزن A+B+C+D یک «نطق یک‌خطی کلاسیک» با ترتیب آزاد بساز (ترتیب ستون اجباری نیست).');
       jadwalLines.push('2) سبک هدف: زنجیرهٔ واژه‌های حرف‌محور شبیه «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت» (عین آن را کپی نکن؛ برای سؤال فعلی بساز).');
-      jadwalLines.push('3) سپس «تفسیر هوش مصنوعی» بده: همان نطق را به فارسی روان برای صورت‌مسئله معنا کن.');
-      jadwalLines.push('4) جدول کاندید فقط پشتیبان است؛ محصول اصلی = نطق یک‌خطی + تفسیر.');
+      jadwalLines.push('3) رنگ/هایلایت را فرمول استخراج فرض نکن؛ بعد از نطق، حروف مصرف‌شده در جدول جارو می‌شوند.');
+      jadwalLines.push('4) سپس «تفسیر هوش مصنوعی» بده: همان نطق را به فارسی روان برای صورت‌مسئله معنا کن.');
+      jadwalLines.push('5) جدول کاندید فقط پشتیبان است؛ محصول اصلی = نطق یک‌خطی + تفسیر.');
       jadwalLines.push('5) حرف خارج از مخزن ممنوع. در نزاع، تفسیر باید مهاجم/مدافع را نام ببرد.');
       (result.jadwal.layers || []).forEach((row) => {
         jadwalLines.push(`- ${row.title}: ${row.str}`);
@@ -2216,7 +2358,8 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
-    computeMizan, analyzeJamalLock, buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
+    computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
+    buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
   };

@@ -195,6 +195,22 @@ assert(lockDiag.gap === 59 && lockDiag.recipes.length === 2, 'تحلیل فاص�
 assert(E.JAMAL_LOCK_TARGET.jamal === 5022, 'ثابت هدف قفل');
 assert(E.describeOptions({ pipeline: 'jadwali', alefMaddaMode: 'sin' }).includes('آ=۶۰'), 'توضیح گزینه آ=۶۰');
 
+// قفل نطق: مخزن‌آزاد + جاروی چندباره برای رنگ
+const refNatq = 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
+assert(E.coverageAgainst(E.normalizeText(refNatq), warSael.jadwal.poolABCD).complete, 'نطق مرجع از مخزن ABCD قابل‌ساخت است');
+const hl = E.planNatqHighlight(refNatq, {
+  A: warSael.jadwal.layers.find((l) => l.id === 'A').str,
+  B: warSael.jadwal.layers.find((l) => l.id === 'B').str,
+  C: warSael.jadwal.layers.find((l) => l.id === 'C').str,
+  D: warSael.jadwal.layers.find((l) => l.id === 'D').str
+});
+assert(hl.complete && hl.sweeps === 6 && hl.picks.length === E.normalizeText(refNatq).length, 'جاروی ۶باره مسیر رنگ نطق مرجع را کامل می‌کند');
+assert(hl.picks[0].row === 'A' && hl.picks[0].col === 1, 'شروع مسیر رنگ از A1');
+assert(warSael.natqLock && warSael.natqLock.unlocked, 'قفل نطق در نتیجه باز علامت خورده');
+assert(warSael.natqLock.reference && warSael.natqLock.reference.highlight.complete, 'نمونه مرجع جنگ مسیر رنگ کامل دارد');
+assert(warSael.steps.some((s) => s.id === 'natq_lock'), 'گام قفل نطق در مراحل');
+assert(E.analyzeNatqLock({ A: 'اب', B: 'جد', C: 'هز', D: 'حط', poolABCD: 'ابجدهزحط' }).unlocked, 'analyzeNatqLock unlocked');
+
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');
