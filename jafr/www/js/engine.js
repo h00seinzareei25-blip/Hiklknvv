@@ -982,22 +982,35 @@
     };
   }
 
+  /** تشخیص پروفایل سؤال: بله/خیر فقط با نشانه‌های قطبی واضح */
+  function looksLikeYesNo(text) {
+    const t = String(text || '');
+    if (!t.trim()) return false;
+    // صریح‌ترین نشانه‌ها
+    if (/آیا/.test(t)) return true;
+    if (/یا\s*نه\b|هست\s*یا\s*نیست|آری\s*یا\s*خیر|بله\s*یا\s*خیر/.test(t)) return true;
+    if (/(می\s*شود|می‌شود|میشود)\s*یا/.test(t)) return true;
+    // بدون «آیا» فقط اگر ساختار قطبی واضح باشد
+    if (/به\s*صلاح\s*(است|می)|مفید\s*(است|می)/.test(t) && /یا\s*نه|میشود|می‌شود|خواهد\s*بود/.test(t)) return true;
+    return false;
+  }
+
   function detectQuestionProfile(meta) {
     const text = [meta.modda, meta.soal].filter(Boolean).join(' ');
     const choices = extractChoiceOptions(meta.soal || '');
     if (choices.length >= 2) {
-      return { id: 'choice', title: 'انتخابی (بین گزینه‌ها)', choices, outputHint: 'برنده بین گزینه‌ها' };
+      return { id: 'choice', title: 'انتخابی (بین گزینه‌ها)', choices, outputHint: 'برنده بین گزینه‌ها + توضیح چندجمله‌ای' };
     }
-    if (/آیا|میشود|می‌شود|خواهد|هست\s*یا|یا نه|مفید است|به صلاح/.test(text)) {
-      return { id: 'yesno', title: 'بله / خیر', choices: ['آری', 'خیر'], outputHint: 'پاسخ قطبی: آری/خیر/مبهم' };
+    if (looksLikeYesNo(text)) {
+      return { id: 'yesno', title: 'بله / خیر', choices: ['آری', 'خیر'], outputHint: 'پاسخ قطبی آری/خیر/مبهم + ۲–۴ جمله دلیل' };
     }
-    if (/کی\b|چه وقت|زمان|موعد|روز|ماه|سال/.test(text)) {
-      return { id: 'timing', title: 'زمانی / وعده', choices: [], outputHint: 'زمان محتمل یا مبهم' };
+    if (/کی\b|چه وقت|زمان\b|موعد|چه روز|چه ماه/.test(text)) {
+      return { id: 'timing', title: 'زمانی / وعده', choices: [], outputHint: 'جدول کاندید زمانی + خوانش چندجمله‌ای' };
     }
-    if (/اسم|نام|کیست|چه کسی|چه چیزی/.test(text)) {
+    if (/اسم|نام|کیست|چه کسی|چه چیزی|چی\s*بگیر|کدام دارو|کدام گیاه/.test(text)) {
       return { id: 'name', title: 'نام‌یابی', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای؛ در پایان نام غالب یا «نام استخراج نشد»' };
     }
-    return { id: 'general', title: 'عمومی', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای (نه فقط یک کلمه)' };
+    return { id: 'general', title: 'عمومی (چندخوانشی)', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای (نه فقط یک کلمه)' };
   }
 
   function detectTopic(meta) {

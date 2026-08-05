@@ -138,6 +138,10 @@ assert(!/اولویت با نام ۲ تا ۶ حرفی از دیکشنری داخ
 
 const yesMeta = { sael: 'حسین', modda: 'دارو', soal: 'آیا این دارو برای من مفید است', extraEnabled: false };
 assert(E.detectQuestionProfile(yesMeta).id === 'yesno', 'پروفایل بله/خیر');
+assert(E.detectQuestionProfile({ modda: 'دارو گیاهی', soal: 'اسم گیاه آرامبخش' }).id !== 'yesno', 'بدون آیا چندخوانشی می‌ماند');
+assert(E.detectQuestionProfile({ modda: 'ازدواج', soal: 'نتیجه پیوند حسین و فاطمه' }).id !== 'yesno', 'بدون نشانه قطبی بله‌خیر نشود');
+assert(E.detectQuestionProfile({ soal: 'بین سیر و سماق کدام بهتر است' }).id === 'choice', 'بین/کدام = انتخابی');
+assert(/چندخوانشی|خوانش چندجمله‌ای/.test(E.detectQuestionProfile({ modda: 'دارو گیاهی', soal: '' }).outputHint), 'عمومی چندخوانشی');
 const yesRun = E.runClassic(Object.assign({ taleb: '', matloob: '', options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, takseerRounds: 1 } }, yesMeta));
 const dict = E.buildInternalDictionary(yesRun.mustehsila, yesMeta, { madkhal: yesRun.madkhal, table: 'kabir' });
 assert(dict.candidates.length > 0, 'دیکشنری داخلی غیرخالی');

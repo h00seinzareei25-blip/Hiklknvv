@@ -207,6 +207,19 @@
     $('compareCard').classList.remove('hidden');
   }
 
+  function showProfileHint(meta) {
+    const el = $('profileHint');
+    if (!el || !JafrEngine.detectQuestionProfile) return;
+    const p = JafrEngine.detectQuestionProfile(meta || {});
+    const topic = JafrEngine.detectTopic ? JafrEngine.detectTopic(meta || {}) : null;
+    let mode = 'چندخوانشی';
+    if (p.id === 'yesno') mode = 'قطبی (آری/خیر/مبهم)';
+    else if (p.id === 'choice') mode = 'انتخاب بین گزینه‌ها';
+    el.textContent = `پروفایل نطق: ${p.title} → ${mode}` +
+      (topic && topic.title ? ` | موضوع کمکی: ${topic.title}` : '') +
+      ' | اگر «آیا / یا نه» ننوشته باشی معمولاً چندخوانشی است.';
+  }
+
   function showPrimary(result, keepCompare) {
     $('statJamal').textContent = String(result.jamal);
     $('statMadkhal').textContent = String(result.madkhal);
@@ -284,6 +297,7 @@
       $('resultTitle').textContent = 'نتیجه مستحصله (روش ۱ + مقایسه)';
       $('mustLabel').textContent = 'مستحصله روش ۱ (برای مرور سریع)';
       showPrimary(bundle.primary, true);
+      showProfileHint(meta);
       renderCompare(bundle.results, bundle.sharedUnique);
       renderStability(stability);
       renderMethodTabs(bundle.results);
@@ -338,6 +352,7 @@
     $('resultTitle').textContent = 'نتیجه مستحصله';
     $('mustLabel').textContent = 'مستحصله';
     showPrimary(result, false);
+    showProfileHint(meta);
     renderStability(stability);
     renderMethodTabs(null);
     renderSteps(result.steps);
