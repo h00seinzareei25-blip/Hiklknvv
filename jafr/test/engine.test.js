@@ -142,6 +142,8 @@ assert(E.describeOptions({ pipeline: 'fifteen' }) === 'جفر ۱۵ سطری', '�
 const herbMeta = { sael: 'حسین', taleb: 'حسین', matloob: 'حسین', modda: 'دارو', soal: 'اسم دارو گیاهی برای ارامش اعصاب من', extraEnabled: false };
 assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاهی');
 const herbPrompt = (E.buildMultiNatqPrompt(multi, herbMeta).generator);
+assert(E.detectTopic({ soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود', modda: 'جنگ' }).id === 'conflict', 'تشخیص موضوع جنگ');
+assert(E.extractConflictParties({ soal: 'جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود' }).defenders.join('').includes('ایران'), 'استخراج مدافع ایران');
 assert(herbPrompt.includes('به لیمو') && herbPrompt.includes('نطق معکوس') && herbPrompt.includes('بانک واژگانی'), 'پرامپت سخت‌گیر گیاهی');
 assert(herbPrompt.includes('نطق‌آزاد') && herbPrompt.includes('زندان نیستند') && herbPrompt.includes('خوانش چندجمله‌ای'), 'نطق آزاد و خوانش چندجمله‌ای فعال است');
 assert(!herbPrompt.includes('فقط از این‌ها رتبه‌بندی کن'), 'دیگر محدود به دیکشنری اجباری نیست');

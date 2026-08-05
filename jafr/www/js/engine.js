@@ -406,22 +406,35 @@
   }
 
   /**
-   * سطر انتخاب: برای هر ستون یک حرف از یکی از ۸ لایه، با کلید میزان
-   * ستون i (۱-مبنا): ردیف = ((i * میزان) % 8)
+   * سطر انتخاب با کلید میزان روی ۴ ردیف A/B/C/D (نه ۸تای تکراری)
+   * ستون i (۱-مبنا): ردیف = ((i * میزان) % 4) میان [A,B,C,D]
    */
   function selectJadwalRow(layers, mizan) {
-    const rows = (layers && layers.rows) || [];
-    const n = rows[0] ? rows[0].str.length : 0;
+    const abcd = [
+      (layers && layers.A) || '',
+      (layers && layers.B) || '',
+      (layers && layers.C) || '',
+      (layers && layers.D) || ''
+    ];
+    const ids = ['A', 'B', 'C', 'D'];
+    const n = abcd[0].length;
     const M = Math.max(1, mizan | 0);
     let selected = '';
     const picks = [];
     for (let i = 0; i < n; i++) {
-      const rowIdx = ((i + 1) * M) % 8;
-      const ch = rows[rowIdx].str[i] || '';
+      const rowIdx = ((i + 1) * M) % 4;
+      const ch = abcd[rowIdx][i] || '';
       selected += ch;
-      picks.push({ col: i + 1, row: rows[rowIdx].id, ch });
+      picks.push({ col: i + 1, row: ids[rowIdx], ch });
     }
-    return { selected, picks };
+    // مخزن اولویت غنی‌تر: انتخاب + حروف ستون‌های مضرب میزان از همهٔ ABCD
+    let priority = selected;
+    for (let i = 0; i < n; i++) {
+      if ((i + 1) % M === 0) {
+        for (let r = 0; r < 4; r++) priority += abcd[r][i] || '';
+      }
+    }
+    return { selected, picks, priority };
   }
 
   /** لقط میزانی: برداشتن حروف ستون‌هایی که شمارهٔشان مضرب میزان است */
@@ -662,10 +675,10 @@
       const sel = selectJadwalRow(layers, mizan);
       steps.push({
         id: 'jadwal_select',
-        title: 'سطر انتخاب (با کلید میزان)',
-        input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 8`,
+        title: 'سطر انتخاب (با کلید میزان روی A–D)',
+        input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 4 میان A/B/C/D`,
         output: sel.selected,
-        note: 'هایلایت‌های نرم‌افزار مرجع گزینشی‌ترند؛ این سطر تقریب قاعده‌مند است. نطق جمله‌ای از مخزن A+B+C+D ساخته می‌شود'
+        note: 'هایلایت مرجع گزینشی‌تر است؛ این سطر تقریب قاعده‌مند. نطق یک‌خطی از مخزن A+B+C+D با اولویت حروف انتخاب/میزان'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
@@ -678,34 +691,32 @@
       });
 
       const condensed = takhlisOdd(sel.selected);
-      steps.push({
-        id: 'jadwal_takhlis',
-        title: 'تخلیص فرد از سطر انتخاب',
-        input: sel.selected,
-        output: condensed,
-        note: 'فشرده‌سازی کمکی'
-      });
-
       const poolABCD = layers.poolABCD || (layers.A + layers.B + layers.C + layers.D);
+      const priority = sel.priority || (sel.selected + mizanExtract);
+      // مستحصله نمایشی: حروف اولویت‌دار (انتخاب+میزان) سپس یکتای مخزن برای غنای نطق
+      let mustehsila = '';
+      const seen = new Set();
+      for (const ch of String(priority + poolABCD)) {
+        if (!ch || seen.has(ch)) continue;
+        seen.add(ch);
+        mustehsila += ch;
+      }
+      if (mustehsila.length < 4) mustehsila = condensed || sel.selected;
+
       steps.push({
         id: 'jadwal_pool',
         title: 'مخزن حروف نطق (A+B+C+D)',
         input: 'چهار ربع دایره',
         output: poolABCD,
-        note: `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)} — جملهٔ نطق مرجع از این مخزن قابل‌ساخت است`
+        note: `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)}`
       });
-
-      // مستحصله نمایشی: لقط میزانی؛ مخزن کامل برای نطق جمله‌ای جداگانه است
-      let mustehsila = mizanExtract;
-      if (mustehsila.length < 4) mustehsila = condensed;
-      if (mustehsila.length < 4) mustehsila = sel.selected;
 
       steps.push({
         id: 'mustehsila',
         title: 'مستحصله نهایی (جدولی)',
-        input: `انتخاب:${sel.selected.length} | لقط‌میزان:${mizanExtract} | مخزنABCD:${poolABCD.length}`,
+        input: `اولویت:${priority.length} | مخزنABCD:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | مدل=ربع۲۸ | بدون تکرار مستحصله: ${uniqueLetters(mustehsila)} | نطق جمله‌ای را از مخزن A+B+C+D بساز`
+        note: `میزان=${mizan} | مدل=ربع۲۸ | نطق یک‌خطی را فقط از مخزن A+B+C+D بساز`
       });
 
       const methodLabel = opts.methodLabel || 'جفر جدولی میزان‌دار';
@@ -734,6 +745,7 @@
           layers: layers.rows.map((r) => ({ id: r.id, title: r.title, str: r.str })),
           selected: sel.selected,
           picks: sel.picks,
+          priority,
           mizanExtract,
           condensed,
           poolABCD,
@@ -1131,7 +1143,8 @@
     'مفید', 'مضر', 'دوا', 'شفا', 'امن', 'خطر', 'سفر', 'مانع', 'وصول', 'قبول', 'رد',
     'سود', 'زیان', 'کامیاب', 'ناکام', 'نزدیک', 'دور', 'زود', 'دیر', 'قوی', 'ضعیف',
     'سیر', 'سماق', 'هل', 'زعفران', 'آویشن', 'نعناع', 'بابونه', 'دارچین', 'زنجبیل',
-    'وفا', 'فنا', 'بقا', 'نور', 'سر', 'دل', 'جان', 'نام', 'کام', 'امید', 'مبهم'
+    'وفا', 'فنا', 'بقا', 'نور', 'سر', 'دل', 'جان', 'نام', 'کام', 'امید', 'مبهم',
+    'نادم', 'سقوط', 'خوف', 'عمید', 'حصول', 'باخت', 'سخت', 'نظامی', 'پشیمان', 'هزینه'
   ];
 
   function slidingWindows(str, minLen, maxLen) {
@@ -1206,6 +1219,27 @@
     return { id: 'general', title: 'عمومی (چندخوانشی)', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای (نه فقط یک کلمه)' };
   }
 
+  /** استخراج طرف‌های نزاع از متن سؤال (برای دقت نسبت‌دهی نطق) */
+  function extractConflictParties(meta) {
+    const text = [meta && meta.soal, meta && meta.modda].filter(Boolean).join(' ');
+    const parties = { attackers: [], defenders: [], raw: text };
+    const m = text.match(/جنگ\s+(.+?)\s+علیه\s+(.+?)(?:\s+چگونه|\s+چه\b|\s+هشتم|\s+در\s+|$)/);
+    if (m) {
+      parties.attackers = m[1].replace(/\s+/g, ' ').trim().split(/\s+و\s+/).map((s) => s.trim()).filter(Boolean);
+      parties.defenders = m[2].replace(/\s+/g, ' ').trim().split(/\s+و\s+/).map((s) => s.trim()).filter(Boolean);
+    } else {
+      const m2 = text.match(/(.+?)\s+علیه\s+(.+?)(?:\s+چگونه|\s+چه\b|$)/);
+      if (m2) {
+        parties.attackers = m2[1].replace(/.*(?:جنگ|حمله|تجاوز)\s+/g, '').replace(/\s+/g, ' ').trim().split(/\s+و\s+/).map((s) => s.trim()).filter(Boolean);
+        parties.defenders = m2[2].replace(/\s+/g, ' ').trim().split(/\s+و\s+/).map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    parties.label =
+      (parties.attackers.length ? ('مهاجم: ' + parties.attackers.join(' و ')) : '') +
+      (parties.defenders.length ? (' | مدافع: ' + parties.defenders.join(' و ')) : '');
+    return parties;
+  }
+
   function detectTopic(meta) {
     const text = [meta.modda, meta.soal].filter(Boolean).join(' ');
     const t = text.replace(/\s+/g, '');
@@ -1217,6 +1251,18 @@
     }
     if (profile.id === 'yesno') {
       return { id: 'yesno', title: 'بله / خیر (قطب‌نما)', bank: ['آری', 'خیر', 'تاخیر', 'موانع', 'میسر', 'مبهم'], choices: ['آری', 'خیر'], isChoice: false, profile };
+    }
+    if (/جنگ|نبرد|حمله|تجاوز|اسرائیل|اسراییل|آمریکا|نظامی|سقوط|پیروز|شکست|خصم|دشمن/.test(t)) {
+      const parties = extractConflictParties(meta);
+      return {
+        id: 'conflict',
+        title: 'موضوع کمکی: جنگ/نزاع' + (parties.label ? (' · ' + parties.label) : ''),
+        bank: ['بقا', 'ناکام', 'سقوط', 'خوف', 'نادم', 'عمید', 'حصول', 'باخت', 'سخت', 'نظامی', 'صبر', 'موانع', 'مبهم', 'فتح', 'نصر', 'هزینه', 'تاخیر', 'پشیمان'],
+        choices: [],
+        isChoice: false,
+        profile,
+        parties
+      };
     }
     if (/چربی|تری\s*گلیس|کلسترول|قند خون/.test(t)) {
       return { id: 'herbal_lipid', title: 'موضوع کمکی: گیاه/چربی‌خون (بانک فقط پیشنهاد است)', bank: ['سیر', 'شنبلیله', 'سماق', 'زعفران', 'دارچین', 'زنجبیل', 'سیاه دانه', 'آویشن', 'هل'], choices: [], isChoice: false, profile };
@@ -1312,6 +1358,11 @@
     }
     lines.push('می‌توانی کاندید تازه از حروف لایه‌ها بسازی؛ برچسب «نطق‌آزاد» بزن و پوشش/حروف کم‌آمده را بنویس.');
     lines.push('موضوع تشخیص‌داده‌شده فقط قطب‌نماست؛ مجبور نیستی فقط گیاه/بانک موضوعی را جواب بدهی مگر سؤال انتخابی باشد.');
+    if (dict.topic && dict.topic.id === 'conflict' && dict.topic.parties && dict.topic.parties.label) {
+      lines.push('## طرف‌های نزاع (اجباری برای نسبت‌دهی)');
+      lines.push(dict.topic.parties.label);
+      lines.push('هر کاندید قطبی (بقا/ناکام/سقوط/…) باید صریحاً به مهاجم یا مدافع نسبت داده شود؛ بدون نسبت‌دهی قبول نهایی ممنوع است.');
+    }
     return lines;
   }
 
@@ -1352,10 +1403,11 @@
     const isChoice = !!topic.isChoice || profile.id === 'choice';
     const isYesNo = profile.id === 'yesno';
     const isNameQuest = !isChoice && profile.id === 'name';
+    const isConflict = topic.id === 'conflict';
     const sentenceNatq = !!(opts && opts.sentenceNatq);
     const lines = [
       '## قواعد نطق (اجباری)',
-      '1) حرف جدید خارج از لایهٔ منبع کاندید ممنوع است؛ هر کاندید باید از یکی از لایه‌های خام/نظیره/ترفع/تنزل (یا حروف مشترک چندروش) قابل‌توجیه باشد.',
+      '1) حرف جدید خارج از لایهٔ منبع کاندید ممنوع است؛ هر کاندید باید از یکی از لایه‌های خام/نظیره/ترفع/تنزل/مخزن ABCD (یا حروف مشترک چندروش) قابل‌توجیه باشد.',
       '2) دیکشنری داخلی و بانک موضوعی فقط «پیشنهاد اولویت»اند؛ زندان نیستند.',
       '3) نطق آزاد مجاز است: واژه/عبارت تازه از حروف مجاز بساز و برچسب «نطق‌آزاد» بزن.',
       '4) اولویت امتیاز: پوشش حروف + هم‌عنصری + هم‌مدخل + پایداری؛ نه زیبایی ادبی.',
@@ -1363,32 +1415,39 @@
       '6) برای هر کاندید نطق معکوس + درصد پوشش + حروف کم‌آمده را بنویس.',
       '7) چند خوانش بده؛ ادعای قطعی پزشکی/غیب نکن.',
       '8) خروجی فارسی باشد.',
-      `9) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
+      '9) پنجره‌های بی‌معنا (مثل ذضز/فقذس) را کاندید غالب نکن؛ فقط شاهد حرفی فرعی.',
+      `10) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
     ];
     if (sentenceNatq) {
-      lines.push('10) این محاسبه جفر جدولی میزان‌دار است: علاوه بر جدول کاندید، یک «نطق جمله‌ای» کامل از حروف مستحصله/سطر انتخاب بساز (مثل سنت جدولی)، نه فقط یک واژه.');
-      lines.push('11) جملهٔ نطق باید فقط از حروف مجاز لایه‌ها قابل‌توجیه باشد؛ سپس ۲–۴ جمله تفسیر جدا بنویس.');
+      lines.push('11) جفر جدولی: جدول کاندید + یک «نطق یک‌خطی کامل» (۸–۲۵ کلمه، شبیه سنت جدولی) فقط از مخزن A+B+C+D.');
+      lines.push('12) بعد از نطق یک‌خطی، ۲–۴ جمله تفسیر جدا بنویس؛ حرف خارج از مخزن نیاور.');
+      lines.push('13) حروف سطر انتخاب و لقط میزانی را در واژه‌سازی اولویت بده.');
     } else if (isChoice) {
-      lines.push('10) در سؤال انتخابی بانک اصلی فقط گزینه‌های خود سؤال است (اینجا آزادسازی موضوعی اعمال نمی‌شود).');
-      lines.push('11) ساخت واژه‌های بی‌ربط از حروف مشترک به‌عنوان جواب اصلی ممنوع است.');
-      lines.push('12) عنصر و مدخل گزینه را در امتیاز دخالت بده.');
-      lines.push('13) خروجی: جدول گزینه‌ها + ۲–۴ جمله توضیح؛ پایان با «برنده بین گزینه‌ها: X» یا مبهم.');
+      lines.push('11) در سؤال انتخابی بانک اصلی فقط گزینه‌های خود سؤال است.');
+      lines.push('12) ساخت واژه‌های بی‌ربط از حروف مشترک به‌عنوان جواب اصلی ممنوع است.');
+      lines.push('13) عنصر و مدخل گزینه را در امتیاز دخالت بده.');
+      lines.push('14) خروجی: جدول گزینه‌ها + ۲–۴ جمله توضیح؛ پایان با «برنده بین گزینه‌ها: X» یا مبهم.');
     } else if (isYesNo) {
-      lines.push('10) اول بین آری/خیر/مبهم کاندید بده؛ ۲–۴ جمله دلیل حرفی/عنصری/مدخل.');
-      lines.push('11) کاندیدهای پشتیبان می‌توانند از دیکشنری یا نطق‌آزاد باشند.');
-      lines.push('12) اگر مثبت/منفی نزدیک بودند، مبهم اعلام کن.');
+      lines.push('11) اول بین آری/خیر/مبهم کاندید بده؛ ۲–۴ جمله دلیل حرفی/عنصری/مدخل.');
+      lines.push('12) کاندیدهای پشتیبان می‌توانند از دیکشنری یا نطق‌آزاد باشند.');
+      lines.push('13) اگر مثبت/منفی نزدیک بودند، مبهم اعلام کن.');
     } else if (isNameQuest) {
-      lines.push('10) نام را از حروف لایه‌ها استخراج کن (۲ تا ۸ حرف ترجیحاً)؛ دیکشنری فقط کمک است.');
-      lines.push('11) اگر نام غالب روشن نبود بگو «نام استخراج نشد» و ۲–۳ کاندید محتمل بیاور.');
+      lines.push('11) نام را از حروف لایه‌ها استخراج کن (۲ تا ۸ حرف ترجیحاً)؛ دیکشنری فقط کمک است.');
+      lines.push('12) اگر نام غالب روشن نبود بگو «نام استخراج نشد» و ۲–۳ کاندید محتمل بیاور.');
     } else {
-      lines.push('10) موضوع کمکی (گیاه/ازدواج/…) را در نظر بگیر ولی اگر حروف چیز دیگری نشان داد، همان را با برچسب نطق‌آزاد گزارش کن.');
-      lines.push('11) علاوه بر جدول کاندید، یک خوانش چندجمله‌ای (۲ تا ۶ جمله) بنویس که معنی حرفی/عنصری را توضیح دهد.');
+      lines.push('11) موضوع کمکی را در نظر بگیر ولی اگر حروف چیز دیگری نشان داد، با برچسب نطق‌آزاد گزارش کن.');
+      lines.push('12) علاوه بر جدول کاندید، خوانش چندجمله‌ای (۲ تا ۶ جمله) بنویس.');
+    }
+    if (isConflict) {
+      lines.push('14) نزاع/جنگ: هر کاندید قطبی را به مهاجم یا مدافع نسبت بده (مثلاً: ناکام=مهاجم، بقا=مدافع).');
+      lines.push('15) بدون نسبت‌دهی طرفین، خوانش غالب ناقص است.');
+      if (topic.parties && topic.parties.label) lines.push('16) طرف‌ها: ' + topic.parties.label);
     }
     if (opts && opts.multi && !isChoice) {
-      lines.push('12) لایه A = حروف مشترک روش‌ها؛ لایه B = هر روش. کاندید قوی بهتر است با لایه A یا چند روش هم‌پوشان باشد.');
+      lines.push('17) لایه A = حروف مشترک روش‌ها؛ لایه B = هر روش.');
     }
     if (opts && opts.multi && isChoice) {
-      lines.push('14) همگرایی = پوشش بهتر گزینه در روش‌های بیشتر.');
+      lines.push('17) همگرایی = پوشش بهتر گزینه در روش‌های بیشتر.');
     }
     lines.push('');
     lines.push(`## موضوع تشخیص‌داده‌شده (قطب‌نما): ${topic.title}`);
@@ -1405,17 +1464,17 @@
       lines.push('پایان: برنده بین گزینه‌ها + قطعی یا فقط محتمل‌تر');
     } else if (isYesNo) {
       lines.push('پاسخ قطبی + ۲–۴ جمله دلیل + جدول کاندیدهای پشتیبان');
-    } else if (opts && opts.sentenceNatq) {
-      lines.push('کاندید | نوع(دیکشنری/نطق‌آزاد) | منبع‌لایه | پوشش | عنصر | مدخل | امتیاز | اطمینان');
-      lines.push('سپس نطق جمله‌ای کامل (یک بند ۸–۲۰ کلمه‌ای) از حروف مستحصله/انتخاب جدولی — مثل سنت جفر جدولی.');
-      lines.push('بعد ۲–۴ جمله تفسیر.');
-      lines.push('پایان: جملهٔ نطق نهایی + سطح اطمینان');
+    } else if (sentenceNatq) {
+      lines.push('کاندید | نوع | منبع‌لایه | پوشش | عنصر | مدخل | نسبت‌طرف(اگر نزاع) | امتیاز | اطمینان');
+      lines.push('نطق یک‌خطی: <یک جملهٔ کامل ۸–۲۵ کلمه‌ای از حروف مخزن>');
+      lines.push('تفسیر: <۲–۴ جمله>');
+      lines.push('پایان: نطق یک‌خطی نهایی + سطح اطمینان');
     } else {
       lines.push('کاندید | نوع(دیکشنری/نطق‌آزاد) | منبع‌لایه | پوشش | عنصر | مدخل | امتیاز | اطمینان');
       lines.push('سپس خوانش چندجمله‌ای (۲ تا ۶ جمله) — نه فقط یک کلمه.');
       lines.push('پایان: بهترین کاندید معتبر + یک خط خلاصه خوانش');
     }
-    return { topic, profile, lines, isChoice, isYesNo };
+    return { topic, profile, lines, isChoice, isYesNo, isConflict, sentenceNatq };
   }
 
   function stripExtraInput(input) {
@@ -1617,6 +1676,10 @@
     const answerBlock = pasted
       ? pasted
       : '<<<PASTE_GENERATOR_ANSWER_HERE>>>';
+    const topic = detectTopic(meta || {});
+    const isConflict = topic.id === 'conflict';
+    const isSentence = /جدولی|نطق یک‌خطی|مخزن A\+B\+C\+D|pipeline/.test((contextLines || []).join('\n')) ||
+      !!(meta && meta._sentenceNatq);
     return [
       'تو داور سخت‌گیر نطق جفر هستی.',
       'وظیفه تو فقط رد/قبول کاندیدهای مولّد است. کاندید جدید نساز.',
@@ -1635,11 +1698,16 @@
       '2) هر کاندید: قبول / رد / مشروط',
       '3) رد کن اگر: حرف اضافه نسبت به لایهٔ ادعایی دارد، پوشش خیلی ضعیف است، یا بازتاب طوطی‌وار عین مدعاست.',
       '4) کاندید «نطق‌آزاد» را فقط به‌خاطر خارج‌بودن از دیکشنری رد نکن؛ معیار حروف/پوشش/پایداری است.',
-      '5) اولویت قبول با کاندیدهای پایدار و پوشش‌دار.',
-      '6) حداکثر ۲ کاندید قبول‌شده نهایی بده.',
-      '7) اگر هیچ‌کدام قبول نشد بگو: نتیجه معتبر استخراج نشد.',
-      '8) ادعای قطعی پزشکی/غیب نکن.',
-      '9) در پایان ۱–۳ جمله خوانش غالب بنویس (نه فقط یک کلمه)، مگر سؤال انتخابی/بله‌خیر باشد.',
+      '5) پنجره‌های بی‌معنا/ناخوانا را حداکثر مشروطِ فرعی کن؛ قبول نهایی نده.',
+      '6) اولویت قبول با کاندیدهای پایدار، پوشش‌دار و معنادار.',
+      '7) حداکثر ۲ کاندید قبول‌شده نهایی بده.',
+      '8) اگر هیچ‌کدام قبول نشد بگو: نتیجه معتبر استخراج نشد.',
+      '9) ادعای قطعی پزشکی/غیب نکن.',
+      isConflict
+        ? '10) در نزاع: قبول نهایی فقط اگر نسبت به مهاجم/مدافع روشن باشد؛ وگرنه مشروط یا رد.'
+        : '10) در پایان خوانش غالب را روشن بنویس.',
+      isConflict && topic.parties && topic.parties.label ? ('11) طرف‌ها: ' + topic.parties.label) : '11) اگر مولّد نطق یک‌خطی داده، همان را از نظر حروف مخزن و معنا داوری کن.',
+      '12) خروجی نهایی باید یک «نطق یک‌خطی کامل» + تفسیر کوتاه باشد (شبیه سنت جدولی)، نه فقط دو کلمه.',
       '',
       '## فرمت خروجی داور',
       'برای هر کاندید مولّد:',
@@ -1648,7 +1716,8 @@
       '- دلیل کوتاه:',
       'پایان:',
       '- کاندیدهای قبول‌شده نهایی:',
-      '- خوانش غالب نهایی: (۱–۳ جمله)',
+      '- نطق یک‌خطی نهایی: <یک جملهٔ کامل>',
+      '- تفسیر کوتاه: <۱–۳ جمله؛ در نزاع نسبت طرفین را بگو>',
       '- سطح اطمینان: کم/متوسط/زیاد'
     ].join('\n');
   }
@@ -1690,9 +1759,10 @@
       jadwalLines.push(`- میزان: ${result.mizan != null ? result.mizan : result.jadwal.mizan}`);
       jadwalLines.push(`- سطر انتخاب (تقریب): ${result.jadwal.selected}`);
       jadwalLines.push(`- لقط میزانی: ${result.jadwal.mizanExtract}`);
+      jadwalLines.push(`- اولویت حروف (انتخاب+میزان): ${result.jadwal.priority || result.jadwal.selected}`);
       jadwalLines.push(`- مخزن حروف نطق A+B+C+D: ${result.jadwal.poolABCD}`);
       jadwalLines.push(`- بدون تکرار مخزن: ${result.jadwal.poolUnique}`);
-      jadwalLines.push('قانون نطق جمله‌ای: واژه‌ها را فقط از مخزن A+B+C+D بساز؛ حروف سطر انتخاب/میزان را اولویت بده؛ حرف خارج از مخزن نیاور.');
+      jadwalLines.push('قانون: اول جدول کاندید؛ سپس «نطق یک‌خطی» کامل فقط از مخزن؛ حرف خارج ممنوع؛ در نزاع طرفین را نام ببر.');
       (result.jadwal.layers || []).forEach((row) => {
         jadwalLines.push(`- ${row.title}: ${row.str}`);
       });
@@ -1718,7 +1788,7 @@
       ...jadwalLines, ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']
-        : sentenceNatq ? ['1) از سطر انتخاب و لقط میزانی شروع کن.', '2) جدول کاندید + یک نطق جمله‌ای کامل بساز.', '3) ۲–۴ جمله تفسیر جدا بنویس.', '4) نهایی‌سازی با داور.']
+        : sentenceNatq ? ['1) از مخزن A+B+C+D و حروف اولویت‌دار شروع کن.', '2) جدول کاندید معنادار بده (پنجرهٔ بی‌معنا غالب نشود).', '3) یک «نطق یک‌خطی کامل» ۸–۲۵ کلمه‌ای بساز.', '4) ۲–۴ جمله تفسیر؛ در نزاع طرفین را نسبت بده؛ نهایی با داور.']
         : ['1) از دیکشنری شروع کن ولی به آن محدود نشو.', '2) در صورت نیاز نطق‌آزاد از لایه‌ها بساز.', '3) پایدارها را بالاتر بنویس.', '4) جدول ۳ تا ۸ کاندید + خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
     ].filter((x) => x != null).join('\n');
 
@@ -1819,7 +1889,7 @@
       ...(rules.isChoice
         ? ['1) جدول پوشش+عنصر+مدخل+پایداری گزینه‌ها را مبنا بگیر.', '2) رتبه‌بندی گزینه‌ها + ۲–۴ جمله توضیح.', '3) واژه‌های خارج از گزینه‌ها را جواب اصلی نکن.', '4) قضاوت نهایی قطعی را به داور واگذار کن.']
         : sentenceNatq
-          ? ['1) روش جدولی و سطر انتخاب را مبنا بگیر.', '2) جدول کاندید + نطق جمله‌ای کامل.', '3) ۲–۴ جمله تفسیر.', '4) نهایی‌سازی با داور.']
+          ? ['1) مخزن جدولی و اولویت میزان را مبنا بگیر.', '2) جدول کاندید معنادار + نطق یک‌خطی کامل.', '3) در نزاع طرفین را نسبت بده.', '4) نهایی‌سازی با داور.']
           : ['1) از دیکشنری و پایدارها شروع کن ولی محدود نشو.', '2) نطق‌آزاد از لایه A و لایه‌های نظیره/ترفع/تنزل بساز.', '3) جدول ۳ تا ۸ کاندید با پوشش/عنصر/مدخل/پایداری.', '4) خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
     ].join('\n');
 
@@ -1841,7 +1911,7 @@
     ABJAD_ORDER, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS,
     normalizeText, normalizeDateTimeField, expandDigitsToWords,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
-    detectTopic, detectQuestionProfile, letterElement, elementProfile,
+    detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
