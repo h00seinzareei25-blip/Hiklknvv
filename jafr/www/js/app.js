@@ -37,9 +37,21 @@
   }
 
   function syncPipelineUI() {
-    const fifteen = $('pipeline') && $('pipeline').value === 'fifteen';
-    if ($('classicOpts')) $('classicOpts').classList.toggle('hidden', !!fifteen);
-    if ($('fifteenHint')) $('fifteenHint').hidden = !fifteen;
+    const pipe = $('pipeline') ? $('pipeline').value : 'classic';
+    const hideClassic = pipe === 'fifteen' || pipe === 'jadwali';
+    if ($('classicOpts')) $('classicOpts').classList.toggle('hidden', hideClassic);
+    if ($('pipelineHint')) {
+      if (pipe === 'jadwali') {
+        $('pipelineHint').hidden = false;
+        $('pipelineHint').textContent = 'جدولی میزان‌دار: ستون‌حروف سؤال → A–D + نظیره → میزان (جمل mod ۲۸) → انتخاب → لقط میزانی → نطق جمله‌ای.';
+      } else if (pipe === 'fifteen') {
+        $('pipelineHint').hidden = false;
+        $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
+      } else {
+        $('pipelineHint').hidden = false;
+        $('pipelineHint').textContent = 'کلاسیک کبیر: بسط/بینات → تکسیر → تخلیص → مستحصله.';
+      }
+    }
   }
 
   function syncExtraUI() {
@@ -123,6 +135,11 @@
       opts.pipeline = 'fifteen';
       opts.methodId = 'fifteen_line';
       opts.methodLabel = 'جفر ۱۵ سطری';
+    } else if (pipeline === 'jadwali') {
+      opts.pipeline = 'jadwali';
+      opts.methodId = 'jadwali_mizan';
+      opts.methodLabel = 'جفر جدولی میزان‌دار';
+      opts.natqStyle = 'sentence';
     }
     return opts;
   }
@@ -222,6 +239,7 @@
 
   function showPrimary(result, keepCompare) {
     $('statJamal').textContent = String(result.jamal);
+    if ($('statMizan')) $('statMizan').textContent = result.mizan != null ? String(result.mizan) : '—';
     $('statMadkhal').textContent = String(result.madkhal);
     $('statCount').textContent = String(result.letterCount);
     $('mustehsilaBox').textContent = result.mustehsila || '—';
@@ -393,8 +411,8 @@
     $('questionTime').value = '14:30';
     $('modeMulti').checked = true;
     syncModeUI();
-    setMethodSelection(['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr']);
-    showAlert('info', 'نمونه با اطلاعات تکمیلی و ۳ روش بارگذاری شد');
+    setMethodSelection(['jadwali_mizan', 'classic_bayyinat', 'classic_malfuzi']);
+    showAlert('info', 'نمونه با اطلاعات تکمیلی و ۳ روش (جدولی+۲ کلاسیک) بارگذاری شد');
   }
 
   // init
@@ -407,7 +425,7 @@
   $('modeMulti').addEventListener('change', syncModeUI);
   if ($('pipeline')) $('pipeline').addEventListener('change', syncPipelineUI);
   $('btnSelectDefault').addEventListener('click', () => {
-    setMethodSelection(['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr']);
+    setMethodSelection(['jadwali_mizan', 'classic_bayyinat', 'classic_malfuzi']);
   });
   $('btnSelectAll').addEventListener('click', () => {
     setMethodSelection(JafrEngine.METHOD_PRESETS.map((p) => p.id));

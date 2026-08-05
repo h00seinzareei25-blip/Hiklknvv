@@ -359,8 +359,76 @@
     return [a, b].filter(Boolean).join(' ');
   }
 
+  /** میزان جدولی: باقیماندهٔ جمل بر دایرهٔ ابجد (۲۸)؛ نمونه: ۵۰۲۲ → ۱۰ */
+  function computeMizan(jamalSum, opts) {
+    if (opts && opts.mizanOverride > 0) return opts.mizanOverride | 0;
+    const base = (opts && opts.mizanBase > 0) ? (opts.mizanBase | 0) : 28;
+    const r = Math.abs(jamalSum | 0) % base;
+    return r === 0 ? base : r;
+  }
+
+  /**
+   * لایه‌های جدول حروف سؤال:
+   * A خام، B ترفع، C تنزل، D ترفعِ نظیره — هر کدام با سطر نظیره
+   */
+  function buildJadwalLayers(asas) {
+    const A = String(asas || '');
+    const nA = mapNazira(A);
+    const B = mapLetters(A, mapTarfa);
+    const nB = mapNazira(B);
+    const C = mapLetters(A, mapTanzil);
+    const nC = mapNazira(C);
+    const D = mapLetters(nA, mapTarfa);
+    const nD = mapNazira(D);
+    const rows = [
+      { id: 'A', title: 'حروف A (خام سؤال)', str: A },
+      { id: 'nA', title: 'نظیره A', str: nA },
+      { id: 'B', title: 'حروف B (ترفع)', str: B },
+      { id: 'nB', title: 'نظیره B', str: nB },
+      { id: 'C', title: 'حروف C (تنزل)', str: C },
+      { id: 'nC', title: 'نظیره C', str: nC },
+      { id: 'D', title: 'حروف D (ترفعِ نظیره)', str: D },
+      { id: 'nD', title: 'نظیره D', str: nD }
+    ];
+    return { A, nA, B, nB, C, nC, D, nD, rows };
+  }
+
+  /**
+   * سطر انتخاب: برای هر ستون یک حرف از یکی از ۸ لایه، با کلید میزان
+   * ستون i (۱-مبنا): ردیف = ((i * میزان) % 8)
+   */
+  function selectJadwalRow(layers, mizan) {
+    const rows = (layers && layers.rows) || [];
+    const n = rows[0] ? rows[0].str.length : 0;
+    const M = Math.max(1, mizan | 0);
+    let selected = '';
+    const picks = [];
+    for (let i = 0; i < n; i++) {
+      const rowIdx = ((i + 1) * M) % 8;
+      const ch = rows[rowIdx].str[i] || '';
+      selected += ch;
+      picks.push({ col: i + 1, row: rows[rowIdx].id, ch });
+    }
+    return { selected, picks };
+  }
+
+  /** لقط میزانی: برداشتن حروف ستون‌هایی که شمارهٔشان مضرب میزان است */
+  function extractByMizanStep(str, mizan) {
+    const M = Math.max(1, mizan | 0);
+    let out = '';
+    for (let i = 0; i < str.length; i++) {
+      if ((i + 1) % M === 0) out += str[i];
+    }
+    return out || str;
+  }
+
   /** پیش‌فرض‌های چندروش */
   const METHOD_PRESETS = [
+    {
+      id: 'jadwali_mizan',
+      label: 'جفر جدولی میزان‌دار (A–D + نظیره + انتخاب)',
+      options: { pipeline: 'jadwali', table: 'kabir', natqStyle: 'sentence' }
+    },
     {
       id: 'classic_bayyinat',
       label: 'کبیر · بینات · صدر/مؤخر · فرد',
@@ -419,6 +487,7 @@
   ];
 
   function describeOptions(opts) {
+    if (opts && opts.pipeline === 'jadwali') return 'جفر جدولی میزان‌دار';
     if (opts && opts.pipeline === 'fifteen') return 'جفر ۱۵ سطری';
     const bastMap = { bayyinat: 'بینات', malfuzi: 'ملفوظی', zabarBayyinat: 'زبر و بینات', none: 'بدون بسط' };
     const takMap = { sadr_muakhkhar: 'صدر/مؤخر', muakhkhar_sadr: 'مؤخر/صدر' };
@@ -548,6 +617,99 @@
       note: jamalNote,
       detail: jamal.detail
     });
+
+    // --- جفر جدولی میزان‌دار (الویت کاربر) ---
+    if (opts.pipeline === 'jadwali') {
+      const mizan = computeMizan(jamal.sum, opts);
+      steps.push({
+        id: 'mizan',
+        title: 'میزان جدولی',
+        input: String(jamal.sum),
+        output: String(mizan),
+        note: `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (دایره ابجد). نمونه شناخته‌شده: ۵۰۲۲ → ۱۰`
+      });
+
+      const layers = buildJadwalLayers(asas);
+      layers.rows.forEach((row) => {
+        steps.push({
+          id: 'jadwal_' + row.id,
+          title: 'جدول · ' + row.title,
+          input: asas.length > 80 ? (asas.slice(0, 80) + '…') : asas,
+          output: row.str,
+          note: `طول ${row.str.length} ستون`
+        });
+      });
+
+      const sel = selectJadwalRow(layers, mizan);
+      steps.push({
+        id: 'jadwal_select',
+        title: 'سطر انتخاب (با کلید میزان)',
+        input: `میزان=${mizan} | قاعده: ردیف ستون i = (i×میزان) mod 8`,
+        output: sel.selected,
+        note: 'از ۸ لایهٔ A/nA/B/nB/C/nC/D/nD برای هر ستون یک حرف انتخاب می‌شود'
+      });
+
+      const mizanExtract = extractByMizanStep(sel.selected, mizan);
+      steps.push({
+        id: 'jadwal_mizan_extract',
+        title: 'لقط میزانی از سطر انتخاب',
+        input: sel.selected,
+        output: mizanExtract,
+        note: `برداشتن حروف ستون‌های مضرب ${mizan}`
+      });
+
+      const condensed = takhlisOdd(sel.selected);
+      steps.push({
+        id: 'jadwal_takhlis',
+        title: 'تخلیص فرد از سطر انتخاب',
+        input: sel.selected,
+        output: condensed,
+        note: 'برای فشرده‌سازی نطق؛ مستحصلهٔ اصلی = لقط میزانی + پشتیبان انتخاب کامل'
+      });
+
+      // مستحصله غالب: لقط میزانی؛ اگر خیلی کوتاه شد از تخلیص فرد، وگرنه انتخاب
+      let mustehsila = mizanExtract;
+      if (mustehsila.length < 4) mustehsila = condensed;
+      if (mustehsila.length < 4) mustehsila = sel.selected;
+
+      steps.push({
+        id: 'mustehsila',
+        title: 'مستحصله نهایی (جدولی)',
+        input: `انتخاب:${sel.selected.length} | لقط‌میزان:${mizanExtract} | فرد:${condensed}`,
+        output: mustehsila,
+        note: `میزان=${mizan} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)} | این زنجیره تقریب عملیاتی قابل‌ممیزی از جفر جدولی است`
+      });
+
+      const methodLabel = opts.methodLabel || 'جفر جدولی میزان‌دار';
+      return {
+        ok: true,
+        method: methodLabel,
+        methodId: opts.methodId || 'jadwali_mizan',
+        parts,
+        asas,
+        nazira: layers.nA,
+        jamal: jamal.sum,
+        mizan,
+        madkhal: madkhal.value,
+        madkhalSteps: madkhal.steps,
+        mustehsila,
+        mustehsilaUnique: uniqueLetters(mustehsila),
+        letterCount: mustehsila.length,
+        dotCount: countDots(mustehsila),
+        steps,
+        options: Object.assign({}, opts, { natqStyle: 'sentence', pipeline: 'jadwali' }),
+        normalize: fullNorm,
+        extraEnabled,
+        jadwal: {
+          mizan,
+          layers: layers.rows.map((r) => ({ id: r.id, title: r.title, str: r.str })),
+          selected: sel.selected,
+          picks: sel.picks,
+          mizanExtract,
+          condensed
+        }
+      };
+    }
 
     // --- زنجیره جفر ۱۵ سطری ---
     if (opts.pipeline === 'fifteen') {
@@ -1159,6 +1321,7 @@
     const isChoice = !!topic.isChoice || profile.id === 'choice';
     const isYesNo = profile.id === 'yesno';
     const isNameQuest = !isChoice && profile.id === 'name';
+    const sentenceNatq = !!(opts && opts.sentenceNatq);
     const lines = [
       '## قواعد نطق (اجباری)',
       '1) حرف جدید خارج از لایهٔ منبع کاندید ممنوع است؛ هر کاندید باید از یکی از لایه‌های خام/نظیره/ترفع/تنزل (یا حروف مشترک چندروش) قابل‌توجیه باشد.',
@@ -1171,7 +1334,10 @@
       '8) خروجی فارسی باشد.',
       `9) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
     ];
-    if (isChoice) {
+    if (sentenceNatq) {
+      lines.push('10) این محاسبه جفر جدولی میزان‌دار است: علاوه بر جدول کاندید، یک «نطق جمله‌ای» کامل از حروف مستحصله/سطر انتخاب بساز (مثل سنت جدولی)، نه فقط یک واژه.');
+      lines.push('11) جملهٔ نطق باید فقط از حروف مجاز لایه‌ها قابل‌توجیه باشد؛ سپس ۲–۴ جمله تفسیر جدا بنویس.');
+    } else if (isChoice) {
       lines.push('10) در سؤال انتخابی بانک اصلی فقط گزینه‌های خود سؤال است (اینجا آزادسازی موضوعی اعمال نمی‌شود).');
       lines.push('11) ساخت واژه‌های بی‌ربط از حروف مشترک به‌عنوان جواب اصلی ممنوع است.');
       lines.push('12) عنصر و مدخل گزینه را در امتیاز دخالت بده.');
@@ -1208,6 +1374,11 @@
       lines.push('پایان: برنده بین گزینه‌ها + قطعی یا فقط محتمل‌تر');
     } else if (isYesNo) {
       lines.push('پاسخ قطبی + ۲–۴ جمله دلیل + جدول کاندیدهای پشتیبان');
+    } else if (opts && opts.sentenceNatq) {
+      lines.push('کاندید | نوع(دیکشنری/نطق‌آزاد) | منبع‌لایه | پوشش | عنصر | مدخل | امتیاز | اطمینان');
+      lines.push('سپس نطق جمله‌ای کامل (یک بند ۸–۲۰ کلمه‌ای) از حروف مستحصله/انتخاب جدولی — مثل سنت جفر جدولی.');
+      lines.push('بعد ۲–۴ جمله تفسیر.');
+      lines.push('پایان: جملهٔ نطق نهایی + سطح اطمینان');
     } else {
       lines.push('کاندید | نوع(دیکشنری/نطق‌آزاد) | منبع‌لایه | پوشش | عنصر | مدخل | امتیاز | اطمینان');
       lines.push('سپس خوانش چندجمله‌ای (۲ تا ۶ جمله) — نه فقط یک کلمه.');
@@ -1471,7 +1642,8 @@
 
   function buildNatqPrompt(result, meta, extras) {
     if (!result.ok) return result.error;
-    const rules = natqRulesBlock(meta, { multi: false });
+    const sentenceNatq = !!(result.options && (result.options.natqStyle === 'sentence' || result.options.pipeline === 'jadwali'));
+    const rules = natqRulesBlock(meta, { multi: false, sentenceNatq });
     let ranked = rules.isChoice ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, [result], result.mustehsilaUnique) : [];
     if (rules.isChoice) ranked = enhanceChoiceScores(ranked, [result], meta);
     const choiceLines = formatChoiceScoreTable(ranked);
@@ -1479,31 +1651,53 @@
     const assist = formatNatiqAssistBlock(dict, result.madkhal);
     const stability = extras && extras.stability;
     const stabilityLines = formatStabilityBlock(stability);
+    const jadwalLines = [];
+    if (result.jadwal) {
+      jadwalLines.push('## جزئیات جفر جدولی میزان‌دار');
+      jadwalLines.push(`- میزان: ${result.mizan != null ? result.mizan : result.jadwal.mizan}`);
+      jadwalLines.push(`- سطر انتخاب: ${result.jadwal.selected}`);
+      jadwalLines.push(`- لقط میزانی: ${result.jadwal.mizanExtract}`);
+      jadwalLines.push(`- تخلیص فرد: ${result.jadwal.condensed}`);
+      (result.jadwal.layers || []).forEach((row) => {
+        jadwalLines.push(`- ${row.title}: ${row.str}`);
+      });
+      jadwalLines.push('');
+    }
     const generator = [
-      rules.isChoice ? 'تو مولّد نطق جفر هستی (حالت انتخاب بین گزینه‌ها).' : (rules.isYesNo ? 'تو مولّد نطق جفر هستی (حالت بله/خیر).' : 'تو مولّد نطق جفر هستی (نطق آزاد + پیشنهاد دیکشنری).'),
+      rules.isChoice ? 'تو مولّد نطق جفر هستی (حالت انتخاب بین گزینه‌ها).'
+        : (rules.isYesNo ? 'تو مولّد نطق جفر هستی (حالت بله/خیر).'
+          : (sentenceNatq ? 'تو مولّد نطق جفر هستی (جفر جدولی · نطق جمله‌ای).' : 'تو مولّد نطق جفر هستی (نطق آزاد + پیشنهاد دیکشنری).')),
       'کاندید بساز و رتبه‌بندی کن. داوری نهایی با پرامپت داور است.',
-      'دیکشنری داخلی پیشنهاد است نه زندان. از حروف لایه‌ها می‌توانی نطق‌آزاد بسازی؛ حرف جدید خارج از لایه ممنوع.',
+      sentenceNatq
+        ? 'مستحصله و سطر انتخاب جدولی را مبنا بگیر؛ نطق جمله‌ای کامل بساز. دیکشنری پیشنهاد است نه زندان.'
+        : 'دیکشنری داخلی پیشنهاد است نه زندان. از حروف لایه‌ها می‌توانی نطق‌آزاد بسازی؛ حرف جدید خارج از لایه ممنوع.',
       '', '## صورت مسئله', ...metaLines(meta), '',
       '## روش محاسباتی',
-      `- قاعده: ${result.method}`, `- دایره/جدول: ${result.options.table}`, `- بسط: ${result.options.bastMode}`, `- تکسیر: ${result.options.takseer}`, `- تخلیص: ${result.options.takhlis}`, '',
+      `- قاعده: ${result.method}`, `- دایره/جدول: ${result.options.table}`,
+      result.mizan != null ? `- میزان: ${result.mizan}` : null,
+      `- بسط: ${result.options.bastMode || '—'}`, `- تکسیر: ${result.options.takseer || '—'}`, `- تخلیص: ${result.options.takhlis || '—'}`, '',
       '## خروجی محاسبات',
       `- اساس: ${result.asas}`, `- نظیره: ${result.nazira}`, `- جمع جمل اساس: ${result.jamal}`, `- مدخل: ${result.madkhal}`,
+      result.mizan != null ? `- میزان جدولی: ${result.mizan}` : null,
       `- مستحصله کامل: ${result.mustehsila}`, `- شمارش حروف: ${letterBag(result.mustehsila)}`, `- حروف بدون تکرار: ${result.mustehsilaUnique}`, '',
-      ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
+      ...jadwalLines, ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']
+        : sentenceNatq ? ['1) از سطر انتخاب و لقط میزانی شروع کن.', '2) جدول کاندید + یک نطق جمله‌ای کامل بساز.', '3) ۲–۴ جمله تفسیر جدا بنویس.', '4) نهایی‌سازی با داور.']
         : ['1) از دیکشنری شروع کن ولی به آن محدود نشو.', '2) در صورت نیاز نطق‌آزاد از لایه‌ها بساز.', '3) پایدارها را بالاتر بنویس.', '4) جدول ۳ تا ۸ کاندید + خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
-    ].join('\n');
+    ].filter((x) => x != null).join('\n');
 
     const judgeContext = [
       ...assist,
       '',
       ...stabilityLines,
       '',
+      result.mizan != null ? `- میزان: ${result.mizan}` : null,
+      result.jadwal ? `- سطر انتخاب: ${result.jadwal.selected}` : null,
       `- مستحصله: ${result.mustehsila}`,
       `- بدون تکرار: ${result.mustehsilaUnique}`,
       `- مدخل: ${result.madkhal}`
-    ];
+    ].filter((x) => x != null);
     const judge = buildJudgePrompt(meta, judgeContext);
     return { generator, judge, prompt: generator, stability, dict, ranked };
   }
@@ -1549,7 +1743,10 @@
 
   function buildMultiNatqPrompt(bundle, meta, extras) {
     if (!bundle.ok) return bundle.error;
-    const rules = natqRulesBlock(meta, { multi: true });
+    const sentenceNatq = !!(bundle.primary && bundle.primary.options &&
+      (bundle.primary.options.natqStyle === 'sentence' || bundle.primary.options.pipeline === 'jadwali' ||
+        bundle.results.some((r) => r.options && r.options.pipeline === 'jadwali')));
+    const rules = natqRulesBlock(meta, { multi: true, sentenceNatq });
     let ranked = rules.isChoice ? scoreChoiceOptions(rules.topic.choices || rules.topic.bank, bundle.results, bundle.sharedUnique) : [];
     if (rules.isChoice) ranked = enhanceChoiceScores(ranked, bundle.results, meta);
     const choiceLines = formatChoiceScoreTable(ranked);
@@ -1567,13 +1764,18 @@
     const stability = extras && extras.stability;
     const stabilityLines = formatStabilityBlock(stability);
     const blocks = bundle.results.map((r, i) => [
-      `### روش ${i + 1}: ${r.method}`, `- جدول: ${r.options.table}`, `- اساس: ${r.asas}`, `- جمل: ${r.jamal} | مدخل: ${r.madkhal}`,
-      `- عناصر: ${elementProfile(r.mustehsila).summary}`, `- مستحصله کامل: ${r.mustehsila}`, `- شمارش حروف: ${letterBag(r.mustehsila)}`, `- بدون تکرار: ${r.mustehsilaUnique}`
-    ].join('\n'));
+      `### روش ${i + 1}: ${r.method}`, `- جدول: ${r.options.table}`, `- اساس: ${r.asas}`,
+      `- جمل: ${r.jamal} | مدخل: ${r.madkhal}` + (r.mizan != null ? ` | میزان: ${r.mizan}` : ''),
+      `- عناصر: ${elementProfile(r.mustehsila).summary}`, `- مستحصله کامل: ${r.mustehsila}`, `- شمارش حروف: ${letterBag(r.mustehsila)}`, `- بدون تکرار: ${r.mustehsilaUnique}`,
+      r.jadwal ? `- سطر انتخاب جدولی: ${r.jadwal.selected}` : null
+    ].filter(Boolean).join('\n'));
     const generator = [
-      rules.isChoice ? 'تو مولّد نطق جفر هستی (انتخابی · چندروش).' : 'تو مولّد نطق جفر هستی (چندروش + نطق آزاد).',
+      rules.isChoice ? 'تو مولّد نطق جفر هستی (انتخابی · چندروش).'
+        : (sentenceNatq ? 'تو مولّد نطق جفر هستی (چندروش + جفر جدولی · نطق جمله‌ای).' : 'تو مولّد نطق جفر هستی (چندروش + نطق آزاد).'),
       'کاندید بساز و رتبه‌بندی کن. داوری نهایی با پرامپت داور است.',
-      'دیکشنری پیشنهاد است نه زندان. نطق‌آزاد از حروف لایه‌ها/حروف مشترک مجاز است؛ حرف جدید خارج از لایه ممنوع.',
+      sentenceNatq
+        ? 'اگر روش جدولی هست، نطق جمله‌ای از سطر انتخاب/لقط میزانی بساز. دیکشنری پیشنهاد است نه زندان.'
+        : 'دیکشنری پیشنهاد است نه زندان. نطق‌آزاد از حروف لایه‌ها/حروف مشترک مجاز است؛ حرف جدید خارج از لایه ممنوع.',
       '', '## صورت مسئله', ...metaLines(meta), '', '## نتایج چندروش', ...blocks, '',
       '## لایه A — حروف مشترک همه روش‌ها',
       `- حروف مشترک: ${bundle.sharedUnique || '—'}`, `- شمارش: ${letterBag(bundle.sharedUnique || '')}`, `- عناصر مشترک: ${elementProfile(bundle.sharedUnique || '').summary}`,
@@ -1581,7 +1783,9 @@
       '', ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice
         ? ['1) جدول پوشش+عنصر+مدخل+پایداری گزینه‌ها را مبنا بگیر.', '2) رتبه‌بندی گزینه‌ها + ۲–۴ جمله توضیح.', '3) واژه‌های خارج از گزینه‌ها را جواب اصلی نکن.', '4) قضاوت نهایی قطعی را به داور واگذار کن.']
-        : ['1) از دیکشنری و پایدارها شروع کن ولی محدود نشو.', '2) نطق‌آزاد از لایه A و لایه‌های نظیره/ترفع/تنزل بساز.', '3) جدول ۳ تا ۸ کاندید با پوشش/عنصر/مدخل/پایداری.', '4) خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
+        : sentenceNatq
+          ? ['1) روش جدولی و سطر انتخاب را مبنا بگیر.', '2) جدول کاندید + نطق جمله‌ای کامل.', '3) ۲–۴ جمله تفسیر.', '4) نهایی‌سازی با داور.']
+          : ['1) از دیکشنری و پایدارها شروع کن ولی محدود نشو.', '2) نطق‌آزاد از لایه A و لایه‌های نظیره/ترفع/تنزل بساز.', '3) جدول ۳ تا ۸ کاندید با پوشش/عنصر/مدخل/پایداری.', '4) خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
     ].join('\n');
 
     const judgeContext = [
@@ -1590,9 +1794,10 @@
       ...stabilityLines,
       '',
       `- حروف مشترک: ${bundle.sharedUnique || '—'}`,
+      bundle.primary.mizan != null ? `- میزان روش۱: ${bundle.primary.mizan}` : null,
       `- مستحصله روش۱: ${bundle.primary.mustehsilaUnique}`,
       `- مدخل روش۱: ${bundle.primary.madkhal}`
-    ];
+    ].filter((x) => x != null);
     const judge = buildJudgePrompt(meta, judgeContext);
     return { generator, judge, prompt: generator, stability, dict: merged, ranked };
   }
@@ -1606,6 +1811,7 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
+    computeMizan, buildJadwalLayers, selectJadwalRow, extractByMizanStep,
     takseerSadrMuakhkhar, takseerMuakhkharSadr, bastMalfuzi, bayyinat, takhlisLaqt
   };
 })(typeof window !== 'undefined' ? window : globalThis);

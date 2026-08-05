@@ -87,6 +87,21 @@ assert(E.METHOD_PRESETS.length >= 6, 'حداقل ۶ پیش‌فرض روش');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt3'), 'پیش‌فرض لقط۳');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt4'), 'پیش‌فرض لقط۴');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'fifteen_line'), 'پیش‌فرض ۱۵ سطری');
+assert(E.METHOD_PRESETS.some((p) => p.id === 'jadwali_mizan'), 'پیش‌فرض جدولی میزان‌دار');
+assert(E.computeMizan(5022) === 10, 'میزان ۵۰۲۲ → ۱۰');
+assert(E.computeMizan(28) === 28, 'میزان مضرب ۲۸ → ۲۸');
+
+const jadwali = E.runClassic({
+  sael: '', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه جنگ چگونه خواهد بود',
+  options: { pipeline: 'jadwali', table: 'kabir', methodId: 'jadwali_mizan' }
+});
+assert(jadwali.ok && jadwali.mizan > 0, 'اجرای جدولی میزان‌دار');
+assert(jadwali.jadwal && jadwali.jadwal.layers.length === 8, '۸ لایه جدولی');
+assert(jadwali.jadwal.selected.length === jadwali.asas.length, 'سطر انتخاب هم‌طول اساس');
+assert(jadwali.mustehsila.length > 0, 'مستحصله جدولی غیرخالی');
+const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
+assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق جمله‌ای'), 'پرامپت جدولی جمله‌ای');
 
 assert(E.takhlisLaqt('ابجدهوزحطی', 3) === 'ادزی', 'لقط گام ۳');
 assert(E.takhlisLaqt('ابجدهوزحطیکل', 4) === 'اهط', 'لقط گام ۴');

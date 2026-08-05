@@ -110,12 +110,13 @@
         <div class="field">
           <label for="pipeline">زنجیره محاسبه</label>
           <select id="pipeline">
-            <option value="classic" selected>کلاسیک کبیر (بسط → تکسیر → تخلیص)</option>
+            <option value="jadwali" selected>جفر جدولی میزان‌دار (مهم)</option>
+            <option value="classic">کلاسیک کبیر (بسط → تکسیر → تخلیص)</option>
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="fifteenHint" hidden>۱۵ سطری: زنجیرهٔ عملیاتی قابل‌ممیزی (اساس، نظیره، نسبت، قوا، جواب). تقریب کاربردی است، نه رونوشت لفظ‌به‌لفظ یک نسخهٔ خطی واحد.</p>
-        <div id="classicOpts">
+        <p class="hint" id="pipelineHint">جدولی: حروف سؤال در ستون‌ها → لایه‌های A–D + نظیره → میزان (جمل mod ۲۸) → سطر انتخاب → لقط میزانی. نطق جمله‌ای. تقریب عملیاتی قابل‌ممیزی است.</p>
+        <div id="classicOpts" class="hidden">
           <div class="field">
             <label for="bastMode">بسط / بینات</label>
             <select id="bastMode">
@@ -202,6 +203,7 @@
       <h2 id="resultTitle">نتیجه مستحصله</h2>
       <div class="summary">
         <div class="stat"><div class="k">جمع جمل اساس</div><div class="v" id="statJamal">—</div></div>
+        <div class="stat"><div class="k">میزان</div><div class="v" id="statMizan">—</div></div>
         <div class="stat"><div class="k">مدخل</div><div class="v" id="statMadkhal">—</div></div>
         <div class="stat"><div class="k">تعداد حروف</div><div class="v" id="statCount">—</div></div>
       </div>
@@ -260,7 +262,7 @@
       <textarea class="prebox" id="reportBox" readonly></textarea>
     </section>
 
-    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. نطق را بیرون از برنامه با AI انجام دهید. دیکشنری داخلی پیشنهاد است نه محدودیت؛ نطق‌آزاد از حروف لایه‌ها مجاز است. جفر ۱۵ سطری تقریب کاربردی قابل‌ممیزی است.</p>
+    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. روش اصلی پیشنهادی: جفر جدولی میزان‌دار. نطق را بیرون با AI انجام دهید. دیکشنری پیشنهاد است نه محدودیت.</p>
   </main>
 
   <script src="js/engine.js"></script>
