@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">میز کار جفر</string>
+    <string name="title_activity_main">میز کار جفر</string>
+    <string name="package_name">ir.jafr.workbench</string>
+    <string name="custom_url_scheme">ir.jafr.workbench</string>
+</resources>

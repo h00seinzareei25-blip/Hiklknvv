@@ -1,0 +1,11 @@
+{
+  "appId": "ir.jafr.workbench",
+  "appName": "میز کار جفر",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
