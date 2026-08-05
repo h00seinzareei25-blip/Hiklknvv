@@ -118,6 +118,8 @@ const herbMeta = { sael: 'حسین', taleb: 'حسین', matloob: 'حسین', mod
 assert(E.detectTopic(herbMeta).id === 'herbal', 'تشخیص موضوع گیاهی');
 const herbPrompt = (E.buildMultiNatqPrompt(multi, herbMeta).generator);
 assert(herbPrompt.includes('به لیمو') && herbPrompt.includes('نطق معکوس') && herbPrompt.includes('بانک واژگانی'), 'پرامپت سخت‌گیر گیاهی');
+assert(herbPrompt.includes('نطق‌آزاد') && herbPrompt.includes('زندان نیستند') && herbPrompt.includes('خوانش چندجمله‌ای'), 'نطق آزاد و خوانش چندجمله‌ای فعال است');
+assert(!herbPrompt.includes('فقط از این‌ها رتبه‌بندی کن'), 'دیگر محدود به دیکشنری اجباری نیست');
 
 const choiceSoal = 'بین سیر شنبلیله و سماق کدام مورد برای پایین اوردن چربی خون مفید است';
 assert(JSON.stringify(E.extractChoiceOptions(choiceSoal)) === JSON.stringify(['سیر', 'شنبلیله', 'سماق']), 'استخراج گزینه‌های بین/کدام');
@@ -132,7 +134,7 @@ const choiceBundle = E.runMany({
 }, ['classic_bayyinat', 'classic_malfuzi', 'muakhkhar_sadr'], { table: 'kabir' });
 const choicePrompt = E.buildMultiNatqPrompt(choiceBundle, choiceMeta).generator;
 assert(choicePrompt.includes('برنده بین گزینه‌ها') && choicePrompt.includes('جدول پوشش') && choicePrompt.includes('سیر'), 'پرامپت انتخابی با جدول پوشش');
-assert(!/اولویت با نام ۲ تا ۶ حرفی\/کلمه/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
+assert(!/اولویت با نام ۲ تا ۶ حرفی از دیکشنری داخلی/.test(choicePrompt), 'قواعد نام‌آزاد روی انتخابی اعمال نشود');
 
 const yesMeta = { sael: 'حسین', modda: 'دارو', soal: 'آیا این دارو برای من مفید است', extraEnabled: false };
 assert(E.detectQuestionProfile(yesMeta).id === 'yesno', 'پروفایل بله/خیر');
