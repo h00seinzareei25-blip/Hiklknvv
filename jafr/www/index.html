@@ -31,7 +31,7 @@
       <div class="grid">
         <div class="field">
           <label for="sael">سائل</label>
-          <input id="sael" type="text" placeholder="نام پرسنده · جمل ۵۹ (مهدی/نواب) قفل ۵۰۲۲ را می‌بندد" autocomplete="off">
+          <input id="sael" type="text" placeholder="مثال تأییدشده: مهدی (جمل ۵۹ → قفل ۵۰۲۲)" autocomplete="off">
         </div>
         <div class="field">
           <label for="taleb">طالب</label>
@@ -65,17 +65,17 @@
           <span>محوری (شخصی)</span>
         </label>
       </div>
-      <p class="hint">از کتب معتبر (طوخى/شاد گیلانی): مرکزی بدون نام سائل؛ محوری با سائل (+والدہ) و تاریخ. قفل اسکرین ۵۰۲۲ با سائل۵۹ محوری‌وار است.</p>
+      <p class="hint">قفل اسکرین باز شد: سائل <strong>مهدی</strong> + سؤال جنگ + تاریخ فارسی → ۵۰۲۲/۱۰ (محوری اصولی). مرکزی بدون سائل → ۴۹۶۳/۷.</p>
 
       <div id="mizanDateBox" class="extra-box" style="margin-top:10px">
         <div class="field">
           <label for="questionDate">تاریخ سؤال (شمسی · برای میزان/جدولی)</label>
           <div class="date-row">
-            <input id="questionDate" type="text" placeholder="مثال: 1405/05/14" autocomplete="off">
+            <input id="questionDate" type="text" placeholder="مثال اسکرین: هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران" autocomplete="off">
             <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
           </div>
         </div>
-        <p class="hint">در جفر جدولی: تاریخ + (در محوری) سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. ابجد کلاسیک: آ→ا=۱. قفل ۵۰۲۲/۱۰ با سائل جمل ۵۹.</p>
+        <p class="hint">تاریخ + سائل مهدی وارد <strong>جمل/میزان</strong>؛ ستون جدول فقط از متن سؤال (~۴۹). ابجد: آ→ا=۱.</p>
       </div>
 
       <div class="check" style="margin-top:8px">
@@ -221,7 +221,8 @@
       <div class="actions" style="margin-top:12px">
         <button class="btn btn-primary" id="btnRun" type="button">اجرای محاسبه اصولی</button>
         <button class="btn btn-ghost" id="btnClear" type="button">پاک کردن</button>
-        <button class="btn btn-ghost" id="btnSample" type="button">نمونه</button>
+        <button class="btn btn-ghost" id="btnSample" type="button">نمونه ازدواج</button>
+        <button class="btn btn-accent" id="btnSampleWar" type="button">نمونه جنگ (قفل مهدی)</button>
       </div>
     </section>
 

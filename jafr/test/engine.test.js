@@ -179,26 +179,38 @@ const warNawab = E.runClassic({
 assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
 
 const lockDiag = E.analyzeJamalLock(4963, { sael: '' }, { table: 'kabir' });
-assert(lockDiag.gap === 59 && lockDiag.recipes.length === 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: دستور کلاسیک سائل ۵۹ + هشدار آ=۶۰ غیرکلاسیک');
-assert(lockDiag.recipes[1].id === 'alef60_nonclassic' && !lockDiag.recipes[1].classic, 'دستور دوم غیرکلاسیک آ=۶۰');
-assert(E.JAMAL_LOCK_TARGET.jamal === 5022, 'ثابت هدف قفل');
+assert(lockDiag.gap === 59 && lockDiag.recipes.length >= 2 && lockDiag.recipes[0].classic, 'تحلیل قفل: راه مهدی + معادل ۵۹');
+assert(lockDiag.recipes.some((r) => r.id === 'sael_mahdi' && r.resolved), 'راه بازشده سائل مهدی');
+assert(lockDiag.recipes.some((r) => r.id === 'alef60_nonclassic' && !r.classic), 'آ=۶۰ غیرکلاسیک و فرعی');
+assert(E.JAMAL_LOCK_TARGET.jamal === 5022 && E.JAMAL_LOCK_TARGET.confirmedSael === 'مهدی', 'ثابت هدف قفل با مهدی');
+assert(E.JAMAL_LOCK_TARGET.resolved === true, 'قفل جمل به‌عنوان بازشده علامت خورده');
 
 const scopeWar = E.classifyQuestionScope({
   soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
   sael: '', taleb: '', matloob: ''
 });
 assert(scopeWar.id === 'markazi' && !scopeWar.saelRequired, 'جنگ بدون شخص = سؤال مرکزی');
+const scopeWarMahdi = E.classifyQuestionScope({
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  sael: 'مهدی'
+});
+assert(scopeWarMahdi.id === 'mehvari' && scopeWarMahdi.saelRequired, 'جنگ + مهدی = محوری اصولی');
 const scopeMeh = E.classifyQuestionScope({
   soal: 'آیا علی با فاطمه ازدواج خواهد کرد',
   sael: 'حسین', questionScope: 'mehvari'
 });
 assert(scopeMeh.id === 'mehvari' && scopeMeh.saelRequired, 'ازدواج/اجبار محوری = شخصی');
 
+const lockMahdi = E.analyzeJamalLock(5022, { sael: 'مهدی' }, { table: 'kabir' });
+assert(lockMahdi.matched && /مهدی/.test(lockMahdi.summary + (lockMahdi.hits || []).join('')), 'قفل با مهدی matched');
+
 const mGrid = E.buildMustehsilaGrid('غتخجقنایفذرسلظکعضدوصهشزمبحثط');
 assert(mGrid.rows.length === 4 && mGrid.source.length === 28, 'جدول مستحصله ۴ ردیف از حروف یکتا');
 assert(warSael.mustehsilaGrid && warSael.mustehsilaGrid.rows.length === 4, 'نتیجه جدولی شامل شبکهٔ مستحصله');
-assert(warSael.questionScope && warSael.steps.some((s) => s.id === 'question_scope'), 'گام نوع سؤال در مراحل');
+assert(warSael.questionScope && warSael.questionScope.id === 'mehvari', 'جنگ+مهدی در نتیجه محوری است');
+assert(warSael.steps.some((s) => s.id === 'question_scope'), 'گام نوع سؤال در مراحل');
 assert(warSael.steps.some((s) => s.id === 'mustehsila_grid'), 'گام جدول مستحصله در مراحل');
+assert(warSael.jamalLock && warSael.jamalLock.matched && warSael.jamalLock.resolvedPath === 'sael_mahdi', 'مسیر قفل sael_mahdi');
 
 // قفل نطق: مخزن‌آزاد + جاروی چندباره برای رنگ
 const refNatq = 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';

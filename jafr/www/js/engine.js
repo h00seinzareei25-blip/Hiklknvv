@@ -49,7 +49,13 @@
   };
 
   /** هدف قفل نمونهٔ حرفه‌ای (اسکرین‌شات جنگ) */
-  const JAMAL_LOCK_TARGET = { jamal: 5022, mizan: 10, saelJamal: 59 };
+  const JAMAL_LOCK_TARGET = {
+    jamal: 5022,
+    mizan: 10,
+    saelJamal: 59,
+    confirmedSael: 'مهدی',
+    resolved: true
+  };
 
   const TABLES = {
     kabir: ABJAD_KABIR,
@@ -360,31 +366,40 @@
   }
 
   /**
-   * نوع سؤال از متون معتبر جفر (طوخى/شاد گیلانی و مستحصلهٔ عسکریه):
-   * - مرکزی (امور عامه): نام سائل لازم نیست
-   * - محوری (شخصی): سائل + والدہ + تاریخ الزامی است
+   * نوع سؤال از متون معتبر جفر (طوخى/شاد گیلانی، السر اللامع، مستحصلهٔ عسکریه):
+   * - مرکزی: جواب ثابت با زمان → نام سائل لازم نیست
+   * - محوری: جواب با زمان/شخص عوض می‌شود → سائل (+والدہ) و تاریخ لازم است
+   * جنگِ زمان‌مند با سائل (مثل مهدی) محوری اصولی است؛ بدون سائل می‌تواند مرکزی/امور عامه باشد.
    */
   function classifyQuestionScope(meta) {
     const forced = meta && meta.questionScope;
     if (forced === 'markazi' || forced === 'mehvari') {
       return {
         id: forced,
-        title: forced === 'markazi' ? 'مرکزی (امور عامه)' : 'محوری (شخصی)',
+        title: forced === 'markazi' ? 'مرکزی (امور عامه)' : 'محوری (زمان‌مند/شخصی)',
         saelRequired: forced === 'mehvari',
         classicNote: forced === 'markazi'
           ? 'در سؤال مرکزی نام سائل در اساس نمی‌آید (طوخى/شاد گیلانی).'
-          : 'در سؤال محوری سائل+والدہ+تاریخ در اساس لازم است.'
+          : 'در سؤال محوری سائل (+والدہ) و تاریخ در اساس لازم است (السر اللامع).'
       };
     }
     const hasPerson = !!(meta && (meta.sael || meta.taleb || meta.matloob));
     const text = [meta && meta.soal, meta && meta.modda].filter(Boolean).join(' ');
     const publicWar = /جنگ|نبرد|اسرائیل|اسراییل|آمریکا|ایران|دولت|کشور|انتخابا?ت|اقتصاد/.test(text);
+    if (publicWar && hasPerson) {
+      return {
+        id: 'mehvari',
+        title: 'محوری (جنگ زمان‌مند + سائل)',
+        saelRequired: true,
+        classicNote: 'جنگ با سائل (مثل مهدی) محوری اصولی است؛ جمل/میزان از اساس کامل. قفل اسکرین: ۵۰۲۲/۱۰.'
+      };
+    }
     if (publicWar && !hasPerson) {
       return {
         id: 'markazi',
         title: 'مرکزی (امور عامه)',
         saelRequired: false,
-        classicNote: 'سؤال عمومی/سیاسی؛ کلاسیک بدون سائل محاسبه می‌شود.'
+        classicNote: 'بدون سائل = امور عامه (عسکریه)؛ جمل نمونهٔ جنگ ≈ ۴۹۶۳ / میزان ۷.'
       };
     }
     if (hasPerson || /ازدواج|همسر|مریض|غائب|فرزند|من\b|برای من/.test(text)) {
@@ -404,49 +419,62 @@
   }
 
   /**
-   * تحلیل قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰)
+   * قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰) — بازشده
    *
-   * تحقیق کتب/متون معتبر:
-   * - ابجد کبیر کلاسیک: آ ≡ ا = ۱ (ویکی‌ابجد، حساب جمل؛ آ=۶۰ غیرکلاسیک است)
-   * - سؤال جنگِ نمونه بدون سائل با ابجد کلاسیک → ۴۹۶۳ / میزان ۷
-   * - فاصلهٔ +۵۹ تا ۵۰۲۲ فقط با افزودن سائلِ جمل ۵۹ (مهدی/نواب) یا شمارش غیرکلاسیک آ=۶۰ بسته می‌شود
-   * - متون اردو (مدھش الباب / شاد گیلانی): سؤال مرکزی بدون سائل؛ محوری با سائل+والدہ+تاریخ
-   * پس قفل اسکرین با سائل۵۹ «محوری‌وار» است، نه قاعدهٔ مرکزیِ صرف
+   * راه حل تأییدشده:
+   * سائل «مهدی» (جمل ۵۹) + سؤال جنگ کوتاه + تاریخ فارسی بلند
+   * → اساس کامل جمل ۵۰۲۲ → میزان ۱۰ (محوری اصولی؛ السر اللامع / طوخى)
+   *
+   * بدون سائل (مرکزی/امور عامه): ۴۹۶۳ / ۷
+   * آ=۶۰ غیرکلاسیک است و دیگر مسیر اصلی نیست.
    */
   function analyzeJamalLock(jamalSum, parts, opts) {
     const target = JAMAL_LOCK_TARGET;
     const table = (opts && opts.table) || 'kabir';
-    const saelSum = sumAbjad((parts && parts.sael) || '', table).sum;
+    const saelRaw = (parts && parts.sael) || '';
+    const saelSum = sumAbjad(saelRaw, table).sum;
     const jamal = jamalSum | 0;
     const mizan = computeMizan(jamal, opts);
     const gap = target.jamal - jamal;
     const hits = [];
+    const isMahdi = normalizeText(saelRaw) === 'مهدی' || normalizeText(saelRaw).indexOf('مهدی') >= 0;
     if (jamal === target.jamal && mizan === target.mizan) {
-      hits.push('منطبق با هدف ۵۰۲۲ / میزان ۱۰');
+      hits.push('قفل ۵۰۲۲ / میزان ۱۰ بسته شد');
     }
     if (saelSum === target.saelJamal) {
-      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — بستن قفل اسکرین به‌شیوهٔ محوری');
+      hits.push(isMahdi
+        ? 'سائل مهدی (جمل ۵۹) — راه تأییدشدهٔ نمونهٔ حرفه‌ای'
+        : 'سائل با جمل ۵۹ (مهدی/نواب) — شیوهٔ محوری');
     }
     if (gap === target.saelJamal && saelSum === 0) {
-      hits.push('فاصلهٔ +۵۹: یا سائلِ ۵۹ بیفزای، یا نرم‌افزار مرجع احتمالاً آ را غیرکلاسیک شمرده');
+      hits.push('فاصلهٔ +۵۹: سائل مهدی (یا هر نام جمل ۵۹) را بیفزای');
     }
     const recipes = [
       {
-        id: 'sael59',
-        title: 'سائل با جمل ۵۹ (محوری‌وار)',
+        id: 'sael_mahdi',
+        title: 'سائل مهدی + سؤال جنگ + تاریخ فارسی',
         classic: true,
-        note: 'مهدی یا نواب → ۵۰۲۲؛ ستون‌ها همچنان فقط از سؤال. برای سؤال مرکزیِ صرف، کتب نام سائل را لازم نمی‌دانند.'
+        resolved: true,
+        note: 'راه بازشده: مهدی(۵۹) → ۵۰۲۲/۱۰؛ ستون‌ها فقط از سؤال (~۴۹). محوری اصولی.'
+      },
+      {
+        id: 'sael59',
+        title: 'هر سائل با جمل ۵۹ (مثل نواب)',
+        classic: true,
+        resolved: true,
+        note: 'معادل عددی مهدی؛ همان قفل را می‌بندد.'
       },
       {
         id: 'alef60_nonclassic',
-        title: 'شمارش آ=۶۰ (غیرکلاسیک)',
+        title: 'شمارش آ=۶۰ (ردشده / غیرکلاسیک)',
         classic: false,
-        note: 'در ابجد کبیر معتبر آ→ا=۱ است؛ بعضی نرم‌افزارها آ را ۶۰ می‌گیرند و بدون سائل به ۵۰۲۲ می‌رسند.'
+        resolved: false,
+        note: 'در ابجد کبیر آ→ا=۱؛ با تأیید نام مهدی دیگر مسیر اصلی نیست.'
       }
     ];
     const summary = gap === 0
-      ? `قفل جمل بسته شد (${target.jamal} → میزان ${target.mizan})`
-      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — کلاسیکِ محوری: سائل ۵۹؛ مرکزیِ صرف: ۴۹۶۳/۷`;
+      ? `قفل جمل بسته شد (${target.jamal} → میزان ${target.mizan})` + (isMahdi ? ' · سائل مهدی' : '')
+      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — راه بازشده: سائل مهدی (+تاریخ فارسی)`;
     return {
       targetJamal: target.jamal,
       targetMizan: target.mizan,
@@ -454,7 +482,8 @@
       mizan,
       gap,
       saelJamal: saelSum,
-      matched: jamal === target.jamal,
+      matched: jamal === target.jamal && mizan === target.mizan,
+      resolvedPath: 'sael_mahdi',
       hits,
       recipes,
       summary
@@ -1051,8 +1080,8 @@
           `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (منازل/دایره ابجد)`,
           'جمل از اساس کامل است',
           questionScope.id === 'mehvari'
-            ? 'قفل اسکرین ۵۰۲۲/۱۰ با سائل جمل ۵۹ (شیوهٔ محوری)'
-            : 'مرکزیِ صرف بدون سائل برای نمونهٔ جنگ: ۴۹۶۳/۷؛ ۵۰۲۲ نیاز به سائل۵۹ یا شمارش غیرکلاسیک دارد'
+            ? 'قفل بازشده: سائل مهدی (۵۹) → ۵۰۲۲/۱۰ · محوری اصولی'
+            : 'بدون سائل (مرکزی): ۴۹۶۳/۷؛ برای ۵۰۲۲ سائل مهدی بیفزای'
         ].join(' | ')
       });
 

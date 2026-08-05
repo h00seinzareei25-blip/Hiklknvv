@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ = جاروی چندباره پس از نطق. قفل جمل کلاسیک: سائلِ ۵۹ (مهدی/نواب).';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · قفل بازشده: سائل مهدی → ۵۰۲۲/۱۰ · نطق از مخزن A–D · رنگ پس از نطق';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -386,8 +386,16 @@
     $('mustehsilaBox').textContent = result.mustehsila || '—';
     $('uniqueBox').textContent = result.mustehsilaUnique || '—';
     const scope = result.questionScope || (result.jadwal && result.jadwal.questionScope);
-    if ($('profileHint') && scope) {
-      $('profileHint').textContent = `نوع سؤال: ${scope.title} — ${scope.classicNote}`;
+    if ($('profileHint')) {
+      const lock = result.jamalLock;
+      let t = scope ? (`نوع سؤال: ${scope.title} — ${scope.classicNote}`) : '';
+      if (lock && lock.matched) {
+        t = (t ? t + ' | ' : '') + 'قفل جمل بسته: ۵۰۲۲ → میزان ۱۰' +
+          (lock.hits && lock.hits.length ? (' · ' + lock.hits[0]) : '');
+      } else if (lock && lock.summary) {
+        t = (t ? t + ' | ' : '') + lock.summary;
+      }
+      $('profileHint').textContent = t || 'پروفایل نطق بعد از اجرا نشان داده می‌شود.';
     }
     renderMustehsilaGrid(result);
     renderJadwalGrid(result);
@@ -561,10 +569,36 @@
     $('matloobFamily').value = 'احمدی';
     $('questionDate').value = '1404/05/13';
     $('questionTime').value = '14:30';
+    if ($('scopeMehvari')) $('scopeMehvari').checked = true;
     $('modeMulti').checked = true;
     syncModeUI();
     setMethodSelection(['jadwali_mizan', 'classic_bayyinat', 'classic_malfuzi']);
-    showAlert('info', 'نمونه با اطلاعات تکمیلی و ۳ روش (جدولی+۲ کلاسیک) بارگذاری شد');
+    showAlert('info', 'نمونه ازدواج با اطلاعات تکمیلی بارگذاری شد');
+  }
+
+  /** نمونهٔ تأییدشدهٔ اسکرین: سائل مهدی → جمل ۵۰۲۲ / میزان ۱۰ */
+  function loadWarLockSample() {
+    $('sael').value = 'مهدی';
+    $('taleb').value = '';
+    $('matloob').value = '';
+    $('modda').value = '';
+    $('soal').value = 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود';
+    $('extraEnabled').checked = false;
+    syncExtraUI();
+    ['saelFamily', 'talebFamily', 'matloobFamily', 'questionTime'].forEach((id) => {
+      if ($(id)) $(id).value = '';
+    });
+    $('questionDate').value = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
+    if ($('scopeMehvari')) $('scopeMehvari').checked = true;
+    if ($('modeSingle')) $('modeSingle').checked = true;
+    syncModeUI();
+    if ($('pipeline')) {
+      $('pipeline').value = 'jadwali';
+      syncPipelineUI();
+    }
+    if ($('jadwalModel')) $('jadwalModel').value = 'quarter28';
+    if ($('table')) $('table').value = 'kabir';
+    showAlert('ok', 'نمونه جنگ قفل‌شده: سائل مهدی → انتظار ۵۰۲۲ / میزان ۱۰');
   }
 
   // init
@@ -594,6 +628,7 @@
   $('btnRun').addEventListener('click', run);
   $('btnClear').addEventListener('click', clearAll);
   $('btnSample').addEventListener('click', loadSample);
+  if ($('btnSampleWar')) $('btnSampleWar').addEventListener('click', loadWarLockSample);
 
   function copyGenerator() {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');
