@@ -39,9 +39,9 @@
     'ذ': 'ذال', 'ض': 'ضاد', 'ظ': 'ظا', 'غ': 'غین'
   };
 
-  /** معادل حروف غیر ابجد (آ جداگانه با alefMaddaMode کنترل می‌شود) */
+  /** معادل حروف غیر ابجد */
   const EQUIV = {
-    'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا', 'ء': 'ا', 'ؤ': 'ا', 'ئ': 'ا',
+    'آ': 'ا', 'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا', 'ء': 'ا', 'ؤ': 'ا', 'ئ': 'ا',
     'ة': 'ه', 'ۀ': 'ه', 'ه‌': 'ه',
     'ي': 'ی', 'ى': 'ی',
     'ك': 'ک', 'گ': 'ک',
@@ -63,16 +63,13 @@
 
   /**
    * نرمال‌سازی حروف ابجدی
-   * @param {string} text
-   * @param {object} [report]
-   * @param {object} [normOpts] — alefMaddaMode: 'alif' (پیش‌فرض، آ→ا=۱) | 'sin' (آ→س=۶۰، فرضیهٔ قفل غیرکلاسیک)
+   * آ همیشه = ا = ۱ (قاعدهٔ کلاسیک)
    */
-  function normalizeText(text, report, normOpts) {
+  function normalizeText(text, report) {
     const raw = String(text || '');
     const kept = [];
     const rejected = [];
     const mapped = [];
-    const alefMode = (normOpts && normOpts.alefMaddaMode) === 'sin' ? 'sin' : 'alif';
 
     for (const ch of raw) {
       if (/\s/.test(ch)) continue;
@@ -89,16 +86,7 @@
       if (/[،؛؟!.:«»"'\-_/\\()\[\]{}…]/.test(ch)) continue;
 
       let c = ch;
-      // آ: استاندارد کلاسیک = ا(۱)؛ فرضیهٔ حسابی قفل اسکرین = س(۶۰)
-      if (c === 'آ') {
-        if (alefMode === 'sin') {
-          mapped.push('آ→س(۶۰)');
-          c = 'س';
-        } else {
-          mapped.push('آ→ا');
-          c = 'ا';
-        }
-      } else if (EQUIV[c]) {
+      if (EQUIV[c]) {
         mapped.push(`${ch}→${EQUIV[c]}`);
         c = EQUIV[c];
       }
@@ -118,7 +106,6 @@
       report.mapped = mapped;
       report.before = raw;
       report.after = kept.join('');
-      report.alefMaddaMode = alefMode;
     }
     return kept.join('');
   }
@@ -367,21 +354,18 @@
     return String(text || '').replace(/[0-9۰-۹٠-٩]/g, (d) => DIGIT_WORDS[d] || '');
   }
 
-  function normalizeDateTimeField(text, report, normOpts) {
+  function normalizeDateTimeField(text, report) {
     const expanded = expandDigitsToWords(text);
-    return normalizeText(expanded, report, normOpts);
+    return normalizeText(expanded, report);
   }
 
   /**
    * تحلیل قفل جمل نمونهٔ حرفه‌ای (۵۰۲۲ / میزان ۱۰)
-   * دو راه تمیز تحقیق‌شده:
-   *  ۱) سائل با جمل ۵۹ (مهدی / نواب) — مطابق خواجه نصیر [کلاسیک]
-   *  ۲) آ=۶۰ به‌جای ۱ — فقط حسابی، بدون منبع کلاسیک
+   * راه کلاسیک: سائل با جمل ۵۹ (مهدی / نواب) — خواجه نصیر
    */
   function analyzeJamalLock(jamalSum, parts, opts) {
     const target = JAMAL_LOCK_TARGET;
     const table = (opts && opts.table) || 'kabir';
-    const mode = (opts && opts.alefMaddaMode) === 'sin' ? 'sin' : 'alif';
     const saelSum = sumAbjad((parts && parts.sael) || '', table).sum;
     const jamal = jamalSum | 0;
     const mizan = computeMizan(jamal, opts);
@@ -391,10 +375,7 @@
       hits.push('منطبق با هدف ۵۰۲۲ / میزان ۱۰');
     }
     if (saelSum === target.saelJamal) {
-      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — فرضیهٔ کلاسیک خواجه نصیر');
-    }
-    if (mode === 'sin') {
-      hits.push('حالت آ=۶۰ فعال — فرضیهٔ غیرکلاسیک/حسابی');
+      hits.push('سائل با جمل ۵۹ (مثل مهدی/نواب) — قاعدهٔ کلاسیک خواجه نصیر');
     }
     const recipes = [
       {
@@ -402,17 +383,11 @@
         title: 'سائل با جمل ۵۹',
         classic: true,
         note: 'اساس کامل + مهدی یا نواب → ۵۰۲۲؛ ستون‌ها همچنان فقط از سؤال'
-      },
-      {
-        id: 'alef60',
-        title: 'آ = ۶۰',
-        classic: false,
-        note: 'بدون سائل، اگر آ مثل س حساب شود → ۵۰۲۲؛ منابع کلاسیک آ را ۱ می‌گیرند'
       }
     ];
     const summary = gap === 0
       ? `قفل جمل بسته شد (${target.jamal} → میزان ${target.mizan})`
-      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — سائلِ ۵۹ یا حالت آ=۶۰`;
+      : `فاصله تا قفل ${target.jamal}: ${gap > 0 ? '+' : ''}${gap} — سائلِ کلاسیک با جمل ۵۹`;
     return {
       targetJamal: target.jamal,
       targetMizan: target.mizan,
@@ -420,7 +395,6 @@
       mizan,
       gap,
       saelJamal: saelSum,
-      alefMaddaMode: mode,
       matched: jamal === target.jamal,
       hits,
       recipes,
@@ -637,7 +611,7 @@
     const rowIds = ['A', 'B', 'C', 'D'];
     const rows = rowIds.map((id) => String((layers && layers[id]) || ''));
     const n = rows[0] ? rows[0].length : 0;
-    const needle = normalizeText(natqText, {}, (opts && opts.normOpts) || {});
+    const needle = normalizeText(natqText);
     const pool = rows.join('');
     const coverPool = coverageAgainst(needle, pool);
     if (!needle || !n) {
@@ -721,7 +695,7 @@
     };
     const ref = opts && opts.referenceNatq ? String(opts.referenceNatq) : '';
     if (ref) {
-      const normalized = normalizeText(ref, {}, (opts && opts.normOpts) || {});
+      const normalized = normalizeText(ref);
       out.reference = {
         text: ref,
         normalized,
@@ -806,11 +780,10 @@
 
   function describeOptions(opts) {
     if (opts && opts.pipeline === 'jadwali') {
-      const alef = (opts.alefMaddaMode === 'sin') ? ' · آ=۶۰' : '';
       if (opts.jadwalModel === 'tttm' || opts.jadwalModel === 'tarfa_tanzil') {
-        return 'جفر جدولی · ترفع/ترقی/تنزل/مساوات' + alef;
+        return 'جفر جدولی · ترفع/ترقی/تنزل/مساوات';
       }
-      return 'جفر جدولی میزان‌دار (ربع دایره)' + alef;
+      return 'جفر جدولی میزان‌دار (ربع دایره)';
     }
     if (opts && opts.pipeline === 'fifteen') return 'جفر ۱۵ سطری';
     const bastMap = { bayyinat: 'بینات', malfuzi: 'ملفوظی', zabarBayyinat: 'زبر و بینات', none: 'بدون بسط' };
@@ -822,8 +795,7 @@
       `×${opts.takseerRounds || 1}`,
       takhMap[opts.takhlis] || opts.takhlis,
       opts.mazjNazira ? 'مزج' : 'بدون‌مزج',
-      opts.removeDupAsas ? 'حذف‌مکرر' : null,
-      opts.alefMaddaMode === 'sin' ? 'آ=۶۰' : null
+      opts.removeDupAsas ? 'حذف‌مکرر' : null
     ].filter(Boolean).join(' · ');
   }
 
@@ -842,13 +814,11 @@
       isqatEnabled: false,
       isqatBase: 9,
       isqatKeepZero: false,
-      takseerRounds: 1,
-      alefMaddaMode: 'alif' // alif: آ→ا=۱ | sin: آ→س=۶۰ (فرضیهٔ قفل غیرکلاسیک)
+      takseerRounds: 1
     }, input.options || {});
 
     const extraEnabled = !!input.extraEnabled;
     const steps = [];
-    const normOpts = { alefMaddaMode: opts.alefMaddaMode === 'sin' ? 'sin' : 'alif' };
 
     const saelRaw = joinName(input.sael, input.saelFamily, extraEnabled);
     const talebRaw = joinName(input.taleb, input.talebFamily, extraEnabled);
@@ -858,13 +828,13 @@
     const timeRaw = extraEnabled ? String(input.questionTime || '').trim() : '';
 
     const parts = {
-      sael: normalizeText(saelRaw, {}, normOpts),
-      taleb: normalizeText(talebRaw, {}, normOpts),
-      matloob: normalizeText(matloobRaw, {}, normOpts),
-      modda: normalizeText(input.modda, {}, normOpts),
-      soal: normalizeText(input.soal, {}, normOpts),
-      date: dateRaw ? normalizeDateTimeField(dateRaw, {}, normOpts) : '',
-      time: timeRaw ? normalizeDateTimeField(timeRaw, {}, normOpts) : ''
+      sael: normalizeText(saelRaw, {}),
+      taleb: normalizeText(talebRaw, {}),
+      matloob: normalizeText(matloobRaw, {}),
+      modda: normalizeText(input.modda, {}),
+      soal: normalizeText(input.soal, {}),
+      date: dateRaw ? normalizeDateTimeField(dateRaw, {}) : '',
+      time: timeRaw ? normalizeDateTimeField(timeRaw, {}) : ''
     };
 
     // نرمال‌سازی همه اجزا با گزارش تجمیعی
@@ -873,7 +843,7 @@
     if (timeRaw) allRawParts.push(expandDigitsToWords(timeRaw));
     const allRaw = allRawParts.filter(Boolean).join(' ');
     const fullNorm = {};
-    normalizeText(allRaw, fullNorm, normOpts);
+    normalizeText(allRaw, fullNorm);
 
     steps.push({
       id: 'normalize',
@@ -883,7 +853,7 @@
       note: [
         dateRaw ? ('تاریخ:' + dateRaw) : 'بدون تاریخ',
         extraEnabled ? 'اطلاعات تکمیلی فعال است' : 'فامیلی/ساعت تکمیلی غیرفعال',
-        normOpts.alefMaddaMode === 'sin' ? 'آ→س(۶۰) فعال' : 'آ→ا(۱) استاندارد',
+        'آ→ا(۱) کلاسیک',
         fullNorm.mapped.length ? `تبدیل‌ها: ${fullNorm.mapped.slice(0, 12).join('، ')}${fullNorm.mapped.length > 12 ? '…' : ''}` : 'بدون تبدیل معادل',
         fullNorm.rejected.length ? `حروف ردشده: ${[...new Set(fullNorm.rejected)].join(' ')}` : 'بدون حرف ردشده'
       ].join(' | ')
@@ -936,7 +906,6 @@
       const iq = isqat(jamal.sum, opts.isqatBase, opts.isqatKeepZero);
       jamalNote += ` | اسقاط ${opts.isqatBase}: ${iq}`;
     }
-    if (normOpts.alefMaddaMode === 'sin') jamalNote += ' | آ=۶۰';
     steps.push({
       id: 'jamal',
       title: 'حساب ابجد و مداخل',
@@ -951,11 +920,11 @@
       input: [
         `جمل=${jamal.sum}`,
         `سائل=${parts.sael || '—'}(${sumAbjad(parts.sael, opts.table).sum})`,
-        normOpts.alefMaddaMode === 'sin' ? 'آ→س(۶۰)' : 'آ→ا(۱)'
+        'آ→ا(۱) کلاسیک'
       ].join(' | '),
       output: jamalLock.summary,
       note: jamalLock.recipes
-        .map((r) => `${r.title}${r.classic ? ' [کلاسیک]' : ' [غیرکلاسیک]'}: ${r.note}`)
+        .map((r) => `${r.title}${r.classic ? ' [کلاسیک]' : ''}: ${r.note}`)
         .concat(jamalLock.hits.length ? ['· ' + jamalLock.hits.join('؛ ')] : [])
         .join(' · ')
     });
@@ -978,7 +947,7 @@
         note: [
           `میزان = باقیماندهٔ جمل بر ${opts.mizanBase || 28} (منازل/دایره ابجد)`,
           'جمل از اساس کامل است (سائل/طالب/مطلوب/مدعا/سؤال/تاریخ)',
-          'قفل نمونه: ۵۰۲۲ → ۱۰ — یا سائلِ ۵۹ (کلاسیک) یا آ=۶۰ (غیرکلاسیک)'
+          'قفل نمونه: ۵۰۲۲ → ۱۰ با سائل جمل ۵۹ (کلاسیک)'
         ].join(' | ')
       });
 
@@ -1029,14 +998,11 @@
         'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
       // برای سؤال جنگِ مرجع، مسیر رنگ نمونه را هم گزارش کن؛ وگرنه فقط مدل قفل
       const warSoalNorm = normalizeText(
-        'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-        {},
-        normOpts
+        'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود'
       );
       const includeRef = !!opts.referenceNatq || columnBase === warSoalNorm;
       const natqLock = analyzeNatqLock(layers, {
-        referenceNatq: includeRef ? refNatq : '',
-        normOpts
+        referenceNatq: includeRef ? refNatq : ''
       });
       steps.push({
         id: 'jadwal_mizan_extract',
@@ -1122,8 +1088,7 @@
         options: Object.assign({}, opts, {
           natqStyle: 'sentence',
           pipeline: 'jadwali',
-          jadwalModel,
-          alefMaddaMode: normOpts.alefMaddaMode
+          jadwalModel
         }),
         normalize: fullNorm,
         extraEnabled,

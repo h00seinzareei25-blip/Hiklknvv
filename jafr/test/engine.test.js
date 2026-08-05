@@ -167,20 +167,8 @@ assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل
 assert(warSael.jamalLock.saelJamal === 59, 'سائل مهدی جمل ۵۹');
 assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
 
-// فرضیهٔ دوم قفل: آ=۶۰ بدون سائل
-assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا استاندارد');
-assert(E.normalizeText('آمریکا', {}, { alefMaddaMode: 'sin' }) === 'سمریکا', 'آ→س در حالت قفل');
+assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا کلاسیک');
 assert(E.sumAbjad('مهدی').sum === 59 && E.sumAbjad('نواب').sum === 59, 'مهدی و نواب = ۵۹');
-const warAlef60 = E.runClassic({
-  sael: '', taleb: '', matloob: '', modda: '',
-  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-  questionDate: warDate,
-  options: { pipeline: 'jadwali', table: 'kabir', alefMaddaMode: 'sin' }
-});
-assert(warAlef60.jamal === 5022 && warAlef60.mizan === 10, 'با آ=۶۰ بدون سائل: جمل ۵۰۲۲ / میزان ۱۰');
-assert(warAlef60.columnBase.length === 49, 'آ=۶۰ عرض ستون را عوض نمی‌کند');
-assert(warAlef60.jamalLock && warAlef60.jamalLock.alefMaddaMode === 'sin', 'حالت آ=۶۰ در قفل ثبت شود');
-assert(warAlef60.normalize.mapped.some((m) => /آ→س/.test(m)), 'گزارش نرمال‌سازی آ→س');
 
 const warNawab = E.runClassic({
   sael: 'نواب', taleb: '', matloob: '', modda: '',
@@ -191,9 +179,8 @@ const warNawab = E.runClassic({
 assert(warNawab.jamal === 5022 && warNawab.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
 
 const lockDiag = E.analyzeJamalLock(4963, { sael: '' }, { table: 'kabir' });
-assert(lockDiag.gap === 59 && lockDiag.recipes.length === 2, 'تحلیل فاصلهٔ قفل = ۵۹ با دو دستور');
+assert(lockDiag.gap === 59 && lockDiag.recipes.length === 1 && lockDiag.recipes[0].classic, 'تحلیل قفل فقط دستور کلاسیک سائل ۵۹');
 assert(E.JAMAL_LOCK_TARGET.jamal === 5022, 'ثابت هدف قفل');
-assert(E.describeOptions({ pipeline: 'jadwali', alefMaddaMode: 'sin' }).includes('آ=۶۰'), 'توضیح گزینه آ=۶۰');
 
 // قفل نطق: مخزن‌آزاد + جاروی چندباره برای رنگ
 const refNatq = 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';

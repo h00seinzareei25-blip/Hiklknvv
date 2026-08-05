@@ -44,7 +44,7 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ = جاروی چندباره پس از نطق (قفل نطق باز). قفل جمل ۵۰۲۲: سائلِ ۵۹ یا آ=۶۰.';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ = جاروی چندباره پس از نطق. قفل جمل کلاسیک: سائلِ ۵۹ (مهدی/نواب).';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -146,7 +146,6 @@
     const pipeline = $('pipeline') ? $('pipeline').value : 'classic';
     const opts = {
       table: $('table').value,
-      alefMaddaMode: ($('alefMaddaMode') && $('alefMaddaMode').value) === 'sin' ? 'sin' : 'alif',
       bastMode: $('bastMode').value,
       takseer: $('takseer').value,
       takhlis: $('takhlis').value,
@@ -280,6 +279,65 @@
     el.textContent = text;
   }
 
+  function renderJadwalGrid(result) {
+    const wrap = $('jadwalGridWrap');
+    const box = $('jadwalGridBox');
+    const hint = $('jadwalGridHint');
+    if (!wrap || !box) return;
+    const j = result && result.jadwal;
+    if (!j || !j.layers || !j.layers.length) {
+      wrap.classList.add('hidden');
+      box.innerHTML = '';
+      return;
+    }
+    const main = ['A', 'B', 'C', 'D']
+      .map((id) => j.layers.find((l) => l.id === id))
+      .filter(Boolean);
+    if (!main.length) {
+      wrap.classList.add('hidden');
+      return;
+    }
+    const n = (main[0].str || '').length;
+    const mark = {};
+    const hl = (result.natqLock && result.natqLock.reference && result.natqLock.reference.highlight)
+      || (j.natqLock && j.natqLock.reference && j.natqLock.reference.highlight)
+      || null;
+    if (hl && hl.picks) {
+      hl.picks.forEach((p) => {
+        mark[p.row + ':' + p.col] = p.sweep;
+      });
+    }
+    let html = '<table class="jadwal-table"><thead><tr><th>سطر</th>';
+    for (let c = 1; c <= n; c++) html += '<th>' + c + '</th>';
+    html += '</tr></thead><tbody>';
+    main.forEach((row) => {
+      html += '<tr><td class="row-label">' + escapeHtml(row.title || row.id) + '</td>';
+      for (let i = 0; i < n; i++) {
+        const ch = row.str[i] || '';
+        const key = row.id + ':' + (i + 1);
+        const sw = mark[key];
+        const cls = sw == null ? '' : ('hl-s' + Math.min(5, sw | 0));
+        html += '<td class="' + cls + '">' + escapeHtml(ch) + '</td>';
+      }
+      html += '</tr>';
+    });
+    if (j.selected) {
+      html += '<tr class="sel-row"><td class="row-label">سطر انتخاب</td>';
+      for (let i = 0; i < n; i++) {
+        html += '<td>' + escapeHtml(j.selected[i] || '') + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    if (hint) {
+      hint.textContent = hl && hl.complete
+        ? ('مسیر رنگ کامل · ' + hl.sweeps + ' جارو · ' + hl.picks.length + ' خانه (نارنجی→زرد→سبز→آبی بر اساس شماره جارو)')
+        : 'جدول لایه‌های A–D؛ پس از نطق مرجع، خانه‌های مصرف‌شده رنگ می‌شوند.';
+    }
+    wrap.classList.remove('hidden');
+  }
+
   function showPrimary(result, keepCompare) {
     $('statJamal').textContent = String(result.jamal);
     if ($('statMizan')) $('statMizan').textContent = result.mizan != null ? String(result.mizan) : '—';
@@ -290,6 +348,7 @@
       : String(result.letterCount);
     $('mustehsilaBox').textContent = result.mustehsila || '—';
     $('uniqueBox').textContent = result.mustehsilaUnique || '—';
+    renderJadwalGrid(result);
     $('resultCard').classList.remove('hidden');
     if (!keepCompare) $('compareCard').classList.add('hidden');
   }
@@ -336,8 +395,7 @@
       }
       const bundle = JafrEngine.runMany(input, ids, {
         table: baseOpts.table,
-        isqatEnabled: baseOpts.isqatEnabled,
-        alefMaddaMode: baseOpts.alefMaddaMode
+        isqatEnabled: baseOpts.isqatEnabled
       });
       if (!bundle.ok) {
         lastBundle = null;

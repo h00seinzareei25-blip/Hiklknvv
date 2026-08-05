@@ -59,7 +59,7 @@
             <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
           </div>
         </div>
-        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. قفل نمونهٔ حرفه‌ای: ۵۰۲۲/۱۰ ≈ سائل با جمل ۵۹ (کلاسیک) یا حالت آ=۶۰ (غیرکلاسیک).</p>
+        <p class="hint">در جفر جدولی: تاریخ + سائل وارد <strong>جمل/میزان</strong> می‌شوند؛ ستون‌های جدول فقط از متن سؤال‌اند. قفل نمونه: ۵۰۲۲/۱۰ با سائل جمل ۵۹ (مثل مهدی) — کلاسیک خواجه نصیر.</p>
       </div>
 
       <div class="check" style="margin-top:8px">
@@ -113,15 +113,6 @@
         </select>
       </div>
 
-      <div class="field">
-        <label for="alefMaddaMode">حرف آ (الف ممدود)</label>
-        <select id="alefMaddaMode">
-          <option value="alif" selected>آ = ا = ۱ (استاندارد کلاسیک)</option>
-          <option value="sin">آ = س = ۶۰ (فرضیهٔ قفل اسکرین · غیرکلاسیک)</option>
-        </select>
-      </div>
-      <p class="hint">تحقیق قفل ۵۰۲۲: با آ=۱ باید سائلِ ۵۹ (مهدی/نواب) باشد؛ با آ=۶۰ بدون سائل هم ۵۰۲۲ می‌شود. سنت خواجه نصیر طرف سائل است.</p>
-
       <div id="singleSettings" class="opts">
         <div class="field">
           <label for="pipeline">زنجیره محاسبه</label>
@@ -131,7 +122,7 @@
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ پس از نطق (جاروی چندباره). قفل جمل: سائلِ ۵۹ یا آ=۶۰.</p>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ پس از نطق (جاروی چندباره). قفل جمل کلاسیک: سائلِ ۵۹.</p>
         <div id="jadwalOpts">
           <div class="field">
             <label for="jadwalModel">مدل لایه‌های جدولی</label>
@@ -238,6 +229,12 @@
       <div class="letters" id="mustehsilaBox">—</div>
       <label>بدون تکرار</label>
       <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
+
+      <div id="jadwalGridWrap" class="hidden" style="margin-top:14px">
+        <label>جدول لایه‌ها + مسیر رنگ (جاروی چندباره)</label>
+        <p class="hint" id="jadwalGridHint">خانه‌های رنگی = مسیر مصرف حروف نطق مرجع/نمونه پس از ساخت جمله.</p>
+        <div class="jadwal-scroll" id="jadwalGridBox"></div>
+      </div>
 
       <div class="actions">
         <button class="btn btn-accent" id="btnCopyPrompt" type="button">کپی پرامپت مولّد</button>
