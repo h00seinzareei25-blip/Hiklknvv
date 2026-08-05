@@ -40,10 +40,11 @@
     const pipe = $('pipeline') ? $('pipeline').value : 'classic';
     const hideClassic = pipe === 'fifteen' || pipe === 'jadwali';
     if ($('classicOpts')) $('classicOpts').classList.toggle('hidden', hideClassic);
+    if ($('jadwalOpts')) $('jadwalOpts').classList.toggle('hidden', pipe !== 'jadwali');
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · A/B/C/D ربع دایره → نطق یک‌خطی + تفسیر AI. میزان = جمل mod ۲۸.';
+        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل (سائل+سؤال+تاریخ) · ستون‌ها فقط از حروف سؤال · لایه‌ها + لقط میزانی کلاسیک → نطق یک‌خطی + تفسیر AI.';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -161,8 +162,12 @@
       opts.methodLabel = 'جفر ۱۵ سطری';
     } else if (pipeline === 'jadwali') {
       opts.pipeline = 'jadwali';
-      opts.methodId = 'jadwali_mizan';
-      opts.methodLabel = 'جفر جدولی میزان‌دار';
+      const model = ($('jadwalModel') && $('jadwalModel').value) || 'quarter28';
+      opts.jadwalModel = model === 'tttm' ? 'tttm' : 'quarter28';
+      opts.methodId = opts.jadwalModel === 'tttm' ? 'jadwali_tttm' : 'jadwali_mizan';
+      opts.methodLabel = opts.jadwalModel === 'tttm'
+        ? 'جفر جدولی · ترفع/ترقی/تنزل/مساوات'
+        : 'جفر جدولی میزان‌دار (ربع دایره)';
       opts.natqStyle = 'sentence';
     }
     return opts;

@@ -96,22 +96,46 @@ assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt3'), 'پیش‌فرض لقط۳
 assert(E.METHOD_PRESETS.some((p) => p.id === 'laqt4'), 'پیش‌فرض لقط۴');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'fifteen_line'), 'پیش‌فرض ۱۵ سطری');
 assert(E.METHOD_PRESETS.some((p) => p.id === 'jadwali_mizan'), 'پیش‌فرض جدولی میزان‌دار');
+assert(E.METHOD_PRESETS.some((p) => p.id === 'jadwali_tttm'), 'پیش‌فرض جدولی ترفع/ترقی/تنزل/مساوات');
 assert(E.computeMizan(5022) === 10, 'میزان ۵۰۲۲ → ۱۰');
 assert(E.computeMizan(28) === 28, 'میزان مضرب ۲۸ → ۲۸');
+
+assert(E.applyTaraqi('اب') === 'بج', 'ترقی ا→ب ب→ج');
+assert(E.applyTanzilCircle('بج') === 'اب', 'تنزل دایره‌ای');
+assert(E.applyTarfaGrid('ک') === 'ب', 'ترفع ک→ب در جدول ۹تایی');
+assert(E.applyMusawatGrid('ب') === 'ک', 'مساوات ب→ک');
 
 const jadwali = E.runClassic({
   sael: '', taleb: '', matloob: '', modda: '',
   soal: 'نتیجه جنگ چگونه خواهد بود',
-  options: { pipeline: 'jadwali', table: 'kabir', methodId: 'jadwali_mizan' }
+  options: { pipeline: 'jadwali', table: 'kabir', methodId: 'jadwali_mizan', jadwalModel: 'quarter28' }
 });
 assert(jadwali.ok && jadwali.mizan > 0, 'اجرای جدولی میزان‌دار');
 assert(jadwali.jadwal && jadwali.jadwal.layers.length === 8, '۸ لایه جدولی');
 assert(jadwali.jadwal.model === 'quarter28', 'مدل ربع دایره');
+assert(jadwali.jadwal.classicLaqt && jadwali.jadwal.classicLaqt.step === jadwali.mizan, 'لقط کلاسیک با گام میزان');
+assert(jadwali.jadwal.classicLaqt.fromAsas.length > 0, 'لقط کلاسیک از اساس سؤال');
 assert(jadwali.jadwal.selected.length === jadwali.columnBase.length, 'سطر انتخاب هم‌طول ستون‌های سؤال');
 assert(jadwali.jadwal.poolABCD && jadwali.jadwal.poolABCD.length === jadwali.columnBase.length * 4, 'مخزن ABCD');
 assert(jadwali.mustehsila.length > 0, 'مستحصله جدولی غیرخالی');
+
+const jadwaliTttm = E.runClassic({
+  sael: 'مهدی', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران',
+  options: { pipeline: 'jadwali', table: 'kabir', jadwalModel: 'tttm' }
+});
+assert(jadwaliTttm.ok && jadwaliTttm.jadwal.model === 'tttm', 'مدل tttm');
+assert(jadwaliTttm.jamal === 5022 && jadwaliTttm.mizan === 10, 'tttm همچنان میزان از اساس کامل');
+assert(jadwaliTttm.columnBase.length === 49, 'tttm ستون ۴۹');
+assert(jadwaliTttm.jadwal.layers[0].title.includes('مساوات'), 'سطر اول مساوات');
+assert(jadwaliTttm.steps.some((s) => s.id === 'jadwal_laqt_classic'), 'گام لقط کلاسیک در مراحل');
+assert(E.describeOptions({ pipeline: 'jadwali', jadwalModel: 'tttm' }).includes('ترفع'), 'توضیح مدل tttm');
+
 const layersQ = E.buildJadwalLayers(E.normalizeText('نتیجه نهایی جنگ'));
 assert(layersQ.C === layersQ.nA && layersQ.D === layersQ.nB, 'C=نظیرهA و D=نظیرهB');
+const layersT = E.buildJadwalLayers(E.normalizeText('نتیجه'), 'tttm');
+assert(layersT.model === 'tttm' && layersT.B === E.applyTaraqi(layersT.A), 'tttm ترقی از اساس');
 const warAsas = E.normalizeText('نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود');
 assert(warAsas.length === 49, 'سؤال جنگ = ۴۹ ستون');
 const warLayers = E.buildJadwalLayers(warAsas);
@@ -138,6 +162,7 @@ const warSael = E.runClassic({
 assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل مهدی: جمل ۵۰۲۲ / میزان ۱۰');
 assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
 assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
+assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام ۱۰ از ۴۹ ستون');
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');

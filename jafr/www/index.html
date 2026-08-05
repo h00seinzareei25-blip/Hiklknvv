@@ -122,7 +122,17 @@
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون‌ها فقط از سؤال → لایه‌های A–D + نظیره → سطر انتخاب → لقط میزانی. نطق جمله‌ای.</p>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون‌ها فقط از سؤال → لایه‌ها → لقط میزانی کلاسیک → نطق جمله‌ای.</p>
+        <div id="jadwalOpts">
+          <div class="field">
+            <label for="jadwalModel">مدل لایه‌های جدولی</label>
+            <select id="jadwalModel">
+              <option value="quarter28" selected>ربع دایره (A+0 / B+7 / C+14 / D+21)</option>
+              <option value="tttm">ترفع · ترقی · تنزل · مساوات (کلاسیک کتب)</option>
+            </select>
+          </div>
+          <p class="hint">هر دو مدل لقط میزانی کلاسیک (گام=میزان) را هم می‌سازند.</p>
+        </div>
         <div id="classicOpts" class="hidden">
           <div class="field">
             <label for="bastMode">بسط / بینات</label>
