@@ -55,7 +55,7 @@
     }
   }
 
-  function todayShamsi() {
+  function todayShamsiNumeric() {
     try {
       const parts = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
         year: 'numeric',
@@ -72,10 +72,18 @@
     }
   }
 
+  /** امروز به سبک اسکرین: پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران */
+  function todayShamsiPersian() {
+    if (window.JafrEngine && typeof JafrEngine.formatTodayShamsiPersian === 'function') {
+      return JafrEngine.formatTodayShamsiPersian({ withHijriShamsi: true, withInIran: true }) || '';
+    }
+    return todayShamsiNumeric();
+  }
+
   function ensureTodayDate(force) {
     const el = $('questionDate');
     if (!el) return;
-    if (force || !el.value.trim()) el.value = todayShamsi();
+    if (force || !el.value.trim()) el.value = todayShamsiPersian();
   }
 
   function syncExtraUI() {
@@ -595,7 +603,7 @@
   if ($('btnTodayDate')) {
     $('btnTodayDate').addEventListener('click', () => {
       ensureTodayDate(true);
-      showAlert('ok', 'تاریخ امروز شمسی گذاشته شد: ' + ($('questionDate').value || '—'));
+      showAlert('ok', 'تاریخ امروز فارسی گذاشته شد: ' + ($('questionDate').value || '—'));
     });
   }
   $('btnSelectDefault').addEventListener('click', () => {

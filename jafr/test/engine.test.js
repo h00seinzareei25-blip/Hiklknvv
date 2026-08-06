@@ -34,6 +34,14 @@ assert(E.takseerMuakhkharSadr('ABCDEF') === 'FAEBDC', 'تکسیر مؤخر و ص
 assert(E.sumAbjad('محمد', 'kabir').sum === 92, 'ابجد محمد = ۹۲');
 assert(E.expandDigitsToWords('14') === 'یکچهار', 'تبدیل ارقام به واژه');
 assert(E.normalizeDateTimeField('14:30').includes('یک'), 'نرمال تاریخ/ساعت با رقم');
+assert(E.numberToPersianWords(1405) === 'هزار و چهارصد و پنج', 'سال ۱۴۰۵ حروفی');
+assert(E.formatShamsiDatePersian({ year: 1405, month: 5, day: 15 }).includes('پانزدهم'), 'روز پانزدهم');
+assert(E.formatShamsiDatePersian({ year: 1405, month: 5, day: 15 }).includes('مرداد'), 'ماه مرداد');
+assert(E.formatShamsiDatePersian({ year: 1405, month: 5, day: 15 }).endsWith('در ایران'), 'پسوند در ایران');
+assert(/هشتم مرداد هزار و چهارصد و پنج هجری شمسی در ایران/.test(
+  E.formatShamsiDatePersian({ year: 1405, month: 5, day: 8 })
+), 'سبک اسکرین هشتم مرداد… در ایران');
+assert(E.formatTodayShamsiPersian().includes('هجری شمسی'), 'امروز فارسی شامل هجری شمسی');
 
 const baseInput = {
   sael: 'حسین',

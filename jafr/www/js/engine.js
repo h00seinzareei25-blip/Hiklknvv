@@ -380,6 +380,84 @@
     return normalizeText(expanded, report);
   }
 
+  /** ماه‌های شمسی (۱…۱۲) — برای تاریخ حروفی شبیه اسکرین */
+  const SHAMSI_MONTHS = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+
+  const DAY_ORDINALS = {
+    1: 'یکم', 2: 'دوم', 3: 'سوم', 4: 'چهارم', 5: 'پنجم', 6: 'ششم', 7: 'هفتم',
+    8: 'هشتم', 9: 'نهم', 10: 'دهم', 11: 'یازدهم', 12: 'دوازدهم', 13: 'سیزدهم',
+    14: 'چهاردهم', 15: 'پانزدهم', 16: 'شانزدهم', 17: 'هفدهم', 18: 'هجدهم',
+    19: 'نوزدهم', 20: 'بیستم', 21: 'بیست و یکم', 22: 'بیست و دوم', 23: 'بیست و سوم',
+    24: 'بیست و چهارم', 25: 'بیست و پنجم', 26: 'بیست و ششم', 27: 'بیست و هفتم',
+    28: 'بیست و هشتم', 29: 'بیست و نهم', 30: 'سی‌ام', 31: 'سی و یکم'
+  };
+
+  function numberToPersianWords(n) {
+    const x = Math.floor(Number(n) || 0);
+    if (x <= 0) return '';
+    const ones = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
+    const teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'];
+    const tens = ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
+    const hundreds = ['', 'صد', 'دویست', 'سیصد', 'چهارصد', 'پانصد', 'ششصد', 'هفتصد', 'هشتصد', 'نهصد'];
+    function under100(v) {
+      if (v < 10) return ones[v];
+      if (v < 20) return teens[v - 10];
+      const t = Math.floor(v / 10);
+      const o = v % 10;
+      return tens[t] + (o ? (' و ' + ones[o]) : '');
+    }
+    function under1000(v) {
+      const h = Math.floor(v / 100);
+      const r = v % 100;
+      if (!h) return under100(r);
+      return hundreds[h] + (r ? (' و ' + under100(r)) : '');
+    }
+    if (x < 1000) return under1000(x);
+    const th = Math.floor(x / 1000);
+    const rest = x % 1000;
+    const thWord = th === 1 ? 'هزار' : (under100(th) + ' هزار');
+    return rest ? (thWord + ' و ' + under1000(rest)) : thWord;
+  }
+
+  /**
+   * تاریخ شمسی حروفی به سبک اسکرین حرفه‌ای:
+   * «پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران»
+   * در فیلد تاریخ می‌نشیند (نه داخل متن سؤال) تا جمل/میزان درست شود و ستون جدول عوض نشود.
+   */
+  function formatShamsiDatePersian(parts, opts) {
+    const o = opts || {};
+    const y = Number(parts && parts.year);
+    const m = Number(parts && parts.month);
+    const d = Number(parts && parts.day);
+    if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return '';
+    const dayWord = DAY_ORDINALS[d] || String(d);
+    const monthWord = SHAMSI_MONTHS[m - 1];
+    const yearWord = numberToPersianWords(y);
+    const bits = [dayWord, monthWord, yearWord];
+    if (o.withHijriShamsi !== false) bits.push('هجری شمسی');
+    if (o.withInIran !== false) bits.push('در ایران');
+    return bits.filter(Boolean).join(' ');
+  }
+
+  /** امروز شمسی → عبارت فارسی حروفی (برای دکمهٔ امروز) */
+  function formatTodayShamsiPersian(opts) {
+    try {
+      const fmt = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      });
+      const parts = fmt.formatToParts(new Date());
+      const get = (t) => Number((parts.find((p) => p.type === t) || {}).value || 0);
+      return formatShamsiDatePersian({ year: get('year'), month: get('month'), day: get('day') }, opts);
+    } catch (e) {
+      return '';
+    }
+  }
+
   /**
    * نوع سؤال از متون معتبر جفر (طوخى/شاد گیلانی، السر اللامع، مستحصلهٔ عسکریه):
    * - مرکزی: جواب ثابت با زمان → نام سائل لازم نیست
@@ -2835,6 +2913,7 @@
   global.JafrEngine = {
     ABJAD_ORDER, ABJAD_QUTB, ABJAD_SHAMSI, ABJAD_KABIR, LETTER_NAMES, METHOD_PRESETS, JAMAL_LOCK_TARGET,
     normalizeText, normalizeDateTimeField, expandDigitsToWords,
+    SHAMSI_MONTHS, numberToPersianWords, formatShamsiDatePersian, formatTodayShamsiPersian,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,

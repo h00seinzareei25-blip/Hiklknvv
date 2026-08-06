@@ -69,13 +69,17 @@
 
       <div id="mizanDateBox" class="extra-box" style="margin-top:10px">
         <div class="field">
-          <label for="questionDate">تاریخ سؤال (شمسی · برای میزان/جدولی)</label>
+          <label for="questionDate">تاریخ سؤال (فارسی حروفی · برای میزان/جدولی)</label>
           <div class="date-row">
-            <input id="questionDate" type="text" placeholder="مثال اسکرین: هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران" autocomplete="off">
-            <button class="btn btn-ghost" id="btnTodayDate" type="button">امروز</button>
+            <input id="questionDate" type="text" placeholder="مثال: پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران" autocomplete="off">
+            <button class="btn btn-ghost" id="btnTodayDate" type="button" title="امروز را به فارسی حروفی می‌گذارد">امروز فارسی</button>
           </div>
         </div>
-        <p class="hint">تاریخ در محوری وارد <strong>جمل/میزان</strong> می‌شود؛ ستون جدول فقط از متن سؤال. ابجد: آ→ا=۱.</p>
+        <div class="date-help">
+          <p class="hint"><strong>تاریخ حروفی (سبک اسکرین):</strong> مثل «هشتم مرداد هزار و چهارصد و پنج هجری شمسی در ایران» — در همین فیلد بنویس، نه داخل متن سؤال.</p>
+          <p class="hint">چرا؟ تاریخ وارد <strong>جمل/میزان</strong> می‌شود؛ ستون جدول فقط از متن سؤال است. رقم مثل <code>1405/05/15</code> یا دکمهٔ عددی قدیمی با تاریخ حروفی یکی نیست و جواب عوض می‌شود.</p>
+          <p class="hint">دکمهٔ «امروز فارسی» همان عبارت حروفی + «هجری شمسی در ایران» را خودکار می‌گذارد.</p>
+        </div>
       </div>
 
       <div class="check" style="margin-top:8px">
