@@ -183,14 +183,18 @@ assert(typeof seed.lexAssist === 'string', 'lexAssist جدا از بذر موج�
 assert(seed.draftLine === seed.seedDraft || seed.draftLine === seed.lexAssist || seed.draftLine === seed.afterNazira, 'draftLine از بذر یا کمک است');
 assert(E.segmentReadingLine('بضدمهاجرین', ['بضد', 'مهاجرین']).readable === 'بضد مهاجرین', 'بخش‌بندی متصل حروف');
 
-// اولویت seedDraft روی lexAssist وقتی بخش‌بندی معنادار است
+// اولویت seedDraft از اسکن ترکیب پشت‌سرهم (نه چسباندن بانک)
 const seedPri = E.buildClassicalNatqSeed('بضدمهاجرین', {
   pool: 'بضدمهاجرینخوفسخت',
   bank: ['خوف', 'سخت', 'بقا', 'نادم', 'بضد', 'مهاجرین']
 });
-assert(seedPri.seedDraft && seedPri.seedDraft !== seedPri.lexAssist, 'seedDraft غیر از lexAssist وقتی بخش‌بندی هست');
-assert(seedPri.draftLine === seedPri.seedDraft, 'draftLine اولویت با seedDraft دارد نه چسباندن بانک');
+assert(seedPri.tableScan && seedPri.tableScan.satrScan, 'اسکن ترکیب پشت‌سرهم موجود است');
+assert(seedPri.seedDraft && /بضد|مهاجرین/.test(seedPri.seedDraft), 'seedDraft از توالی بضدمهاجرین واژه می‌سازد');
 assert(!/^خوف\s+سخت/.test(seedPri.draftLine), 'draftLine با ردیف بانک شروع نمی‌شود');
+const consec = E.scanConsecutiveColumnWords('بضدمهاجرین', ['بضد', 'مهاجرین', 'خوف']);
+assert(consec.chainText === 'بضد مهاجرین', 'زنجیرهٔ ۱–۲–۳ حرفی: بضد مهاجرین');
+assert(consec.hits.some((h) => h.word === 'بضد' && h.colFrom === 1 && h.colTo === 3), 'بضد = ستون ۱–۳');
+assert(consec.hits.some((h) => h.norm === 'مهاجرین' && h.colFrom === 4), 'مهاجرین از ستون ۴');
 
 // تفکیک نقش: میزان از اساس کامل، ستون فقط از سؤال
 const warDate = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
@@ -329,6 +333,8 @@ assert(warSael.legal.laqt.fromSelected.length === 4, 'با میزان ۱۰ رو�
 assert(warSael.legal.mustahdara === warSael.jadwal.selected, 'مستحضره در استخراج قانونی');
 assert(warSael.legal.seedA && warSael.legal.seedB, 'بذر A/B در استخراج قانونی');
 assert(warSael.jadwal.onePerColumn !== false && warSael.jadwal.picks.every((p) => p.onePerColumn), 'picks جدول یک‌حرف‌در‌ستون');
+assert(warSael.natqSeed.tableScan && Array.isArray(warSael.natqSeed.tableScan.candidateWords), 'نتیجهٔ جنگ اسکن واژه دارد');
+assert(/پشت‌سرهم|ترکیب ۱|واژه/.test(warSael.legal.rules.join(' ')), 'قواعد ترکیب پشت‌سرهم');
 const legalCoverRef = E.provenanceAgainstLegal(refNatq, warSael.legal);
 assert(!legalCoverRef.complete, 'جملهٔ اسکرین روی حروف قانونی این اجرا کامل نیست → جواب این حساب نیست');
 assert(warSael.natqLock && warSael.natqLock.reference && warSael.natqLock.reference.literarySample, 'اسکرین به‌عنوان نمونه ادبی برچسب خورده');

@@ -392,7 +392,17 @@
     if (legal.mustLines && legal.mustLines.length) {
       parts.push('<p class="hint">منشأ ستون‌ها: ' + escapeHtml(legal.mustLines.slice(0, 12).join(' · ')) + '</p>');
     }
-    parts.push('<p class="hint">قانون: از هر ستون یک حرف. اگر نطق با کلمات قبلی هم‌خوان بود درست است.</p>');
+    parts.push('<p class="hint">قانون: از هر ستون یک حرف → ترکیب ۱–۲–۳… حرفی = واژه → واژه‌ها کنار هم = جواب مرتبط با سؤال.</p>');
+    if (legal.chainText) {
+      parts.push('<p><strong>زنجیرهٔ واژه‌ها:</strong> «' + escapeHtml(legal.chainText) + '»</p>');
+    }
+    if (legal.wordLines && legal.wordLines.length) {
+      parts.push('<p><strong>واژه‌های کاندید (بازهٔ ستون):</strong></p><ul class="natq-prov-list">');
+      legal.wordLines.forEach((ln) => {
+        parts.push('<li class="ok"><span class="d">' + escapeHtml(ln) + '</span></li>');
+      });
+      parts.push('</ul>');
+    }
     parts.push('<p><strong>لقط میزانی (گام ' + escapeHtml(String(legal.mizan || '')) + '):</strong></p><ul class="natq-prov-list">');
     (legal.laqtLines || []).forEach((ln) => {
       parts.push('<li class="ok"><span class="d">' + escapeHtml(ln) + '</span></li>');
@@ -482,8 +492,13 @@
     }
     if ($('natqLineA')) $('natqLineA').textContent = ns.afterNazira || ns.readingLine || '—';
     if ($('natqLineB')) $('natqLineB').textContent = (ns.qutbPath && ns.qutbPath.readingLine) || '—';
-    if ($('natqDraft')) $('natqDraft').textContent = ns.seedDraft || ns.draftLine || '—';
-    if ($('natqLexAssist')) $('natqLexAssist').textContent = ns.lexAssist || '— (بانک فقط کمکی؛ اسکلت نطق نیست)';
+    if ($('natqDraft')) $('natqDraft').textContent = (ns.tableScan && ns.tableScan.chainText) || ns.seedDraft || ns.draftLine || '—';
+    if ($('natqLexAssist')) {
+      const consec = (ns.candidateWords || []).filter((w) => w.complete && w.consecutive).slice(0, 12);
+      $('natqLexAssist').textContent = consec.length
+        ? consec.map((w) => w.word + (w.colFrom ? `(${w.colFrom}–${w.colTo})` : '')).join('، ')
+        : (ns.lexAssist || '— هنوز واژهٔ پشت‌سرهم یافت نشد');
+    }
     if ($('natqWords')) {
       const words = (ns.candidateWords || []).filter((w) => w.complete).slice(0, 14).map((w) => w.word);
       $('natqWords').textContent = words.length ? words.join('، ') : '—';

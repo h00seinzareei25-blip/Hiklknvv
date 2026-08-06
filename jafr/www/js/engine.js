@@ -741,46 +741,145 @@
   }
 
   /**
-   * خوانش متصل: حروف را بدون جابه‌جایی با تطبیق حریصانهٔ واژه‌های بانک بخش می‌کند
-   * («حاصلہ حروف کو ملا کر پڑھیں» — مستحصلہ تکمیل آرزو)
+   * خوانش متصل حریصانه (سازگاری قبلی)
    */
   function segmentReadingLine(letterLine, bank) {
+    const scan = scanConsecutiveColumnWords(letterLine, bank, { greedyChain: true });
+    return {
+      parts: scan.chainParts,
+      words: scan.chainWords.map((w) => w.word),
+      joined: scan.chainParts.join(''),
+      readable: scan.chainText,
+      coverageRatio: scan.coverageRatio,
+      hits: scan.hits,
+      chain: scan.chainWords
+    };
+  }
+
+  /**
+   * قانون نطق جدول رنگی:
+   * حروف ستون‌ها پشت‌سرهم سنجیده می‌شوند؛ ترکیب ۱ یا ۲ یا ۳ یا … حرفی اگر واژه شد کنار گذاشته می‌شود؛
+   * سپس همان واژه‌ها در کنار هم باید جواب مرتبط با سؤال بسازند.
+   */
+  function scanConsecutiveColumnWords(letterLine, bank, opts) {
     const s = String(letterLine || '');
-    const norms = [];
-    const seen = new Set();
+    const minLen = (opts && opts.minLen > 0) ? (opts.minLen | 0) : 1;
+    const maxLen = (opts && opts.maxLen > 0) ? (opts.maxLen | 0) : 8;
+    const dict = new Map();
     (bank || []).forEach((w) => {
       const n = normalizeText(w);
-      if (n.length >= 2 && n.length <= 12 && !seen.has(n)) {
-        seen.add(n);
-        norms.push(n);
-      }
+      if (n.length >= minLen && n.length <= maxLen && !dict.has(n)) dict.set(n, w);
     });
-    norms.sort((a, b) => b.length - a.length || a.localeCompare(b));
-    const parts = [];
+    // واژه‌های ۱حرفی فقط اگر در بانک باشند (وگرنه نویز)
+    const hits = [];
+    for (let i = 0; i < s.length; i++) {
+      for (let len = Math.min(maxLen, s.length - i); len >= minLen; len--) {
+        const slice = s.slice(i, i + len);
+        if (!dict.has(slice)) continue;
+        // برای len=1 فقط اگر بانک صریحاً داشته باشد
+        if (len === 1 && !dict.has(slice)) continue;
+        hits.push({
+          word: dict.get(slice) || slice,
+          norm: slice,
+          start: i,
+          end: i + len,
+          colFrom: i + 1,
+          colTo: i + len,
+          span: len,
+          detail: `ستون‌های ${i + 1}–${i + len}: ${slice}`
+        });
+      }
+    }
+    // یکتا بر اساس (start,end)
+    const seen = new Set();
+    const uniq = [];
+    hits.forEach((h) => {
+      const k = h.start + ':' + h.end;
+      if (seen.has(k)) return;
+      seen.add(k);
+      uniq.push(h);
+    });
+    // زنجیرهٔ چپ→راست: در هر موقعیت بلندترین واژه، وگرنه حرف تکی به‌عنوان شکاف
+    const chainWords = [];
+    const chainParts = [];
     let i = 0;
     while (i < s.length) {
-      let hit = null;
-      for (const w of norms) {
-        if (s.slice(i, i + w.length) === w) {
-          hit = w;
-          break;
-        }
-      }
-      if (hit) {
-        parts.push(hit);
-        i += hit.length;
+      const at = uniq.filter((h) => h.start === i).sort((a, b) => b.span - a.span || a.norm.localeCompare(b.norm));
+      if (at.length) {
+        const best = at[0];
+        chainWords.push(best);
+        chainParts.push(best.norm);
+        i = best.end;
       } else {
-        parts.push(s[i]);
+        chainParts.push(s[i]);
         i += 1;
       }
     }
-    const words = parts.filter((p) => p.length >= 2);
+    const covered = chainWords.reduce((n, w) => n + w.span, 0);
     return {
-      parts,
-      words,
-      joined: parts.join(''),
-      readable: words.join(' '),
-      coverageRatio: s.length ? words.join('').length / s.length : 0
+      line: s,
+      hits: uniq.sort((a, b) => a.start - b.start || b.span - a.span),
+      chainWords,
+      chainParts,
+      chainText: chainWords.map((w) => w.word).join(' '),
+      coverageRatio: s.length ? covered / s.length : 0,
+      summary: uniq.length
+        ? `${uniq.length} واژهٔ کاندید از ترکیب ۱–${maxLen} حرفی · زنجیره: «${chainWords.map((w) => w.word).join(' ')}»`
+        : 'هنوز واژهٔ بانکی از ترکیب پشت‌سرهم ساخته نشد — بذر A/B را هم اسکن کن'
+    };
+  }
+
+  /**
+   * اسکن نطق جدول: سطر یک‌حرفی (مستحضره) + بذر A/B
+   * خروجی: واژه‌های کاندید با بازهٔ ستون + زنجیرهٔ پیشنهادی مرتبط با موضوع
+   */
+  function buildTableNatqScan(mustahdara, natqSeed, bank, opts) {
+    const topicBank = bank || [];
+    const fullBank = topicBank.concat(CORE_LEXICON || []);
+    const satrScan = scanConsecutiveColumnWords(mustahdara, fullBank, opts);
+    const seedA = natqSeed && (natqSeed.afterNazira || natqSeed.readingLine) || '';
+    const seedB = natqSeed && natqSeed.qutbPath && natqSeed.qutbPath.readingLine || '';
+    const scanA = scanConsecutiveColumnWords(seedA, fullBank, opts);
+    const scanB = scanConsecutiveColumnWords(seedB, fullBank, opts);
+    // اولویت زنجیره: هر کدام پوشش بیشتر و واژه بیشتر
+    const ranked = [
+      { id: 'mustahdara', title: 'مستحضره (۱ حرف/ستون)', scan: satrScan },
+      { id: 'seedA', title: 'بذر A (بعد از تبدیل قانونی)', scan: scanA },
+      { id: 'seedB', title: 'بذر B (بعد از تبدیل قانونی)', scan: scanB }
+    ].sort((a, b) =>
+      (b.scan.chainWords.length - a.scan.chainWords.length) ||
+      (b.scan.coverageRatio - a.scan.coverageRatio)
+    );
+    const best = ranked[0];
+    const allWords = [];
+    const seenW = new Set();
+    [satrScan, scanA, scanB].forEach((sc, idx) => {
+      const src = idx === 0 ? 'must' : (idx === 1 ? 'A' : 'B');
+      (sc.hits || []).forEach((h) => {
+        const k = src + ':' + h.norm + ':' + h.colFrom;
+        if (seenW.has(k)) return;
+        seenW.add(k);
+        allWords.push(Object.assign({ source: src }, h));
+      });
+    });
+    return {
+      satrScan,
+      scanA,
+      scanB,
+      ranked,
+      best,
+      candidateWords: allWords.slice(0, 40),
+      chainText: best.scan.chainText,
+      chainWords: best.scan.chainWords,
+      summary: best.scan.chainWords.length
+        ? `واژه‌های نطق از ${best.title}: «${best.scan.chainText}» — کنار هم باید جواب مرتبط با سؤال بسازند`
+        : 'واژه از ترکیب پشت‌سرهم کم است؛ حروف سطر را با صبر با بانک/معنای سؤال بسنج',
+      rules: [
+        'از هر ستون یک حرف؛ حروف پشت‌سرهم سنجیده می‌شوند',
+        'ترکیب ۱ یا ۲ یا ۳ یا … حرفی اگر واژه شد کنار گذاشته می‌شود',
+        'همان واژه‌ها در کنار هم باید جواب مرتبط با سؤال بسازند',
+        'واژه خارج از توالی ستون‌ها (از هوا) ممنوع است'
+      ]
     };
   }
 
@@ -788,7 +887,7 @@
    * بذر نطق کلاسیک از مستحصله
    * A) مشهور: مستحصله → مؤخرصدر → نظیرهٔ قمری → خواندن
    * B) خودناطق تکمیل آرزو: نظیرهٔ قطب → مؤخرصدر×۲ → نظیرهٔ قمری → خواندن
-   * C) واژه‌پوش از مخزن A–D (کمکی)
+   * C) اسکن ترکیب پشت‌سرهم روی سطر/بذر
    */
   function buildClassicalNatqSeed(mustehsila, opts) {
     const src = String(mustehsila || '');
@@ -803,8 +902,29 @@
     if (opts && opts.forbidPolar) {
       bank = bank.filter((w) => !isPolarBankWord(w));
     }
+    const tableScan = buildTableNatqScan(src, {
+      afterNazira: naziraLine,
+      readingLine: naziraLine,
+      qutbPath: { readingLine: qutbRead }
+    }, bank);
     const words = [];
     const seen = new Set();
+    // اول واژه‌های اسکن پشت‌سرهم (قانونی)
+    (tableScan.candidateWords || []).forEach((h) => {
+      if (seen.has(h.norm)) return;
+      seen.add(h.norm);
+      words.push({
+        word: h.norm,
+        coverage: 1,
+        complete: true,
+        span: h.span,
+        colFrom: h.colFrom,
+        colTo: h.colTo,
+        source: h.source,
+        consecutive: true
+      });
+    });
+    // سپس واژه‌پوش مخزن (کمکی) اگر در pool کامل است
     bank.forEach((w) => {
       const norm = normalizeText(w);
       if (norm.length < 2 || norm.length > 10) return;
@@ -812,19 +932,20 @@
       const cov = coverageAgainst(norm, pool);
       if (cov.complete || cov.ratio >= 0.85) {
         seen.add(norm);
-        words.push({ word: norm, coverage: cov.ratio, complete: !!cov.complete });
+        words.push({ word: norm, coverage: cov.ratio, complete: !!cov.complete, consecutive: false });
       }
     });
-    words.sort((a, b) => (b.complete - a.complete) || (b.coverage - a.coverage) || (a.word.length - b.word.length));
-    const top = words.filter((w) => w.complete).slice(0, 12);
+    words.sort((a, b) =>
+      ((b.consecutive ? 1 : 0) - (a.consecutive ? 1 : 0)) ||
+      (b.complete - a.complete) ||
+      (b.coverage - a.coverage) ||
+      (a.word.length - b.word.length)
+    );
+    const top = words.filter((w) => w.complete && w.consecutive).slice(0, 12);
     const lexAssist = top.length ? top.slice(0, 8).map((w) => w.word).join(' ') : '';
-    const segA = segmentReadingLine(naziraLine, bank);
-    const segB = segmentReadingLine(qutbRead, bank);
-    const bestSeg = segB.coverageRatio > segA.coverageRatio ? segB : segA;
-    // اولویت با خوانش متصل بذر A/B؛ واژه‌پوش بانک فقط کمکی است (نه چسباندن به‌عنوان نطق)
-    const seedDraft = (bestSeg.coverageRatio >= 0.25 && bestSeg.readable)
-      ? bestSeg.readable
-      : naziraLine;
+    const seedDraft = tableScan.chainText
+      || (tableScan.satrScan && tableScan.satrScan.chainText)
+      || naziraLine;
     const draftLine = seedDraft || lexAssist || naziraLine;
     return {
       source: src,
@@ -837,12 +958,19 @@
         afterTakseer2: qutbTakseer2,
         readingLine: qutbRead
       },
-      segmented: { qamari: segA, qutb: segB, best: bestSeg },
+      segmented: {
+        qamari: segmentReadingLine(naziraLine, bank),
+        qutb: segmentReadingLine(qutbRead, bank),
+        best: Object.assign({}, tableScan.best && tableScan.best.scan, {
+          readable: (tableScan.best && tableScan.best.scan && tableScan.best.scan.chainText) || tableScan.chainText || ''
+        })
+      },
+      tableScan,
       candidateWords: words.slice(0, 24),
       seedDraft,
       lexAssist,
       draftLine,
-      classicNote: 'A/B بذر اصل خوانش است؛ واژه‌پوش بانک فقط کمکی — چسباندن ردیف بانک = نطق غلط'
+      classicNote: 'از هر ستون ۱ حرف → ترکیب ۱–۲–۳… حرفی واژه → واژه‌ها کنار هم = جواب مرتبط با سؤال'
     };
   }
 
@@ -1281,10 +1409,8 @@
     ] : [];
 
     const bank = (natqSeed && natqSeed.candidateWords) || [];
-    const legalWords = bank.filter((w) => {
-      if (!w || !w.complete) return false;
-      return coverageAgainst(w.word, legalPool + seedA + seedB).complete;
-    }).slice(0, 20);
+    const legalWords = bank.filter((w) => w && w.complete && (w.consecutive || coverageAgainst(w.word, legalPool + seedA + seedB).complete)).slice(0, 20);
+    const tableScan = (natqSeed && natqSeed.tableScan) || buildTableNatqScan(sel && sel.selected || '', natqSeed, []);
 
     const mustLines = uniqueColPicks.slice(0, 24).map((p) =>
       `ستون${p.col}: ${p.ch}←${p.row}${p.col}` + (p.category ? `(${p.category})` : '')
@@ -1298,6 +1424,9 @@
         if (t) laqtLines.push(`شاهد سطر ${k} (نه جمع با ستون‌های دیگر): ${t}`);
       });
     }
+    const wordLines = (tableScan.candidateWords || []).slice(0, 16).map((h) =>
+      `«${h.word}» ← ستون ${h.colFrom}–${h.colTo} (${h.source === 'must' ? 'مستحضره' : 'بذر ' + h.source})`
+    );
 
     const multi = [...byCol.values()].length !== mustPicks.length;
     return {
@@ -1314,14 +1443,19 @@
       legalWords,
       mustLines,
       laqtLines,
+      tableScan,
+      wordLines,
+      chainText: tableScan.chainText || '',
       onePerColumn: true,
       columnCount: uniqueColPicks.length,
-      summary: `استخراج قانونی جدول رنگی: از هر ستون ۱ حرف (${uniqueColPicks.length} ستون) + لقط یک‌حرفی · حروف یکتا: ${legalPool.length}`,
+      summary: tableScan.chainText
+        ? `۱ حرف/ستون → واژه‌های پشت‌سرهم: «${tableScan.chainText}» · باید جواب مرتبط با سؤال بسازند`
+        : `استخراج: از هر ستون ۱ حرف (${uniqueColPicks.length} ستون)؛ واژه‌سازی از ترکیب ۱–۲–۳… حرفی`,
       rules: [
-        'از هر ستون جدول رنگی دقیقاً یک حرف انتخاب می‌شود (نه چند حرف از یک ستون)',
-        'نطق = خواندن همان حروف به‌ترتیب ستون؛ اگر با کلمات قبلی هم‌خوان بود درست است',
-        'لقط میزانی فقط همان یک حرفِ انتخاب‌شدهٔ ستون‌های مضرب میزان را برمی‌دارد',
-        'جمع کردن A+B+C+D در یک ستون برای نطق ممنوع است'
+        'از هر ستون جدول رنگی دقیقاً یک حرف',
+        'حروف پشت‌سرهم سنجیده می‌شوند؛ ترکیب ۱ یا ۲ یا ۳ یا … حرفی اگر واژه شد کنار گذاشته می‌شود',
+        'همان واژه‌ها در کنار هم باید جواب مرتبط با سؤال بسازند',
+        'جمع چند حرف از یک ستون (A+B+C+D) ممنوع است'
       ],
       warnMulti: multi ? 'هشدار: pick تکراری ستون حذف شد' : null
     };
@@ -1501,7 +1635,14 @@
     if (legal.mustLines && legal.mustLines.length) {
       lines.push('منشأ ستون‌ها: ' + legal.mustLines.slice(0, 16).join(' · '));
     }
-    lines.push('قانون: از هر ستون یک حرف؛ نطق هم‌خوان با کلمات قبلی = درست.');
+    lines.push('قانون: از هر ستون یک حرف؛ ترکیب ۱–۲–۳… حرفی = واژه؛ واژه‌ها کنار هم = جواب مرتبط با سؤال.');
+    if (legal.chainText) {
+      lines.push(`### زنجیرهٔ واژه‌های استخراج‌شده: «${legal.chainText}»`);
+    }
+    if (legal.wordLines && legal.wordLines.length) {
+      lines.push('### واژه‌های کاندید (بازهٔ ستون)');
+      legal.wordLines.forEach((ln) => lines.push('- ' + ln));
+    }
     lines.push('');
     lines.push(`### لقط میزانی (گام=${legal.mizan})`);
     (legal.laqtLines || []).forEach((ln) => lines.push('- ' + ln));
@@ -1535,11 +1676,11 @@
   function analyzeNatqLock(layers, opts) {
     const legal = opts && opts.legal;
     const rules = [
-      'از هر ستون جدول رنگی دقیقاً یک حرف انتخاب می‌شود',
-      'نطق = خواندن همان حروف؛ اگر با کلمات قبلی هم‌خوان بود درست است',
-      'لقط میزانی فقط یک حرف از ستون‌های مضرب میزان (همان حرف انتخاب‌شده)',
-      'جمع چند حرف از یک ستون (A+B+C+D با هم) برای نطق ممنوع است',
-      'جملهٔ «نادم شوند…» فقط نمونهٔ سبک اسکرین است مگر حروفش از همین انتخاب یک‌حرفی بیاید'
+      'از هر ستون جدول رنگی دقیقاً یک حرف',
+      'حروف پشت‌سرهم سنجیده می‌شوند؛ ترکیب ۱ یا ۲ یا ۳ یا … حرفی اگر واژه شد کنار گذاشته می‌شود',
+      'همان واژه‌ها در کنار هم باید جواب مرتبط با سؤال بسازند',
+      'لقط فقط یک حرف از ستون‌های مضرب میزان',
+      'جمع چند حرف از یک ستون ممنوع؛ جملهٔ اسکرین فقط نمونهٔ سبک است'
     ];
     const out = {
       unlocked: true,
@@ -2942,13 +3083,13 @@
       `10) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
     ];
     if (sentenceNatq) {
-      lines.push('11) محصول اصلی جدول رنگی: از هر ستون یک حرف → نطق هم‌خوان با کلمات قبلی.');
-      lines.push('12) از هر ستون دقیقاً یک حرف (خانهٔ انتخاب‌شده در A–D). چند حرف از یک ستون ممنوع.');
-      lines.push('12ب) ممنوع: چسباندن ردیف بانک؛ ممنوع: جمع A+B+C+D در یک ستون.');
-      lines.push('12ج) بذر A/B از همان سطر یک‌حرفی ساخته می‌شود؛ بانک فقط اگر حرفش در همین حروف باشد.');
-      lines.push('12د) پیوند بذر + پیوند قانون (ستونN: حرف←سطر) اجباری.');
-      lines.push('12ه) اگر نطق با کلمات قبلی هم‌خوان نبود، همان انتخاب ستون را عوض نکن مگر قانون دسته بگوید؛ خوانش را اصلاح کن.');
-      lines.push('12و) جملهٔ اسکرین «نادم…» جواب این حساب نیست مگر از همین یک‌حرف‌در‌ستون استخراج شود.');
+      lines.push('11) از هر ستون یک حرف؛ حروف پشت‌سرهم سنجیده می‌شوند.');
+      lines.push('12) ترکیب ۱ یا ۲ یا ۳ یا … حرفی اگر واژه شد کنار بگذار.');
+      lines.push('12ب) همان واژه‌ها را کنار هم بچین تا جواب مرتبط با سؤال ساخته شود.');
+      lines.push('12ج) ممنوع: چند حرف از یک ستون؛ ممنوع: واژه خارج از توالی ستون‌ها؛ ممنوع: چسباندن بانک بی‌توالی.');
+      lines.push('12د) پیوند بذر + پیوند قانون (واژه ← ستون از–تا) اجباری.');
+      lines.push('12ه) اگر زنجیره با سؤال نامرتبط بود، ترکیب‌های دیگر همان توالی را بیازما — حرف از هوا نگیر.');
+      lines.push('12و) جملهٔ اسکرین «نادم…» جواب این حساب نیست مگر از همین توالی استخراج شود.');
       if (isConflict) {
         lines.push('13) سبک زنجیرهٔ کلاسیک مجاز است؛ ولی فقط با حروف قانونی همین جدول/لقط/بذر.');
         lines.push('14) در نطق یک‌خطی نام طرفین سیاسی/جغرافیایی ننویس؛ نام‌ها فقط در تفسیر.');
@@ -3598,6 +3739,7 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     buildAskRefinePrompt, describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
+    scanConsecutiveColumnWords, buildTableNatqScan,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight, buildNatqProvenance, formatProvenanceBlock,
     extractByMizanStepDetailed, buildLegalExtraction, provenanceAgainstLegal, formatLegalExtractionBlock,
     classifyQuestionScope, buildMustehsilaGrid,
