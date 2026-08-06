@@ -325,26 +325,22 @@
     }
     const n = (main[0].str || '').length;
     const mark = {};
-    // رنگ خانه‌های مستحضره (قانون انتخاب دسته)
+    // قانون: از هر ستون دقیقاً یک خانه رنگ شود (حرف انتخاب‌شده)
     if (j.picks && j.picks.length) {
       j.picks.forEach((p) => {
-        const rowMap = { Mus: 'A', Tarfa: 'C', Tanz: 'D', Taraqi: 'B', A: 'A', B: 'B', C: 'C', D: 'D' };
-        const rid = rowMap[p.row] || p.row;
-        if (rid === 'A' || rid === 'B' || rid === 'C' || rid === 'D') {
-          mark[rid + ':' + p.col] = 0;
+        if (p.row === 'A' || p.row === 'B' || p.row === 'C' || p.row === 'D') {
+          mark[p.row + ':' + p.col] = 0;
         }
       });
     }
-    // رنگ ستون‌های لقط میزانی روی A–D
+    // ستون‌های لقط = همان یک خانه، رنگ دوم
     const step = (j.classicLaqt && j.classicLaqt.step) || result.mizan || 0;
-    if (step > 0) {
-      const nCols = (main[0].str || '').length;
-      for (let c = step; c <= nCols; c += step) {
-        ['A', 'B', 'C', 'D'].forEach((rid) => {
-          const key = rid + ':' + c;
-          if (mark[key] == null) mark[key] = 1;
-        });
-      }
+    if (step > 0 && j.picks) {
+      j.picks.forEach((p) => {
+        if ((p.col % step) === 0 && (p.row === 'A' || p.row === 'B' || p.row === 'C' || p.row === 'D')) {
+          mark[p.row + ':' + p.col] = 2;
+        }
+      });
     }
     let html = '<table class="jadwal-table"><thead><tr><th>سطر</th>';
     for (let c = 1; c <= n; c++) html += '<th>' + c + '</th>';
@@ -361,19 +357,17 @@
       html += '</tr>';
     });
     if (j.selected) {
-      html += '<tr class="sel-row"><td class="row-label">مستحضره</td>';
+      html += '<tr class="sel-row"><td class="row-label">مستحضره (۱/ستون)</td>';
       for (let i = 0; i < n; i++) {
         const isLaqt = step > 0 && ((i + 1) % step === 0);
-        html += '<td class="' + (isLaqt ? 'hl-s2' : '') + '">' + escapeHtml(j.selected[i] || '') + '</td>';
+        html += '<td class="' + (isLaqt ? 'hl-s2' : 'hl-s1') + '">' + escapeHtml(j.selected[i] || '') + '</td>';
       }
       html += '</tr>';
     }
     html += '</tbody></table>';
     box.innerHTML = html;
     if (hint) {
-      hint.textContent = step
-        ? ('نارنجی≈خانه‌های مرتبط مستحضره · زرد=ستون لقط (مضرب ' + step + ') · سبز روی مستحضره=حروف لقط')
-        : 'سطرهای A–D و مستحضره؛ نطق از استخراج قانونی.';
+      hint.textContent = 'قانون جدول رنگی: از هر ستون دقیقاً یک حرف (نارنجی). سبز=همان حرف در ستون لقط. چند حرف از یک ستون گرفته نمی‌شود.';
     }
     renderLegalExtraction(result);
     renderNatqProvenance(result);
@@ -393,11 +387,12 @@
     }
     if (summary) summary.textContent = legal.summary || '—';
     const parts = [];
-    parts.push('<p><strong>مستحضره:</strong> <span class="letters" style="display:inline;font-size:14px">' +
+    parts.push('<p><strong>مستحضره (۱ حرف از هر ستون):</strong> <span class="letters" style="display:inline;font-size:14px">' +
       escapeHtml(legal.mustahdara || '—') + '</span></p>');
     if (legal.mustLines && legal.mustLines.length) {
-      parts.push('<p class="hint">منشأ نمونه: ' + escapeHtml(legal.mustLines.slice(0, 12).join(' · ')) + '</p>');
+      parts.push('<p class="hint">منشأ ستون‌ها: ' + escapeHtml(legal.mustLines.slice(0, 12).join(' · ')) + '</p>');
     }
+    parts.push('<p class="hint">قانون: از هر ستون یک حرف. اگر نطق با کلمات قبلی هم‌خوان بود درست است.</p>');
     parts.push('<p><strong>لقط میزانی (گام ' + escapeHtml(String(legal.mizan || '')) + '):</strong></p><ul class="natq-prov-list">');
     (legal.laqtLines || []).forEach((ln) => {
       parts.push('<li class="ok"><span class="d">' + escapeHtml(ln) + '</span></li>');

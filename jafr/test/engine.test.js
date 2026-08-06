@@ -320,9 +320,15 @@ const warLayerMap = {
 const hl = E.planNatqHighlight(refNatq, warLayerMap);
 assert(hl.complete && hl.sweeps === 6 && hl.picks.length === E.normalizeText(refNatq).length, 'جاروی پوشش نمونه ادبی کامل است');
 assert(warSael.legal && warSael.legal.legalPool, 'استخراج قانونی روی نتیجهٔ جنگ موجود است');
-assert(warSael.legal.laqt && warSael.legal.laqt.fromSelected === 'اجاه', 'لقط مستحضره جنگ = اجاه');
+assert(warSael.legal.onePerColumn === true, 'قانون یک‌حرف‌در‌ستون فعال است');
+assert(warSael.legal.mustPicks.length === 49, 'مستحضره جنگ: ۴۹ ستون = ۴۹ حرف');
+assert(warSael.legal.mustPicks.every((p) => p.row === 'A' || p.row === 'B' || p.row === 'C' || p.row === 'D'), 'هر حرف از یکی از سطرهای A–D');
+assert(new Set(warSael.legal.mustPicks.map((p) => p.col)).size === 49, 'هیچ ستونی دو حرف ندارد');
+assert(warSael.legal.laqtPicks.length === warSael.legal.laqt.fromSelected.length, 'لقط فقط یک حرف از هر ستون مضرب');
+assert(warSael.legal.laqt.fromSelected.length === 4, 'با میزان ۱۰ روی ۴۹ ستون: ۴ حرف لقط');
 assert(warSael.legal.mustahdara === warSael.jadwal.selected, 'مستحضره در استخراج قانونی');
 assert(warSael.legal.seedA && warSael.legal.seedB, 'بذر A/B در استخراج قانونی');
+assert(warSael.jadwal.onePerColumn !== false && warSael.jadwal.picks.every((p) => p.onePerColumn), 'picks جدول یک‌حرف‌در‌ستون');
 const legalCoverRef = E.provenanceAgainstLegal(refNatq, warSael.legal);
 assert(!legalCoverRef.complete, 'جملهٔ اسکرین روی حروف قانونی این اجرا کامل نیست → جواب این حساب نیست');
 assert(warSael.natqLock && warSael.natqLock.reference && warSael.natqLock.reference.literarySample, 'اسکرین به‌عنوان نمونه ادبی برچسب خورده');

@@ -1097,24 +1097,17 @@
     const M = Math.max(1, mizan | 0);
     const ids = ['A', 'B', 'C', 'D'];
 
-    // ردیف‌های عملیاتی کلاسیک از اساس ستون
-    const classicRows = [
-      base,                         // مساوات · اساس
-      applyTarfaGrid(base),         // ترفع
-      applyTanzilCircle(base),      // تنزل
-      applyTaraqi(base)             // ترقی
+    // ردیف‌های نمایشی جدول رنگی A–D (یک حرف از هر ستون از همین‌ها انتخاب می‌شود)
+    const abcdRows = [
+      (layers && layers.A) || '',
+      (layers && layers.B) || '',
+      (layers && layers.C) || '',
+      (layers && layers.D) || ''
     ];
-
-    // اگر مدل tttm است، از همان لایه‌های نمایشی با نگاشت دسته→ردیف استفاده کن
-    const useTttm = layers && layers.model === 'tttm';
-    const tttmByCat = useTttm ? [
-      layers.A || '', // مساوات
-      layers.C || '', // ترفع
-      layers.D || '', // تنزل
-      layers.B || ''  // ترقی
-    ] : null;
-    const sourceRows = tttmByCat || classicRows;
-    const sourceIds = useTttm ? ['A', 'C', 'D', 'B'] : ['Mus', 'Tarfa', 'Tanz', 'Taraqi'];
+    // نگاشت دستهٔ کلاسیک → سطر جدول رنگی
+    // مساوات→A ، ترقی→B ، ترفع→C ، تنزل→D
+    const catToAbcd = [0, 2, 3, 1]; // index دسته → index A/B/C/D
+    const catIds = ['A', 'C', 'D', 'B'];
 
     let selected = '';
     const picks = [];
@@ -1124,55 +1117,50 @@
       let rowId;
       let ch;
       if (mode === 'mod4') {
-        const abcd = [
-          (layers && layers.A) || '',
-          (layers && layers.B) || '',
-          (layers && layers.C) || '',
-          (layers && layers.D) || ''
-        ];
         rowIdx = ((i + 1) * M) % 4;
         rowId = ids[rowIdx];
-        ch = abcd[rowIdx][i] || '';
+        ch = abcdRows[rowIdx][i] || '';
       } else {
         const cat = letterCategory(chBase);
-        rowIdx = cat.index | 0;
-        rowId = sourceIds[rowIdx];
-        ch = sourceRows[rowIdx][i] || '';
+        rowIdx = catToAbcd[cat.index | 0] | 0;
+        rowId = ids[rowIdx];
+        ch = abcdRows[rowIdx][i] || '';
         picks.push({
           col: i + 1,
           row: rowId,
           ch,
           category: cat.id,
           categoryTitle: cat.title,
-          base: chBase
+          base: chBase,
+          onePerColumn: true
         });
         selected += ch;
         continue;
       }
       selected += ch;
-      picks.push({ col: i + 1, row: rowId, ch, base: chBase });
+      picks.push({
+        col: i + 1,
+        row: rowId,
+        ch,
+        base: chBase,
+        onePerColumn: true
+      });
     }
 
+    // اولویت کمکی: همان یک‌حرف‌در‌ستون + لقط یک‌حرفی از مستحضره
     let priority = selected;
-    const poolRows = [
-      (layers && layers.A) || classicRows[0],
-      (layers && layers.B) || classicRows[3],
-      (layers && layers.C) || classicRows[1],
-      (layers && layers.D) || classicRows[2]
-    ];
     for (let i = 0; i < n; i++) {
-      if ((i + 1) % M === 0) {
-        for (let r = 0; r < 4; r++) priority += poolRows[r][i] || '';
-      }
+      if ((i + 1) % M === 0) priority += selected[i] || '';
     }
     return {
       selected,
       picks,
       priority,
       mode: mode === 'mod4' ? 'mod4' : 'category',
+      onePerColumn: true,
       classicNote: mode === 'mod4'
-        ? 'انتخاب mod4 نرم‌افزاری (غیرمنقول در رسائل نام‌دار)'
-        : 'مستحضره کلاسیک: دستهٔ حرف (مساوات/ترفع/تنزل/ترقی) → ردیف همان عمل؛ میزان برای لقط'
+        ? 'انتخاب mod4: از هر ستون یک حرف از A–D'
+        : 'مستحضره: از هر ستون دقیقاً یک حرف از جدول رنگی A–D (دستهٔ حرف → سطر)'
     };
   }
 
@@ -1197,11 +1185,11 @@
           col: i + 1,
           row: sourceId || 'row',
           rule: 'laqt_mizan',
-          step: M
+          step: M,
+          onePerColumn: true
         });
       }
     }
-    // اگر هیچ مضربی نبود، کل سطر را با برچسب satr نگه دار (نه اختراع حرف)
     if (!picks.length && src) {
       for (let i = 0; i < src.length; i++) {
         picks.push({
@@ -1209,32 +1197,33 @@
           col: i + 1,
           row: sourceId || 'row',
           rule: 'satr_full',
-          step: M
+          step: M,
+          onePerColumn: true
         });
       }
     }
     return { text: picks.map((p) => p.ch).join(''), picks, step: M, source: sourceId || 'row' };
   }
 
-  /** لقط کلاسیک از چند سطر (اساس + انتخاب + ABCD) با منشأ هر حرف */
+  /**
+   * لقط کلاسیک برای گزارش:
+   * اصل نطق جدول رنگی = فقط لقط از مستحضره (یک حرف در ستون).
+   * لقط A/B/C/D جداگانه فقط شاهد سطر است — با هم در یک ستون جمع نمی‌شوند.
+   */
   function buildClassicLaqtBundle(columnBase, layers, selected, mizan) {
     const M = Math.max(1, mizan | 0);
+    const fromSelected = extractByMizanStepDetailed(selected, M, 'Must');
     const parts = {
       asas: extractByMizanStepDetailed(columnBase, M, 'Asas'),
-      selected: extractByMizanStepDetailed(selected, M, 'Must'),
+      selected: fromSelected,
       A: extractByMizanStepDetailed((layers && layers.A) || '', M, 'A'),
       B: extractByMizanStepDetailed((layers && layers.B) || '', M, 'B'),
       C: extractByMizanStepDetailed((layers && layers.C) || '', M, 'C'),
       D: extractByMizanStepDetailed((layers && layers.D) || '', M, 'D')
     };
-    const picks = []
-      .concat(parts.asas.picks)
-      .concat(parts.selected.picks)
-      .concat(parts.A.picks)
-      .concat(parts.B.picks)
-      .concat(parts.C.picks)
-      .concat(parts.D.picks);
-    const pooled = picks.map((p) => p.ch).join('');
+    // حروف قانونی لقط جدول = فقط مستحضره (یک حرف از هر ستونِ مضرب)
+    const picks = fromSelected.picks.slice();
+    const pooled = fromSelected.text;
     return {
       step: M,
       fromAsas: parts.asas.text,
@@ -1246,66 +1235,75 @@
       pooled,
       unique: uniqueLetters(pooled),
       picks,
-      parts
+      parts,
+      onePerColumn: true,
+      note: 'لقط نطق از مستحضره: از هر ستون مضرب میزان فقط همان یک حرف انتخاب‌شده'
     };
   }
 
   /**
-   * جریان حروف قانونی جدولی — فقط از قانون حساب، نه از مخزن آزاد
-   * ۱) مستحضره خانه‌به‌خانه (دستهٔ حرف)
-   * ۲) لقط میزانی از اساس + مستحضره + A/B/C/D
-   * ۳) بذر A/B از سطر مستحصله (تبدیل قانونی متصل)
+   * جریان حروف قانونی جدول رنگی
+   * قانون کارشناس: از هر ستون دقیقاً یک حرف انتخاب می‌شود.
+   * نطق = خواندن همان حروف به‌ترتیب ستون؛ اگر با کلمات قبلی هم‌خوان بود درست است.
    */
   function buildLegalExtraction(sel, classicLaqt, layers, mizan, natqSeed) {
     const mustPicks = (sel && Array.isArray(sel.picks) ? sel.picks : []).map((p) => ({
       ch: p.ch,
       col: p.col,
       row: p.row,
-      rule: 'mustahdara',
+      rule: 'one_per_column',
       category: p.category,
-      base: p.base
+      base: p.base,
+      onePerColumn: true
     }));
-    const laqtPicks = (classicLaqt && Array.isArray(classicLaqt.picks) ? classicLaqt.picks : []).map((p) => Object.assign({}, p));
-    const legalPool = uniqueLetters(
-      mustPicks.map((p) => p.ch).join('') + laqtPicks.map((p) => p.ch).join('')
-    );
+    // تضمین: در هر ستون بیش از یک pick نباشد
+    const byCol = new Map();
+    mustPicks.forEach((p) => {
+      if (!byCol.has(p.col)) byCol.set(p.col, p);
+    });
+    const uniqueColPicks = [...byCol.keys()].sort((a, b) => a - b).map((c) => byCol.get(c));
+    const laqtPicks = (classicLaqt && Array.isArray(classicLaqt.picks) ? classicLaqt.picks : [])
+      .filter((p) => p.row === 'Must' || p.rule === 'laqt_mizan');
+    const legalPool = uniqueLetters(uniqueColPicks.map((p) => p.ch).join(''));
     const seedA = natqSeed && (natqSeed.afterNazira || natqSeed.readingLine) || '';
     const seedB = natqSeed && natqSeed.qutbPath && natqSeed.qutbPath.readingLine || '';
     const seedChainA = natqSeed ? [
-      { step: 'مستحصله/مستحضره', value: natqSeed.source || '' },
+      { step: 'مستحضره (۱ حرف از هر ستون)', value: natqSeed.source || '' },
       { step: 'مؤخرصدر', value: natqSeed.afterTakseer || '' },
       { step: 'نظیره قمری (= بذر A)', value: seedA }
     ] : [];
     const seedChainB = natqSeed && natqSeed.qutbPath ? [
-      { step: 'مستحصله', value: natqSeed.source || '' },
+      { step: 'مستحضره (۱ حرف از هر ستون)', value: natqSeed.source || '' },
       { step: 'نظیره قطب', value: natqSeed.qutbPath.afterQutbNazira || '' },
       { step: 'مؤخرصدر×۱', value: natqSeed.qutbPath.afterTakseer1 || '' },
       { step: 'مؤخرصدر×۲', value: natqSeed.qutbPath.afterTakseer2 || '' },
       { step: 'نظیره قمری (= بذر B)', value: seedB }
     ] : [];
 
-    // واژه‌پوش فقط از حروف قانونی (نه کل مخزن آزاد A–D)
     const bank = (natqSeed && natqSeed.candidateWords) || [];
     const legalWords = bank.filter((w) => {
       if (!w || !w.complete) return false;
       return coverageAgainst(w.word, legalPool + seedA + seedB).complete;
     }).slice(0, 20);
 
-    const mustLines = mustPicks.slice(0, 24).map((p) =>
-      `${p.ch}←${p.row}${p.col}` + (p.category ? `(${p.category})` : '')
+    const mustLines = uniqueColPicks.slice(0, 24).map((p) =>
+      `ستون${p.col}: ${p.ch}←${p.row}${p.col}` + (p.category ? `(${p.category})` : '')
     );
-    const laqtLines = [];
-    ['selected', 'A', 'B', 'C', 'D', 'asas'].forEach((key) => {
-      const part = classicLaqt && classicLaqt.parts && classicLaqt.parts[key === 'selected' ? 'selected' : key];
-      if (!part || !part.text) return;
-      const label = key === 'selected' ? 'Must' : (key === 'asas' ? 'Asas' : key);
-      laqtLines.push(`لقط ${label} (گام ${mizan}): ${part.text} ← ستون‌های مضرب ${mizan}`);
-    });
+    const laqtLines = [
+      `لقط مستحضره (گام ${mizan}): ${(classicLaqt && classicLaqt.fromSelected) || '—'} — از هر ستون مضرب فقط همان یک حرف`
+    ];
+    if (classicLaqt) {
+      ['A', 'B', 'C', 'D'].forEach((k) => {
+        const t = classicLaqt['from' + k];
+        if (t) laqtLines.push(`شاهد سطر ${k} (نه جمع با ستون‌های دیگر): ${t}`);
+      });
+    }
 
+    const multi = [...byCol.values()].length !== mustPicks.length;
     return {
       mizan: mizan | 0,
       mustahdara: sel && sel.selected || '',
-      mustPicks,
+      mustPicks: uniqueColPicks,
       laqtPicks,
       laqt: classicLaqt || null,
       legalPool,
@@ -1316,12 +1314,16 @@
       legalWords,
       mustLines,
       laqtLines,
-      summary: `استخراج قانونی: مستحضره ${mustPicks.length} خانه + لقط ${laqtPicks.length} حرف · حروف مجاز یکتا: ${legalPool.length}`,
+      onePerColumn: true,
+      columnCount: uniqueColPicks.length,
+      summary: `استخراج قانونی جدول رنگی: از هر ستون ۱ حرف (${uniqueColPicks.length} ستون) + لقط یک‌حرفی · حروف یکتا: ${legalPool.length}`,
       rules: [
-        'حروف جواب فقط از مستحضره / لقط میزانی / بذر A–B (تبدیل قانونی سطر)',
-        'مخزن کامل A–D برای نطق آزادِ بی‌قانون نیست؛ حرف خارج از استخراج قانونی ممنوع',
-        'جملهٔ ادبی اسکرین («نادم…») نمونهٔ سبک است نه خروجی این حساب مگر همان حروف از قانون بیایند'
-      ]
+        'از هر ستون جدول رنگی دقیقاً یک حرف انتخاب می‌شود (نه چند حرف از یک ستون)',
+        'نطق = خواندن همان حروف به‌ترتیب ستون؛ اگر با کلمات قبلی هم‌خوان بود درست است',
+        'لقط میزانی فقط همان یک حرفِ انتخاب‌شدهٔ ستون‌های مضرب میزان را برمی‌دارد',
+        'جمع کردن A+B+C+D در یک ستون برای نطق ممنوع است'
+      ],
+      warnMulti: multi ? 'هشدار: pick تکراری ستون حذف شد' : null
     };
   }
 
@@ -1494,11 +1496,12 @@
     ];
     (legal.rules || []).forEach((r, i) => lines.push(`${i + 1}) ${r}`));
     lines.push('');
-    lines.push(`### مستحضره (${(legal.mustahdara || '').length} حرف)`);
+    lines.push(`### مستحضره — ۱ حرف از هر ستون (${(legal.mustahdara || '').length} ستون)`);
     lines.push(legal.mustahdara || '—');
     if (legal.mustLines && legal.mustLines.length) {
-      lines.push('نمونهٔ منشأ خانه‌ها: ' + legal.mustLines.slice(0, 16).join(' · '));
+      lines.push('منشأ ستون‌ها: ' + legal.mustLines.slice(0, 16).join(' · '));
     }
+    lines.push('قانون: از هر ستون یک حرف؛ نطق هم‌خوان با کلمات قبلی = درست.');
     lines.push('');
     lines.push(`### لقط میزانی (گام=${legal.mizan})`);
     (legal.laqtLines || []).forEach((ln) => lines.push('- ' + ln));
@@ -1532,10 +1535,11 @@
   function analyzeNatqLock(layers, opts) {
     const legal = opts && opts.legal;
     const rules = [
-      'نطق فقط از حروف استخراج قانونی: مستحضره، لقط میزانی، بذر A/B',
-      'حرف خارج از استخراج قانونی = رد (از هوا نیامده باشد)',
-      'برای هر واژهٔ مهم منشأ قانون بنویس: مستحضره‌ستون / لقط‌سطرستون / قطعهٔ بذر',
-      'جملهٔ «نادم شوند…» اگر در پرامپت هست فقط نمونهٔ سبک اسکرین است — خروجی این حساب نیست مگر همان حروف از قانون بیایند'
+      'از هر ستون جدول رنگی دقیقاً یک حرف انتخاب می‌شود',
+      'نطق = خواندن همان حروف؛ اگر با کلمات قبلی هم‌خوان بود درست است',
+      'لقط میزانی فقط یک حرف از ستون‌های مضرب میزان (همان حرف انتخاب‌شده)',
+      'جمع چند حرف از یک ستون (A+B+C+D با هم) برای نطق ممنوع است',
+      'جملهٔ «نادم شوند…» فقط نمونهٔ سبک اسکرین است مگر حروفش از همین انتخاب یک‌حرفی بیاید'
     ];
     const out = {
       unlocked: true,
@@ -2061,6 +2065,7 @@
           picks: sel.picks,
           selectMode: sel.mode,
           selectNote: sel.classicNote,
+          onePerColumn: true,
           measuredSelected,
           natqSeed,
           natqChecklist,
@@ -2937,13 +2942,13 @@
       `10) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
     ];
     if (sentenceNatq) {
-      lines.push('11) محصول اصلی جفر جدولی: نطق از حروف استخراج قانونی (مستحضره + لقط میزانی + بذر A/B).');
-      lines.push('12) حرف خارج از استخراج قانونی ممنوع است — از هوا / از مخزن آزاد کامل نساز.');
-      lines.push('12ب) ممنوع: چسباندن ردیف بانک پشت‌سرهم به‌عنوان نطق یک‌خطی.');
-      lines.push('12ج) واجب: بذر A یا B را از تبدیل قانونی سطر بخوان؛ بانک فقط اگر حرفش در حروف قانونی باشد.');
-      lines.push('12د) «پیوند بذر» بنویس (A یا B + قطعه).');
-      lines.push('12ه) «پیوند قانون» بنویس: هر واژه از مستحضره/لقط/بذر از کجا آمده (خانه یا گام لقط).');
-      lines.push('12و) جملهٔ «نادم شوند…» اگر در شواهد هست فقط نمونهٔ سبک اسکرین است — آن را جواب این حساب جا نزن مگر حروفش از استخراج قانونی همین اجرا بیاید.');
+      lines.push('11) محصول اصلی جدول رنگی: از هر ستون یک حرف → نطق هم‌خوان با کلمات قبلی.');
+      lines.push('12) از هر ستون دقیقاً یک حرف (خانهٔ انتخاب‌شده در A–D). چند حرف از یک ستون ممنوع.');
+      lines.push('12ب) ممنوع: چسباندن ردیف بانک؛ ممنوع: جمع A+B+C+D در یک ستون.');
+      lines.push('12ج) بذر A/B از همان سطر یک‌حرفی ساخته می‌شود؛ بانک فقط اگر حرفش در همین حروف باشد.');
+      lines.push('12د) پیوند بذر + پیوند قانون (ستونN: حرف←سطر) اجباری.');
+      lines.push('12ه) اگر نطق با کلمات قبلی هم‌خوان نبود، همان انتخاب ستون را عوض نکن مگر قانون دسته بگوید؛ خوانش را اصلاح کن.');
+      lines.push('12و) جملهٔ اسکرین «نادم…» جواب این حساب نیست مگر از همین یک‌حرف‌در‌ستون استخراج شود.');
       if (isConflict) {
         lines.push('13) سبک زنجیرهٔ کلاسیک مجاز است؛ ولی فقط با حروف قانونی همین جدول/لقط/بذر.');
         lines.push('14) در نطق یک‌خطی نام طرفین سیاسی/جغرافیایی ننویس؛ نام‌ها فقط در تفسیر.');
