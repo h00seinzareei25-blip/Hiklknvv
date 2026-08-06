@@ -404,6 +404,58 @@ textarea { min-height: 84px; resize: vertical; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+.guide-box {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #f7faf7;
+}
+.guide-box summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--brand);
+}
+.guide-list {
+  margin: 10px 0 4px;
+  padding-right: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.guide-list li { margin: 4px 0; }
+.natq-read-box {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfb;
+}
+.natq-lines { display: flex; flex-direction: column; gap: 10px; }
+.natq-k {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.natq-v {
+  font-size: 16px !important;
+  min-height: 0;
+  padding: 10px 12px;
+}
+.must-grid-details {
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #f7faf7;
+}
+.must-grid-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+}
 .date-help {
   margin-top: 6px;
 }

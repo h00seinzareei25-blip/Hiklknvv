@@ -28,6 +28,17 @@
 
     <section class="card">
       <h2>صورت مسئله</h2>
+      <details class="guide-box" id="askGuide">
+        <summary>راهنمای سؤال‌پرسیدن (از کتب جفر)</summary>
+        <ol class="guide-list">
+          <li><strong>محوری</strong> (ازدواج، سفر، کار، معامله…): سائل + تاریخ فارسی حروفی لازم است.</li>
+          <li><strong>مرکزی</strong> (امور عامهٔ ثابت): معمولاً بدون سائل.</li>
+          <li>متن سؤال را کوتاه و یک‌مطلب بنویس؛ تاریخ را داخل سؤال نچسبان — جایش فیلد تاریخ است.</li>
+          <li>تاریخ مثل اسکرین: «پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران» یا دکمهٔ امروز فارسی.</li>
+          <li>بعد از محاسبه، اصل کار <strong>خوانش سطر مستحصله / بذر نطق</strong> است؛ عجله نکن و به سؤال ربط بده.</li>
+          <li>در کتب مستحصله <strong>سطر</strong> است؛ شبکهٔ فشرده فقط نمایش است.</li>
+        </ol>
+      </details>
       <div class="grid">
         <div class="field">
           <label for="sael">سائل</label>
@@ -245,16 +256,27 @@
         <div class="stat"><div class="k">تعداد حروف</div><div class="v" id="statCount">—</div></div>
       </div>
       <p class="hint" id="profileHint">پروفایل نطق بعد از اجرا نشان داده می‌شود.</p>
-      <label id="mustLabel">مستحصله (روش اصلی)</label>
+      <label id="mustLabel">سطر مستحصله (اصل کلاسیک)</label>
       <div class="letters" id="mustehsilaBox">—</div>
       <label>بدون تکرار</label>
       <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
 
-      <div id="mustehsilaGridWrap" class="hidden" style="margin-top:12px">
-        <label>جدول مستحصله (نمایش فشرده)</label>
-        <p class="hint" id="mustehsilaGridHint">در کتب مستحصله یک سطر است؛ این شبکه همان حروف را فشرده نشان می‌دهد.</p>
-        <div class="jadwal-scroll" id="mustehsilaGridBox"></div>
+      <div id="natqReadWrap" class="hidden natq-read-box" style="margin-top:12px">
+        <label>خوانش / بذر نطق کلاسیک</label>
+        <p class="hint">از کتب: بعد از مستحصله حروف را با صبر بخوان و به سؤال ربط بده؛ جملهٔ ادبی نهایی با AI روی همین بذر ساخته می‌شود.</p>
+        <div class="natq-lines">
+          <div><span class="natq-k">مسیر A (قمری)</span><div class="letters natq-v" id="natqLineA">—</div></div>
+          <div><span class="natq-k">مسیر B (قطب)</span><div class="letters natq-v" id="natqLineB">—</div></div>
+          <div><span class="natq-k">پیشنهاد یک‌خطی</span><div class="letters natq-v" id="natqDraft" style="background:#1a5c45">—</div></div>
+          <div><span class="natq-k">واژه‌پوش مخزن</span><div class="hint" id="natqWords" style="margin:6px 0 0">—</div></div>
+        </div>
       </div>
+
+      <details id="mustehsilaGridWrap" class="hidden must-grid-details" style="margin-top:12px">
+        <summary>جدول مستحصله (نمایش فشرده · فرعی)</summary>
+        <p class="hint" id="mustehsilaGridHint">در کتب مستحصله یک سطر است؛ این شبکه فقط فشرده‌سازی همان حروف است.</p>
+        <div class="jadwal-scroll" id="mustehsilaGridBox"></div>
+      </details>
 
       <div id="jadwalGridWrap" class="hidden" style="margin-top:14px">
         <label>جدول لایه‌ها + مسیر رنگ (جاروی چندباره)</label>
@@ -311,7 +333,7 @@
       <textarea class="prebox" id="reportBox" readonly></textarea>
     </section>
 
-    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. روش اصلی پیشنهادی: جفر جدولی میزان‌دار. نطق را بیرون با AI انجام دهید. دیکشنری پیشنهاد است نه محدودیت.</p>
+    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. اصل کلاسیک: سطر مستحصله + خوانش باصبر. روش پیشنهادی: جفر جدولی میزان‌دار. نطق ادبی را با AI روی بذر بساز.</p>
   </main>
 
   <script src="js/engine.js"></script>

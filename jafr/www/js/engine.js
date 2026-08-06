@@ -1708,6 +1708,18 @@
       });
 
       const mustehsila = L[15] || L[14] || L[13] || '';
+      const topic = detectTopic(Object.assign({}, input, parts));
+      const natqSeed = buildClassicalNatqSeed(mustehsila, {
+        pool: mustehsila,
+        bank: (topic && topic.bank) || []
+      });
+      steps.push({
+        id: 'natq_seed',
+        title: 'بذر نطق کلاسیک از سطر ۱۵',
+        input: mustehsila,
+        output: natqSeed.readingLine || natqSeed.afterNazira,
+        note: 'خوانش باصبر · مسیر A/B · ربط به سؤال'
+      });
       const methodLabel = opts.methodLabel || 'جفر ۱۵ سطری';
       return {
         ok: true,
@@ -1718,10 +1730,12 @@
         nazira: L[2],
         jamal: jamal.sum,
         jamalLock,
+        questionScope,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
         mustehsila,
         mustehsilaUnique: uniqueLetters(mustehsila),
+        natqSeed,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
@@ -1818,10 +1832,28 @@
 
     steps.push({
       id: 'mustehsila',
-      title: 'مستحصله نهایی',
+      title: 'سطر مستحصله نهایی',
       input: work,
       output: mustehsila,
-      note: `طول: ${mustehsila.length} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)}`
+      note: `طول: ${mustehsila.length} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)} · اصل کلاسیک «سطر» است`
+    });
+
+    const topic = detectTopic(Object.assign({}, input, parts));
+    const natqSeed = buildClassicalNatqSeed(mustehsila, {
+      pool: mustehsila,
+      bank: (topic && topic.bank) || []
+    });
+    steps.push({
+      id: 'natq_seed',
+      title: 'بذر نطق کلاسیک (مستحصله → مؤخرصدر → نظیره)',
+      input: mustehsila,
+      output: natqSeed.readingLine || natqSeed.afterNazira,
+      note: [
+        'A قمری: ' + natqSeed.afterNazira,
+        'B قطب: ' + ((natqSeed.qutbPath && natqSeed.qutbPath.readingLine) || '—'),
+        'پیشنهاد: ' + natqSeed.draftLine,
+        'با صبر بخوان و به سؤال ربط بده'
+      ].join(' · ')
     });
 
     const methodLabel = opts.methodLabel || ('جفر کبیر · ' + describeOptions(opts));
@@ -1835,10 +1867,12 @@
       nazira: naz,
       jamal: jamal.sum,
       jamalLock,
+      questionScope,
       madkhal: madkhal.value,
       madkhalSteps: madkhal.steps,
       mustehsila,
       mustehsilaUnique: uniqueLetters(mustehsila),
+      natqSeed,
       letterCount: mustehsila.length,
       dotCount: countDots(mustehsila),
       steps,
@@ -2737,6 +2771,8 @@
       }
       jadwalLines.push('## دستور نطق جدولی (قفل باز)');
       jadwalLines.push('1) از مخزن A+B+C+D یک «نطق یک‌خطی کلاسیک» با ترتیب آزاد بساز (ترتیب ستون اجباری نیست).');
+      jadwalLines.push('1ب) بذر کلاسیک A/B را بخوان؛ با صبر ترکیب کن و حتماً به صورت‌مسئله ربط بده (از کتب: نطق مرتبط با پرسش مهم‌تر از واژهٔ معنادارِ بی‌ربط است).');
+      jadwalLines.push('1ج) مستحصله در کتب «سطر» است؛ شبکهٔ فشرده فقط نمایش است — مبنای خوانش همان سطر/بذر است.');
       if (rules.isConflict) {
         jadwalLines.push('2) سبک هدف: زنجیرهٔ واژه‌های حرف‌محور شبیه «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت» (عین آن را کپی نکن؛ برای سؤال فعلی بساز).');
         jadwalLines.push('3) ممنوع در نطق یک‌خطی: نام طرفین (اسرائیل/امریکا/ایران/…) و جملهٔ خبری مدرن با ویرگول‌های تحلیلی.');
@@ -2770,6 +2806,14 @@
       `- اساس: ${result.asas}`, `- نظیره: ${result.nazira}`, `- جمع جمل اساس: ${result.jamal}`, `- مدخل: ${result.madkhal}`,
       result.mizan != null ? `- میزان جدولی: ${result.mizan}` : null,
       `- مستحصله کامل: ${result.mustehsila}`, `- شمارش حروف: ${letterBag(result.mustehsila)}`, `- حروف بدون تکرار: ${result.mustehsilaUnique}`, '',
+      ...(result.natqSeed ? [
+        '## بذر نطق کلاسیک',
+        `- مسیر A (قمری): ${result.natqSeed.afterNazira || result.natqSeed.readingLine}`,
+        result.natqSeed.qutbPath ? `- مسیر B (قطب): ${result.natqSeed.qutbPath.readingLine}` : null,
+        `- پیشنهاد یک‌خطی: ${result.natqSeed.draftLine}`,
+        '- با صبر بخوان و به سؤال ربط بده؛ سطر مستحصله اصل است.',
+        ''
+      ].filter(Boolean) : []),
       ...jadwalLines, ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']

@@ -383,7 +383,25 @@
     });
     html += '</tbody></table>';
     box.innerHTML = html;
-    if (hint) hint.textContent = grid.classicNote || 'نمایش فشردهٔ حروف مستحصله.';
+    if (hint) hint.textContent = grid.classicNote || 'نمایش فشردهٔ حروف مستحصله؛ اصل همان سطر بالاست.';
+    wrap.classList.remove('hidden');
+  }
+
+  function renderNatqReading(result) {
+    const wrap = $('natqReadWrap');
+    if (!wrap) return;
+    const ns = result.natqSeed || (result.jadwal && result.jadwal.natqSeed);
+    if (!ns) {
+      wrap.classList.add('hidden');
+      return;
+    }
+    if ($('natqLineA')) $('natqLineA').textContent = ns.afterNazira || ns.readingLine || '—';
+    if ($('natqLineB')) $('natqLineB').textContent = (ns.qutbPath && ns.qutbPath.readingLine) || '—';
+    if ($('natqDraft')) $('natqDraft').textContent = ns.draftLine || '—';
+    if ($('natqWords')) {
+      const words = (ns.candidateWords || []).filter((w) => w.complete).slice(0, 14).map((w) => w.word);
+      $('natqWords').textContent = words.length ? words.join('، ') : '—';
+    }
     wrap.classList.remove('hidden');
   }
 
@@ -411,6 +429,7 @@
       }
       $('profileHint').textContent = t || 'پروفایل نطق بعد از اجرا نشان داده می‌شود.';
     }
+    renderNatqReading(result);
     renderMustehsilaGrid(result);
     renderJadwalGrid(result);
     $('resultCard').classList.remove('hidden');
@@ -485,7 +504,7 @@
       };
 
       $('resultTitle').textContent = 'نتیجه مستحصله (روش ۱ + مقایسه)';
-      $('mustLabel').textContent = 'مستحصله روش ۱ (برای مرور سریع)';
+      $('mustLabel').textContent = 'سطر مستحصله روش ۱ (اصل کلاسیک)';
       showPrimary(bundle.primary, true);
       showProfileHint(meta, bundle.primary);
       renderCompare(bundle.results, bundle.sharedUnique);
@@ -539,8 +558,8 @@
       meta
     };
 
-    $('resultTitle').textContent = 'نتیجه مستحصله';
-    $('mustLabel').textContent = 'مستحصله';
+    $('resultTitle').textContent = 'نتیجه · سطر مستحصله';
+    $('mustLabel').textContent = 'سطر مستحصله (اصل کلاسیک)';
     showPrimary(result, false);
     showProfileHint(meta, result);
     renderStability(stability);
@@ -565,7 +584,7 @@
     ensureTodayDate(true);
     lastBundle = null;
     if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
-    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard', 'mustehsilaGridWrap', 'jadwalGridWrap']
+    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard', 'mustehsilaGridWrap', 'jadwalGridWrap', 'natqReadWrap']
       .forEach((id) => { const el = $(id); if (el) el.classList.add('hidden'); });
     hideAlert();
   }
@@ -581,7 +600,8 @@
     $('saelFamily').value = 'رضایی';
     $('talebFamily').value = 'محمدی';
     $('matloobFamily').value = 'احمدی';
-    $('questionDate').value = '1404/05/13';
+    $('questionDate').value = JafrEngine.formatShamsiDatePersian({ year: 1404, month: 5, day: 13 })
+      || 'سیزدهم مرداد هزار و چهارصد و چهار هجری شمسی در ایران';
     $('questionTime').value = '14:30';
     if ($('scopeMehvari')) $('scopeMehvari').checked = true;
     $('modeMulti').checked = true;

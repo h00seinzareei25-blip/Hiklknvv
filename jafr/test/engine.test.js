@@ -207,6 +207,22 @@ assert(warSael.natqSeed && warSael.natqSeed.draftLine, 'نتیجهٔ جنگ شا
 assert(warSael.measuredSelected && warSael.measuredSelected.length === warSael.jadwal.selected.length, 'سنجش مقرره هم‌طول مستحضره');
 assert(warSael.steps.some((s) => s.id === 'muqarrara_measure') && warSael.steps.some((s) => s.id === 'natq_seed'), 'گام‌های مقرره و بذر نطق');
 
+// بذر نطق روی مسیر کلاسیک و ۱۵ سطری هم
+const classicNatq = E.runClassic({
+  sael: 'علی', taleb: '', matloob: '', modda: '',
+  soal: 'آیا این کار خیر است',
+  questionDate: 'پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران',
+  options: { bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true }
+});
+assert(classicNatq.ok && classicNatq.natqSeed && classicNatq.natqSeed.afterNazira, 'مسیر کلاسیک بذر نطق دارد');
+const fifteenNatq = E.runClassic({
+  sael: 'علی', taleb: '', matloob: '', modda: '',
+  soal: 'آیا این کار خیر است',
+  questionDate: 'پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران',
+  options: { pipeline: 'fifteen', table: 'kabir' }
+});
+assert(fifteenNatq.ok && fifteenNatq.natqSeed && fifteenNatq.steps.some((s) => s.id === 'natq_seed'), '۱۵ سطری بذر نطق دارد');
+
 assert(E.normalizeText('آمریکا') === 'امریکا', 'آ→ا کلاسیک');
 assert(E.sumAbjad('نواب').sum === 59 && E.sumAbjad('مهدی').sum === 59, 'نواب و مهدی = ۵۹');
 
