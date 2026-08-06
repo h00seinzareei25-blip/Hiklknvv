@@ -167,7 +167,7 @@
             <option value="fifteen">جفر ۱۵ سطری</option>
           </select>
         </div>
-        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون از سؤال · نطق فقط از حروف A–D با منشأ خانه · رنگ = اثبات جدول. قفل جمل کلاسیک: سائلِ ۵۹.</p>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون از سؤال · نطق فقط از مستحضره+لقط+بذر (استخراج قانونی). جملهٔ اسکرین نمونهٔ سبک است نه جواب حساب.</p>
         <div id="jadwalOpts">
           <div class="field">
             <label for="jadwalModel">مدل لایه‌های جدولی</label>
@@ -308,14 +308,18 @@
       </details>
 
       <div id="jadwalGridWrap" class="hidden" style="margin-top:14px">
-        <label>جدول لایه‌ها + اثبات منشأ حروف</label>
-        <p class="hint" id="jadwalGridHint">خانه‌های رنگی = حروف مصرف‌شده از سطرهای A–D. هر حرف جواب باید در جدول باشد.</p>
+        <label>جدول لایه‌ها + استخراج قانونی</label>
+        <p class="hint" id="jadwalGridHint">نطق فقط از مستحضره / لقط میزانی / بذر A–B. مخزن کامل A–D منبع آزاد نیست.</p>
+        <div id="legalExtractWrap" class="hidden natq-prov-box" style="margin-bottom:12px">
+          <span class="natq-k">استخراج قانونی حروف (طبق قانون جفر)</span>
+          <p class="hint" id="legalExtractSummary">—</p>
+          <div id="legalExtractBody"></div>
+        </div>
         <div class="jadwal-scroll" id="jadwalGridBox"></div>
         <div id="natqProvWrap" class="hidden natq-prov-box" style="margin-top:12px">
-          <span class="natq-k">منشأ حروف نطق (خانه به خانه)</span>
+          <span class="natq-k">نمونهٔ ادبی اسکرین (فقط سبک — نه جواب این حساب)</span>
           <p class="hint" id="natqProvSummary">—</p>
           <ul class="natq-prov-list" id="natqProvList"></ul>
-          <p class="hint">مثال خواندن: نادم یعنی ن از A1، ا از B2، د از D13، م از D16 — نه از بیرون جدول.</p>
         </div>
       </div>
 

@@ -297,11 +297,9 @@
       }
     }
     if (result && result.natqLock && result.natqLock.unlocked) {
-      text += ' | قفل نطق: حروف فقط از جدول A–D';
-      if (result.natqLock.reference && result.natqLock.reference.provenance && result.natqLock.reference.provenance.complete) {
-        text += ` · منشأ ${result.natqLock.reference.provenance.words.length} واژه اثبات شد`;
-      } else if (result.natqLock.reference && result.natqLock.reference.highlight && result.natqLock.reference.highlight.complete) {
-        text += ` · نمونه ${result.natqLock.reference.highlight.sweeps} جارو`;
+      text += ' | قفل نطق: استخراج قانونی (مستحضره/لقط/بذر)';
+      if (result.legal && result.legal.legalPool) {
+        text += ` · حروف مجاز ${result.legal.legalPool.length}`;
       }
     }
     el.textContent = text;
@@ -327,13 +325,26 @@
     }
     const n = (main[0].str || '').length;
     const mark = {};
-    const hl = (result.natqLock && result.natqLock.reference && result.natqLock.reference.highlight)
-      || (j.natqLock && j.natqLock.reference && j.natqLock.reference.highlight)
-      || null;
-    if (hl && hl.picks) {
-      hl.picks.forEach((p) => {
-        mark[p.row + ':' + p.col] = p.sweep;
+    // رنگ خانه‌های مستحضره (قانون انتخاب دسته)
+    if (j.picks && j.picks.length) {
+      j.picks.forEach((p) => {
+        const rowMap = { Mus: 'A', Tarfa: 'C', Tanz: 'D', Taraqi: 'B', A: 'A', B: 'B', C: 'C', D: 'D' };
+        const rid = rowMap[p.row] || p.row;
+        if (rid === 'A' || rid === 'B' || rid === 'C' || rid === 'D') {
+          mark[rid + ':' + p.col] = 0;
+        }
       });
+    }
+    // رنگ ستون‌های لقط میزانی روی A–D
+    const step = (j.classicLaqt && j.classicLaqt.step) || result.mizan || 0;
+    if (step > 0) {
+      const nCols = (main[0].str || '').length;
+      for (let c = step; c <= nCols; c += step) {
+        ['A', 'B', 'C', 'D'].forEach((rid) => {
+          const key = rid + ':' + c;
+          if (mark[key] == null) mark[key] = 1;
+        });
+      }
     }
     let html = '<table class="jadwal-table"><thead><tr><th>سطر</th>';
     for (let c = 1; c <= n; c++) html += '<th>' + c + '</th>';
@@ -350,20 +361,61 @@
       html += '</tr>';
     });
     if (j.selected) {
-      html += '<tr class="sel-row"><td class="row-label">سطر انتخاب</td>';
+      html += '<tr class="sel-row"><td class="row-label">مستحضره</td>';
       for (let i = 0; i < n; i++) {
-        html += '<td>' + escapeHtml(j.selected[i] || '') + '</td>';
+        const isLaqt = step > 0 && ((i + 1) % step === 0);
+        html += '<td class="' + (isLaqt ? 'hl-s2' : '') + '">' + escapeHtml(j.selected[i] || '') + '</td>';
       }
       html += '</tr>';
     }
     html += '</tbody></table>';
     box.innerHTML = html;
     if (hint) {
-      hint.textContent = hl && hl.complete
-        ? ('اثبات جدول کامل · ' + hl.sweeps + ' جارو · ' + hl.picks.length + ' خانه از A–D (رنگ = منشأ حرف)')
-        : 'سطرهای A–D؛ هر حرف نطق باید از یکی از این خانه‌ها باشد.';
+      hint.textContent = step
+        ? ('نارنجی≈خانه‌های مرتبط مستحضره · زرد=ستون لقط (مضرب ' + step + ') · سبز روی مستحضره=حروف لقط')
+        : 'سطرهای A–D و مستحضره؛ نطق از استخراج قانونی.';
     }
+    renderLegalExtraction(result);
     renderNatqProvenance(result);
+    wrap.classList.remove('hidden');
+  }
+
+  function renderLegalExtraction(result) {
+    const wrap = $('legalExtractWrap');
+    const body = $('legalExtractBody');
+    const summary = $('legalExtractSummary');
+    if (!wrap || !body) return;
+    const legal = result.legal || (result.jadwal && result.jadwal.legal);
+    if (!legal) {
+      wrap.classList.add('hidden');
+      body.innerHTML = '';
+      return;
+    }
+    if (summary) summary.textContent = legal.summary || '—';
+    const parts = [];
+    parts.push('<p><strong>مستحضره:</strong> <span class="letters" style="display:inline;font-size:14px">' +
+      escapeHtml(legal.mustahdara || '—') + '</span></p>');
+    if (legal.mustLines && legal.mustLines.length) {
+      parts.push('<p class="hint">منشأ نمونه: ' + escapeHtml(legal.mustLines.slice(0, 12).join(' · ')) + '</p>');
+    }
+    parts.push('<p><strong>لقط میزانی (گام ' + escapeHtml(String(legal.mizan || '')) + '):</strong></p><ul class="natq-prov-list">');
+    (legal.laqtLines || []).forEach((ln) => {
+      parts.push('<li class="ok"><span class="d">' + escapeHtml(ln) + '</span></li>');
+    });
+    parts.push('</ul>');
+    parts.push('<p><strong>حروف مجاز یکتا:</strong> <span class="letters" style="display:inline;font-size:14px">' +
+      escapeHtml(legal.legalPool || '—') + '</span></p>');
+    parts.push('<p><strong>بذر A:</strong> <span class="d">' + escapeHtml((legal.seedA || '').slice(0, 80)) +
+      ((legal.seedA || '').length > 80 ? '…' : '') + '</span></p>');
+    parts.push('<p><strong>بذر B:</strong> <span class="d">' + escapeHtml((legal.seedB || '').slice(0, 80)) +
+      ((legal.seedB || '').length > 80 ? '…' : '') + '</span></p>');
+    if (legal.legalWords && legal.legalWords.length) {
+      parts.push('<p><strong>واژه‌پوش قانونی:</strong> ' +
+        escapeHtml(legal.legalWords.map((w) => w.word).join('، ')) + '</p>');
+    } else {
+      parts.push('<p class="hint">واژهٔ کامل بانک روی حروف قانونی کم است — از بذر A/B متصل بخوان.</p>');
+    }
+    body.innerHTML = parts.join('');
     wrap.classList.remove('hidden');
   }
 
@@ -372,20 +424,23 @@
     const list = $('natqProvList');
     const summary = $('natqProvSummary');
     if (!wrap || !list) return;
-    const prov = (result.natqLock && result.natqLock.reference && result.natqLock.reference.provenance)
-      || (result.jadwal && result.jadwal.natqLock && result.jadwal.natqLock.reference && result.jadwal.natqLock.reference.provenance)
+    const ref = (result.natqLock && result.natqLock.reference)
+      || (result.jadwal && result.jadwal.natqLock && result.jadwal.natqLock.reference)
       || null;
-    if (!prov || !prov.words || !prov.words.length) {
+    const prov = ref && ref.provenance;
+    if (!ref || !ref.literarySample || !prov || !prov.words || !prov.words.length) {
       wrap.classList.add('hidden');
       list.innerHTML = '';
       if (summary) summary.textContent = '—';
       return;
     }
+    const legalNote = ref.legalCover
+      ? (' | روی حروف قانونی این اجرا: ' + ref.legalCover.summary)
+      : '';
     if (summary) {
-      summary.textContent = (prov.complete ? '✓ ' : '⚠ ') + (prov.summary || '') +
-        (prov.text ? ' — «' + prov.text + '»' : '');
+      summary.textContent = (ref.note || 'نمونه ادبی') + legalNote;
     }
-    list.innerHTML = prov.words.map((w) => {
+    list.innerHTML = prov.words.slice(0, 12).map((w) => {
       const cls = w.ok ? 'ok' : 'bad';
       return `<li class="${cls}"><strong>${escapeHtml(w.word)}</strong><span class="d">${escapeHtml(w.detail || '')}</span></li>`;
     }).join('');

@@ -864,14 +864,14 @@
     },
     {
       id: 'war_screen_style',
-      title: 'سبک نطق جنگ (اسکرین) + اثبات جدول',
-      source: 'مرجع جدولی · حروف فقط از A–D',
+      title: 'نمونه ادبی اسکرین (نه خروجی قانونی)',
+      source: 'اسکرین مرجع · فقط سبک',
       soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-      mustehsila: 'سطرهای A–D پس از میزان ۱۰',
-      steps: 'انتخاب حروف از سطرهای جدول → واژه → جمله؛ هر حرف خانه دارد',
-      seed: 'مثال: نادم = ن←A1 ا←B2 د←D13 م←D16',
-      reading: 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت',
-      lesson: 'جواب «از خود» نیست اگر هر حرف در جدول باشد و منشأ خانه نوشته شود. ترتیب برداشتن آزمایش خوانش است؛ حرف خارج از A–D ممنوع.'
+      mustehsila: 'در هر اجرا: مستحضره + لقط میزان + بذر A/B همان اجرا',
+      steps: 'حساب → مستحضره → لقط → بذر → نطق از همان حروف',
+      seed: 'جواب قانونی = حروف همین استخراج؛ نه کپی جملهٔ اسکرین',
+      reading: 'نادم شوند که … (فقط نمونهٔ سبک اگر در اسکرین دیدی)',
+      lesson: 'جملهٔ اسکرین را جواب این حساب جا نزن. هر حرف باید از مستحضره یا لقط یا بذر قانونی همین اجرا بیاید و منشأاش نوشته شود.'
     },
     {
       id: 'checklist_core',
@@ -1181,40 +1181,189 @@
    * (هم‌خانوادهٔ لقط اخباری «هر N حرف یکی»)
    */
   function extractByMizanStep(str, mizan) {
-    const M = Math.max(1, mizan | 0);
-    let out = '';
-    for (let i = 0; i < str.length; i++) {
-      if ((i + 1) % M === 0) out += str[i];
-    }
-    return out || str;
+    const detailed = extractByMizanStepDetailed(str, mizan, 'row');
+    return detailed.text || str;
   }
 
-  /** لقط کلاسیک از چند سطر (اساس + انتخاب + ABCD) */
+  /** لقط میزانی با منشأ ستون — هر حرف خانه دارد */
+  function extractByMizanStepDetailed(str, mizan, sourceId) {
+    const M = Math.max(1, mizan | 0);
+    const src = String(str || '');
+    const picks = [];
+    for (let i = 0; i < src.length; i++) {
+      if ((i + 1) % M === 0) {
+        picks.push({
+          ch: src[i],
+          col: i + 1,
+          row: sourceId || 'row',
+          rule: 'laqt_mizan',
+          step: M
+        });
+      }
+    }
+    // اگر هیچ مضربی نبود، کل سطر را با برچسب satr نگه دار (نه اختراع حرف)
+    if (!picks.length && src) {
+      for (let i = 0; i < src.length; i++) {
+        picks.push({
+          ch: src[i],
+          col: i + 1,
+          row: sourceId || 'row',
+          rule: 'satr_full',
+          step: M
+        });
+      }
+    }
+    return { text: picks.map((p) => p.ch).join(''), picks, step: M, source: sourceId || 'row' };
+  }
+
+  /** لقط کلاسیک از چند سطر (اساس + انتخاب + ABCD) با منشأ هر حرف */
   function buildClassicLaqtBundle(columnBase, layers, selected, mizan) {
     const M = Math.max(1, mizan | 0);
-    const fromAsas = extractByMizanStep(columnBase, M);
-    const fromSelected = extractByMizanStep(selected, M);
-    const fromA = extractByMizanStep((layers && layers.A) || '', M);
-    const fromB = extractByMizanStep((layers && layers.B) || '', M);
-    const fromC = extractByMizanStep((layers && layers.C) || '', M);
-    const fromD = extractByMizanStep((layers && layers.D) || '', M);
-    const pooled = fromAsas + fromSelected + fromA + fromB + fromC + fromD;
+    const parts = {
+      asas: extractByMizanStepDetailed(columnBase, M, 'Asas'),
+      selected: extractByMizanStepDetailed(selected, M, 'Must'),
+      A: extractByMizanStepDetailed((layers && layers.A) || '', M, 'A'),
+      B: extractByMizanStepDetailed((layers && layers.B) || '', M, 'B'),
+      C: extractByMizanStepDetailed((layers && layers.C) || '', M, 'C'),
+      D: extractByMizanStepDetailed((layers && layers.D) || '', M, 'D')
+    };
+    const picks = []
+      .concat(parts.asas.picks)
+      .concat(parts.selected.picks)
+      .concat(parts.A.picks)
+      .concat(parts.B.picks)
+      .concat(parts.C.picks)
+      .concat(parts.D.picks);
+    const pooled = picks.map((p) => p.ch).join('');
     return {
       step: M,
-      fromAsas,
-      fromSelected,
-      fromA,
-      fromB,
-      fromC,
-      fromD,
+      fromAsas: parts.asas.text,
+      fromSelected: parts.selected.text,
+      fromA: parts.A.text,
+      fromB: parts.B.text,
+      fromC: parts.C.text,
+      fromD: parts.D.text,
       pooled,
-      unique: uniqueLetters(pooled)
+      unique: uniqueLetters(pooled),
+      picks,
+      parts
     };
   }
 
   /**
-   * مسیر رنگ/هایلایت: جاروی چندبارهٔ چپ→راست روی سطرهای A–D
-   * هر حرف نطق باید در یکی از خانه‌های جدول باشد؛ این تابع منشأ خانه به خانه را ثابت می‌کند.
+   * جریان حروف قانونی جدولی — فقط از قانون حساب، نه از مخزن آزاد
+   * ۱) مستحضره خانه‌به‌خانه (دستهٔ حرف)
+   * ۲) لقط میزانی از اساس + مستحضره + A/B/C/D
+   * ۳) بذر A/B از سطر مستحصله (تبدیل قانونی متصل)
+   */
+  function buildLegalExtraction(sel, classicLaqt, layers, mizan, natqSeed) {
+    const mustPicks = (sel && Array.isArray(sel.picks) ? sel.picks : []).map((p) => ({
+      ch: p.ch,
+      col: p.col,
+      row: p.row,
+      rule: 'mustahdara',
+      category: p.category,
+      base: p.base
+    }));
+    const laqtPicks = (classicLaqt && Array.isArray(classicLaqt.picks) ? classicLaqt.picks : []).map((p) => Object.assign({}, p));
+    const legalPool = uniqueLetters(
+      mustPicks.map((p) => p.ch).join('') + laqtPicks.map((p) => p.ch).join('')
+    );
+    const seedA = natqSeed && (natqSeed.afterNazira || natqSeed.readingLine) || '';
+    const seedB = natqSeed && natqSeed.qutbPath && natqSeed.qutbPath.readingLine || '';
+    const seedChainA = natqSeed ? [
+      { step: 'مستحصله/مستحضره', value: natqSeed.source || '' },
+      { step: 'مؤخرصدر', value: natqSeed.afterTakseer || '' },
+      { step: 'نظیره قمری (= بذر A)', value: seedA }
+    ] : [];
+    const seedChainB = natqSeed && natqSeed.qutbPath ? [
+      { step: 'مستحصله', value: natqSeed.source || '' },
+      { step: 'نظیره قطب', value: natqSeed.qutbPath.afterQutbNazira || '' },
+      { step: 'مؤخرصدر×۱', value: natqSeed.qutbPath.afterTakseer1 || '' },
+      { step: 'مؤخرصدر×۲', value: natqSeed.qutbPath.afterTakseer2 || '' },
+      { step: 'نظیره قمری (= بذر B)', value: seedB }
+    ] : [];
+
+    // واژه‌پوش فقط از حروف قانونی (نه کل مخزن آزاد A–D)
+    const bank = (natqSeed && natqSeed.candidateWords) || [];
+    const legalWords = bank.filter((w) => {
+      if (!w || !w.complete) return false;
+      return coverageAgainst(w.word, legalPool + seedA + seedB).complete;
+    }).slice(0, 20);
+
+    const mustLines = mustPicks.slice(0, 24).map((p) =>
+      `${p.ch}←${p.row}${p.col}` + (p.category ? `(${p.category})` : '')
+    );
+    const laqtLines = [];
+    ['selected', 'A', 'B', 'C', 'D', 'asas'].forEach((key) => {
+      const part = classicLaqt && classicLaqt.parts && classicLaqt.parts[key === 'selected' ? 'selected' : key];
+      if (!part || !part.text) return;
+      const label = key === 'selected' ? 'Must' : (key === 'asas' ? 'Asas' : key);
+      laqtLines.push(`لقط ${label} (گام ${mizan}): ${part.text} ← ستون‌های مضرب ${mizan}`);
+    });
+
+    return {
+      mizan: mizan | 0,
+      mustahdara: sel && sel.selected || '',
+      mustPicks,
+      laqtPicks,
+      laqt: classicLaqt || null,
+      legalPool,
+      seedA,
+      seedB,
+      seedChainA,
+      seedChainB,
+      legalWords,
+      mustLines,
+      laqtLines,
+      summary: `استخراج قانونی: مستحضره ${mustPicks.length} خانه + لقط ${laqtPicks.length} حرف · حروف مجاز یکتا: ${legalPool.length}`,
+      rules: [
+        'حروف جواب فقط از مستحضره / لقط میزانی / بذر A–B (تبدیل قانونی سطر)',
+        'مخزن کامل A–D برای نطق آزادِ بی‌قانون نیست؛ حرف خارج از استخراج قانونی ممنوع',
+        'جملهٔ ادبی اسکرین («نادم…») نمونهٔ سبک است نه خروجی این حساب مگر همان حروف از قانون بیایند'
+      ]
+    };
+  }
+
+  /**
+   * پوشش واژه نسبت به جریان قانونی (مستحضره+لقط+بذر)
+   * اگر کامل نبود → از هوا آمده و رد است.
+   */
+  function provenanceAgainstLegal(text, legal) {
+    const needle = normalizeText(text);
+    const pool = (legal && (legal.legalPool + (legal.seedA || '') + (legal.seedB || ''))) || '';
+    const cover = coverageAgainst(needle, pool);
+    const fromMust = [];
+    const fromLaqt = [];
+    if (legal && Array.isArray(legal.mustPicks)) {
+      needle.split('').forEach((ch) => {
+        const hit = legal.mustPicks.find((p) => p.ch === ch);
+        if (hit) fromMust.push(`${ch}←${hit.row}${hit.col}`);
+      });
+    }
+    if (legal && Array.isArray(legal.laqtPicks)) {
+      needle.split('').forEach((ch) => {
+        const hit = legal.laqtPicks.find((p) => p.ch === ch);
+        if (hit) fromLaqt.push(`${ch}←لقط ${hit.row}${hit.col}`);
+      });
+    }
+    return {
+      text,
+      needle,
+      complete: !!cover.complete,
+      ratio: cover.ratio,
+      missing: cover.missing || '',
+      fromMust,
+      fromLaqt,
+      summary: cover.complete
+        ? 'پوشش کامل از حروف قانونی'
+        : `ناقص — حروف خارج از قانون: ${cover.missing || '—'}`
+    };
+  }
+
+  /**
+   * مسیر رنگ فقط برای نمایش نمونهٔ ادبی اسکرین (اثبات «حرف در جدول هست»)
+   * این استخراج قانونی نیست و نباید جواب حساب معرفی شود.
    */
   function planNatqHighlight(natqText, layers, opts) {
     const rowIds = ['A', 'B', 'C', 'D'];
@@ -1278,8 +1427,8 @@
   }
 
   /**
-   * منشأ واژه به واژه: هر کلمهٔ نطق → خانه‌های جدول (مثلاً نادم: ن←A1 ا←B2 د←D13 م←D16)
-   * این همان چیزی است که کارشناس جفر می‌خواهد ببیند — نه جملهٔ «از خود ساخته».
+   * منشأ واژه به واژه روی جدول A–D (فقط برای نمایش نمونهٔ ادبی اسکرین).
+   * استخراج قانونی نیست — برای جواب حساب از buildLegalExtraction استفاده کن.
    */
   function buildNatqProvenance(natqText, layers, opts) {
     const text = String(natqText || '').trim();
@@ -1319,14 +1468,15 @@
       words,
       lines,
       complete,
+      literaryOnly: true,
       summary: complete
-        ? `منشأ جدول برای ${words.length} واژه کامل است`
-        : `منشأ جدول ناقص (${words.filter((w) => w.ok).length}/${words.length} واژه)`
+        ? `پوشش حروف در A–D برای نمونهٔ ادبی (${words.length} واژه) — این استخراج قانونی حساب نیست`
+        : `پوشش ناقص نمونهٔ ادبی (${words.filter((w) => w.ok).length}/${words.length})`
     };
   }
 
   function formatProvenanceBlock(provenance, opts) {
-    const title = (opts && opts.title) || 'منشأ حروف از جدول A–D (اثبات — نه از خود ساختن)';
+    const title = (opts && opts.title) || 'منشأ حروف';
     const lines = [title, provenance && provenance.summary ? provenance.summary : '—'];
     if (provenance && Array.isArray(provenance.lines)) {
       provenance.lines.forEach((ln) => lines.push('- ' + ln));
@@ -1335,46 +1485,88 @@
     return lines;
   }
 
+  function formatLegalExtractionBlock(legal) {
+    if (!legal) return ['## استخراج قانونی', '—'];
+    const lines = [
+      '## استخراج قانونی حروف (طبق قانون جفر — نه از هوا)',
+      legal.summary,
+      ''
+    ];
+    (legal.rules || []).forEach((r, i) => lines.push(`${i + 1}) ${r}`));
+    lines.push('');
+    lines.push(`### مستحضره (${(legal.mustahdara || '').length} حرف)`);
+    lines.push(legal.mustahdara || '—');
+    if (legal.mustLines && legal.mustLines.length) {
+      lines.push('نمونهٔ منشأ خانه‌ها: ' + legal.mustLines.slice(0, 16).join(' · '));
+    }
+    lines.push('');
+    lines.push(`### لقط میزانی (گام=${legal.mizan})`);
+    (legal.laqtLines || []).forEach((ln) => lines.push('- ' + ln));
+    if (legal.laqt && legal.laqt.pooled) {
+      lines.push(`لقط تجمعی: ${legal.laqt.pooled}`);
+      lines.push(`لقط یکتا: ${legal.laqt.unique}`);
+    }
+    lines.push('');
+    lines.push('### بذر قانونی A (مستحصله→مؤخرصدر→نظیره قمری)');
+    (legal.seedChainA || []).forEach((s) => lines.push(`- ${s.step}: ${s.value || '—'}`));
+    lines.push('### بذر قانونی B (قطب→مؤخرصدر×۲→قمری)');
+    (legal.seedChainB || []).forEach((s) => lines.push(`- ${s.step}: ${s.value || '—'}`));
+    lines.push('');
+    lines.push(`### حروف مجاز یکتا برای نطق: ${legal.legalPool || '—'}`);
+    if (legal.legalWords && legal.legalWords.length) {
+      lines.push('واژه‌های پوش‌شده فقط از حروف قانونی: ' +
+        legal.legalWords.map((w) => w.word).join('، '));
+    } else {
+      lines.push('واژهٔ کامل از بانک روی حروف قانونی یافت نشد — از بذر A/B متصل بخوان.');
+    }
+    lines.push('');
+    lines.push('واجب: نطق یک‌خطی فقط از همین حروف قانونی / بذر A–B. حرف خارج = رد.');
+    return lines;
+  }
+
   /**
-   * مدل قفل نطق:
-   * حرف جواب باید در سطرهای A–D باشد؛ منشأ خانه به خانه قابل اثبات است.
-   * ترتیب برداشتن آزاد است (آزمایش/خوانش ادبی روی حروف موجود)، حرف خارج از جدول ممنوع.
+   * قفل نطق طبق قانون:
+   * حروف جواب = مستحضره + لقط میزانی + بذر A/B
+   * نمونهٔ ادبی اسکرین فقط سبک است، جواب این حساب نیست.
    */
   function analyzeNatqLock(layers, opts) {
-    const pool = (layers && layers.poolABCD) || (
-      String((layers && layers.A) || '') +
-      String((layers && layers.B) || '') +
-      String((layers && layers.C) || '') +
-      String((layers && layers.D) || '')
-    );
+    const legal = opts && opts.legal;
     const rules = [
-      'هر حرف نطق باید در یکی از خانه‌های سطرهای A–D باشد؛ حرف خارج از جدول ممنوع',
-      'برای هر واژهٔ مهم، منشأ خانه بنویس (مثال: نادم: ن←A1 ا←B2 د←D13 م←D16)',
-      'ترتیب برداشتن حروف آزاد است (آزمایش خوانش روی حروف موجود)؛ رنگ = اثبات مصرف خانه',
-      'لقط/سطر انتخاب برای حساب کمکی است؛ نطق ادبی از مخزن A–D با اثبات جدول'
+      'نطق فقط از حروف استخراج قانونی: مستحضره، لقط میزانی، بذر A/B',
+      'حرف خارج از استخراج قانونی = رد (از هوا نیامده باشد)',
+      'برای هر واژهٔ مهم منشأ قانون بنویس: مستحضره‌ستون / لقط‌سطرستون / قطعهٔ بذر',
+      'جملهٔ «نادم شوند…» اگر در پرامپت هست فقط نمونهٔ سبک اسکرین است — خروجی این حساب نیست مگر همان حروف از قانون بیایند'
     ];
     const out = {
       unlocked: true,
-      id: 'pool_letters_with_table_provenance',
-      title: 'قفل نطق: حروف فقط از جدول',
+      id: 'legal_mustahdara_laqt_seed',
+      title: 'قفل نطق: استخراج قانونی',
       rules,
-      poolUnique: uniqueLetters(pool),
-      summary: 'قفل نطق: فقط حروف A–D + منشأ خانه به خانه',
+      poolUnique: legal ? legal.legalPool : uniqueLetters((layers && layers.poolABCD) || ''),
+      summary: legal
+        ? legal.summary
+        : 'قفل نطق: فقط استخراج قانونی (مستحضره/لقط/بذر)',
+      legal: legal || null,
       reference: null
     };
     const ref = opts && opts.referenceNatq ? String(opts.referenceNatq) : '';
     if (ref) {
       const normalized = normalizeText(ref);
+      const pool = (layers && layers.poolABCD) || '';
       const provenance = buildNatqProvenance(ref, layers, opts);
+      const legalCover = legal ? provenanceAgainstLegal(ref, legal) : null;
       out.reference = {
         text: ref,
         normalized,
+        literarySample: true,
+        note: 'نمونهٔ ادبی اسکرین — استخراج قانونی این اجرا نیست',
         poolCover: coverageAgainst(normalized, pool),
+        legalCover,
         highlight: provenance.highlight,
         provenance
       };
-      if (out.reference.highlight.complete && out.reference.poolCover.complete) {
-        out.summary += ` · نمونه مرجع اثبات‌شده (${out.reference.highlight.sweeps} جارو)`;
+      if (legalCover && !legalCover.complete) {
+        out.summary += ' · نمونهٔ ادبی اسکرین ≠ خروجی قانونی این حساب';
       }
     }
     return out;
@@ -1673,61 +1865,35 @@
         title: 'سطر انتخاب / مستحضره',
         input: `میزان=${mizan} | حالت=${sel.mode}`,
         output: sel.selected,
-        note: (sel.classicNote || '') + ' · میزان برای لقط روی همین سطر · نطق از مخزن A–D'
+        note: (sel.classicNote || '') + ' · سپس لقط میزانی + بذر A/B از همین سطر'
       });
 
       const mizanExtract = extractByMizanStep(sel.selected, mizan);
       const classicLaqt = buildClassicLaqtBundle(columnBase, layers, sel.selected, mizan);
-      const refNatq = opts.referenceNatq ||
-        'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
-      // برای سؤال جنگِ مرجع، مسیر رنگ نمونه را هم گزارش کن؛ وگرنه فقط مدل قفل
-      const warSoalNorm = normalizeText(
-        'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود'
-      );
-      const includeRef = !!opts.referenceNatq || columnBase === warSoalNorm;
-      const natqLock = analyzeNatqLock(layers, {
-        referenceNatq: includeRef ? refNatq : ''
-      });
       steps.push({
         id: 'jadwal_mizan_extract',
         title: 'لقط میزانی از سطر انتخاب',
         input: sel.selected,
         output: mizanExtract,
-        note: `برداشتن حروف ستون‌های مضرب ${mizan}`
+        note: `قانون لقط: حروف ستون‌های مضرب ${mizan}`
       });
       steps.push({
         id: 'jadwal_laqt_classic',
         title: 'لقط میزانی کلاسیک (گام = میزان)',
-        input: `گام ${classicLaqt.step} از اساس‌سؤال + انتخاب + A/B/C/D`,
+        input: `گام ${classicLaqt.step} از اساس‌سؤال + مستحضره + A/B/C/D`,
         output: classicLaqt.pooled,
         note: [
           `از اساس سؤال: ${classicLaqt.fromAsas || '—'}`,
-          `از انتخاب: ${classicLaqt.fromSelected || '—'}`,
+          `از مستحضره: ${classicLaqt.fromSelected || '—'}`,
+          `از A/B/C/D: ${[classicLaqt.fromA, classicLaqt.fromB, classicLaqt.fromC, classicLaqt.fromD].join('/')}`,
           `یکتا: ${classicLaqt.unique}`
         ].join(' | ')
-      });
-      steps.push({
-        id: 'natq_lock',
-        title: 'قفل نطق (حروف فقط از جدول)',
-        input: 'مخزن A+B+C+D · منشأ خانه به خانه',
-        output: natqLock.summary,
-        note: natqLock.rules.concat(
-          natqLock.reference && natqLock.reference.provenance
-            ? [natqLock.reference.provenance.summary].concat(
-              (natqLock.reference.provenance.lines || []).slice(0, 4)
-            )
-            : (natqLock.reference && natqLock.reference.highlight
-              ? [natqLock.reference.highlight.summary]
-              : [])
-        ).join(' · ')
       });
 
       const condensed = takhlisOdd(sel.selected);
       const poolABCD = layers.poolABCD || (layers.A + layers.B + layers.C + layers.D);
       const priority = sel.priority || (sel.selected + mizanExtract);
       const classicBasis = opts.classicBasis !== false; // پیش‌فرض: مبنا اصولی
-      // مهندسی (بدون تیک): مستحصله = یکتای اولویت+لقط+مخزن
-      // اصولی (با تیک): مستحصله = سطر مستحضره؛ مخزن فقط برای نطق ادبی
       let mustehsila = '';
       let mustehsilaMode = 'engineered_pool';
       if (classicBasis) {
@@ -1743,13 +1909,16 @@
         if (mustehsila.length < 4) mustehsila = condensed || sel.selected;
       }
 
+      // حروف مجاز نطق = مستحضره + لقط (نه مخزن آزاد کامل)
+      const legalLetterPool = uniqueLetters(String(sel.selected || '') + String(classicLaqt.pooled || ''));
+
       steps.push({
         id: 'jadwal_pool',
-        title: 'مخزن حروف نطق ادبی (A+B+C+D · مهندسی)',
+        title: 'مخزن لایه‌ها A–D (فقط ساخت جدول — نه منبع آزاد نطق)',
         input: 'چهار لایهٔ اصلی',
         output: poolABCD,
         note: classicBasis
-          ? `مخزن فقط برای نطق ادبی/AI است · طول ${poolABCD.length} | یکتا: ${uniqueLetters(poolABCD)}`
+          ? `نطق از مستحضره+لقط+بذر · حروف مجاز یکتا: ${legalLetterPool} · طول مخزن نمایشی ${poolABCD.length}`
           : `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)}`
       });
 
@@ -1762,18 +1931,17 @@
           : `اولویت:${priority.length} | لقط:${classicLaqt.pooled.length} | مخزن:${poolABCD.length}`,
         output: mustehsila,
         note: classicBasis
-          ? `مبنا اصولی: سطر مستحضره = مستحصله · مخزن A–D فقط نطق ادبی · ستون=${columnBase.length}`
-          : `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | در کتب مستحصله «سطر» است؛ شبکهٔ فشرده فقط نمایش است`
+          ? `مبنا اصولی: سطر مستحضره = مستحصله · نطق از همین سطر + لقط + بذر A/B`
+          : `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel}`
       });
 
-      // سنجش مقرره + بذر نطق کلاسیک
       const measuredSelected = measureStringByMuqarrara(sel.selected, mizan);
       steps.push({
         id: 'muqarrara_measure',
         title: 'سنجش با اعداد مقرره + میزان',
         input: `مستحضره + میزان ${mizan}`,
         output: measuredSelected,
-        note: 'عدد مقررهٔ حرف (جدول چهار دسته) + میزان → طرح ۲۸ → حرف؛ منبع: رسالهٔ ۲۸ عمل / هیئت موسی بن جعفر'
+        note: 'عدد مقررهٔ حرف + میزان → طرح ۲۸ → حرف'
       });
       const topic = detectTopic({
         sael: input.sael,
@@ -1782,27 +1950,52 @@
         modda: input.modda,
         soal: input.soal
       });
-      // بذر A/B از سطر اصولی؛ واژه‌پوش ادبی از مخزن مهندسی
+      // بذر A/B از سطر مستحصله؛ واژه‌پوش فقط روی حروف قانونی
       const natqSeed = buildClassicalNatqSeed(mustehsila, {
-        pool: poolABCD,
+        pool: legalLetterPool + mustehsila,
         bank: (topic && topic.bank) || [],
         forbidPolar: !!(topic && (topic.forbidPolar || topic.id === 'medical_cause'))
       });
+      const legal = buildLegalExtraction(sel, classicLaqt, layers, mizan, natqSeed);
       const natqChecklist = buildNatqChecklist(natqSeed, {
         soal: input.soal || ''
       });
       steps.push({
         id: 'natq_seed',
-        title: 'بذر نطق کلاسیک (قمری + قطب خودناطق)',
+        title: 'بذر نطق قانونی (قمری + قطب)',
         input: mustehsila,
         output: natqSeed.readingLine || natqSeed.afterNazira,
         note: [
-          classicBasis ? 'مبنا: سطر اصولی · ادبی: مخزن A–D' : 'مبنا: مخزن/یکتا',
           'A قمری: ' + natqSeed.afterNazira,
           'B قطب: ' + ((natqSeed.qutbPath && natqSeed.qutbPath.readingLine) || '—'),
-          'خوانش/پیشنهاد: ' + natqSeed.draftLine,
+          'پیش‌نویس بذر: ' + (natqSeed.seedDraft || natqSeed.draftLine),
           natqSeed.classicNote
         ].join(' · ')
+      });
+      steps.push({
+        id: 'legal_extract',
+        title: 'استخراج قانونی حروف',
+        input: `میزان=${mizan}`,
+        output: legal.legalPool,
+        note: legal.summary + ' · ' + (legal.laqtLines || []).slice(0, 3).join(' · ')
+      });
+
+      const refNatq = opts.referenceNatq ||
+        'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
+      const warSoalNorm = normalizeText(
+        'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود'
+      );
+      const includeRef = !!opts.referenceNatq || columnBase === warSoalNorm;
+      const natqLock = analyzeNatqLock(layers, {
+        legal,
+        referenceNatq: includeRef ? refNatq : ''
+      });
+      steps.push({
+        id: 'natq_lock',
+        title: 'قفل نطق (استخراج قانونی)',
+        input: 'مستحضره + لقط + بذر A/B',
+        output: natqLock.summary,
+        note: natqLock.rules.join(' · ')
       });
       steps.push({
         id: 'natq_checklist',
@@ -1835,6 +2028,7 @@
         mizan,
         jamalLock,
         natqLock,
+        legal,
         questionScope,
         madkhal: madkhal.value,
         madkhalSteps: madkhal.steps,
@@ -1876,6 +2070,8 @@
           condensed,
           poolABCD,
           poolUnique: uniqueLetters(poolABCD),
+          legalLetterPool,
+          legal,
           natqLock,
           mustehsilaGrid,
           questionScope,
@@ -2741,35 +2937,33 @@
       `10) پروفایل این سؤال: ${profile.title}. قالب: ${profile.outputHint}.`
     ];
     if (sentenceNatq) {
-      lines.push('11) محصول اصلی جفر جدولی یک «نطق یک‌خطی کلاسیک» است — نه فقط جدول کاندیدهای مدرن.');
-      lines.push('12) نطق یک‌خطی را فقط از حروف مخزن A+B+C+D بساز (۸–۲۵ کلمه؛ ترتیب آزاد، نه اجبار ترتیب ستون).');
-      lines.push('12ب) ممنوع: چسباندن ردیف کاندیدهای بانک پشت‌سرهم به‌عنوان نطق یک‌خطی (مثل «فشار سخت مانع پنهان صبر آرام»).');
-      lines.push('12ج) واجب: اول بذر A یا B را بخوان؛ از روی همان حروف/بخش‌ها زنجیره بساز؛ بانک فقط کمکی است.');
-      lines.push('12د) در خروجی، یک خط «پیوند بذر» بنویس: از کدام مسیر (A/B) و کدام قطعهٔ بذر استفاده شد.');
-      lines.push('12ه) واجب اثبات جدول: هر حرف نطق باید در سطرهای A–D باشد؛ برای واژه‌های اصلی «پیوند جدول» خانه به خانه بنویس (مثال نادم: ن←A1 ا←B2 …). حرف خارج از جدول = رد.');
+      lines.push('11) محصول اصلی جفر جدولی: نطق از حروف استخراج قانونی (مستحضره + لقط میزانی + بذر A/B).');
+      lines.push('12) حرف خارج از استخراج قانونی ممنوع است — از هوا / از مخزن آزاد کامل نساز.');
+      lines.push('12ب) ممنوع: چسباندن ردیف بانک پشت‌سرهم به‌عنوان نطق یک‌خطی.');
+      lines.push('12ج) واجب: بذر A یا B را از تبدیل قانونی سطر بخوان؛ بانک فقط اگر حرفش در حروف قانونی باشد.');
+      lines.push('12د) «پیوند بذر» بنویس (A یا B + قطعه).');
+      lines.push('12ه) «پیوند قانون» بنویس: هر واژه از مستحضره/لقط/بذر از کجا آمده (خانه یا گام لقط).');
+      lines.push('12و) جملهٔ «نادم شوند…» اگر در شواهد هست فقط نمونهٔ سبک اسکرین است — آن را جواب این حساب جا نزن مگر حروفش از استخراج قانونی همین اجرا بیاید.');
       if (isConflict) {
-        lines.push('13) الگوی مطلوب شبیه این است (فقط سبک؛ عین این جمله را کپی نکن): «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت».');
-        lines.push('14) سبک نطق یک‌خطی = زنجیرهٔ کلاسیک حرف‌محور (نادم شوند که … / حصول به … / … سخت). نه خبر تحلیلی مدرن.');
-        lines.push('15) در خودِ نطق یک‌خطی نام طرفین سیاسی/جغرافیایی (اسرائیل، امریکا، ایران، …) ننویس؛ نام‌ها فقط در «تفسیر» مجازند.');
-        lines.push('16) ویرگول مدرن (،) و ساختار «الف …، ب با …» را کم کن؛ اتصال با که / و / به / ز / از.');
-        lines.push('17) واژه‌های نتیجه را از مخزن بچین: ندامت، سخت، خوف، نظامی/نظام، سقوط، حصول، بقا، نصر، باخت، عمید، … — نه روایت خبری بلند.');
+        lines.push('13) سبک زنجیرهٔ کلاسیک مجاز است؛ ولی فقط با حروف قانونی همین جدول/لقط/بذر.');
+        lines.push('14) در نطق یک‌خطی نام طرفین سیاسی/جغرافیایی ننویس؛ نام‌ها فقط در تفسیر.');
+        lines.push('15) ویرگول مدرن کم کن؛ اتصال با که / و / به / ز / از.');
+        lines.push('16) واژه‌ها از حروف قانونی: بقا، خوف، سخت، … فقط اگر در مستحضره/لقط/بذر پوشش دارند.');
       } else if (isCause) {
-        lines.push('13) این سؤال علت/وضعیت است؛ نطق یک‌خطی = زنجیره از بذر A/B + حروف مخزن — نه فهرست بانک.');
-        lines.push('14) بانک قطبی (آری، خیر، بله) و چسباندن بانک علت (فشار+مانع+صبر+آرام+…) به‌عنوان کل نطق ممنوع است.');
-        lines.push('15) واژهٔ موضوع سؤال (مو، دندان، بچه، خواب، …) را طوطی‌وار داخل نطق یک‌خطی ننویس؛ معنا در تفسیر بیاید.');
+        lines.push('13) سؤال علت: نطق از بذر/لقط قانونی — نه فهرست بانک.');
+        lines.push('14) بانک قطبی و چسباندن بانک علت ممنوع.');
+        lines.push('15) واژهٔ موضوع (مو/دندان/بچه) را طوطی‌وار ننویس.');
         lines.push('16) ویرگول مدرن کم کن؛ اتصال با که / و / به / ز / از.');
-        lines.push('17) اگر بذر سخت‌خوان است، ۲–۴ واژهٔ رمزی از حروف بذر بساز و در تفسیر باز کن؛ جدول کاندید پشتیبان بماند.');
       } else {
-        lines.push('13) سبک نطق یک‌خطی = زنجیرهٔ کلاسیک حرف‌محور از بذر/مخزن (۸–۲۵ کلمه)؛ الگوی جنگ را کپی نکن.');
-        lines.push('14) موضوع سؤال را در نطق رعایت کن ولی بانک را ردیف نکن؛ بانک جنگ را وارد نکن مگر حروف مجبور کند.');
-        lines.push('15) نام اشخاص خاص سؤال را در نطق ننویس مگر برای نام‌یابی؛ جزئیات روان در تفسیر بیاید.');
-        lines.push('16) ویرگول مدرن کم کن؛ اتصال با که / و / به / ز / از.');
-        lines.push('17) از واژه‌های هم‌خوان با بذر و حروف مخزن استفاده کن؛ برای سؤال غیرقطبی آری/خیر را غالب نکن.');
+        lines.push('13) زنجیره از حروف قانونی هم‌خوان با موضوع؛ الگوی جنگ را کپی نکن.');
+        lines.push('14) بانک را ردیف نکن؛ بانک جنگ را وارد نکن مگر حروف قانونی مجبور کند.');
+        lines.push('15) نام اشخاص خاص را در نطق ننویس مگر نام‌یابی.');
+        lines.push('16) ویرگول مدرن کم کن.');
       }
-      lines.push('18) رنگ/هایلایت را کلید استخراج ندان؛ بعد از نطق با جاروی چندبارهٔ جدول خانه‌های مصرف‌شده مشخص می‌شود.');
-      lines.push('19) بعد از نطق یک‌خطی، بخش «تفسیر هوش مصنوعی» را جدا بنویس (۲–۵ جملهٔ فارسی روان' + (isConflict ? '؛ اینجا می‌توانی طرفین را نام ببری' : '') + (isCause ? '؛ صریحاً بگو تشخیص پزشکی نیست' : '') + ').');
-      lines.push('20) جدول کاندید فقط پشتیبان است؛ جواب آخر همان نطق یک‌خطی + پیوند بذر + تفسیر است.');
-      lines.push('21) حرف خارج از مخزن ممنوع. حروف اولویت (انتخاب/میزان) کمکی‌اند نه زندان ترتیب.');
+      lines.push('17) جدول کاندید فقط پشتیبان است.');
+      lines.push('18) بعد از نطق، «تفسیر هوش مصنوعی» جدا (۲–۵ جمله' + (isConflict ? '؛ طرفین را نام ببر' : '') + (isCause ? '؛ تشخیص پزشکی نیست' : '') + ').');
+      lines.push('19) جواب آخر = نطق یک‌خطی + پیوند بذر + پیوند قانون + تفسیر.');
+      lines.push('20) بدون پیوند قانون یا با حرف خارج از استخراج قانونی = رد.');
     } else if (isChoice) {
       lines.push('11) در سؤال انتخابی بانک اصلی فقط گزینه‌های خود سؤال است.');
       lines.push('12) ساخت واژه‌های بی‌ربط از حروف مشترک به‌عنوان جواب اصلی ممنوع است.');
@@ -2826,12 +3020,12 @@
     } else if (sentenceNatq) {
       lines.push('### ۱) جدول کاندید پشتیبان');
       lines.push('کاندید | نوع | منبع‌لایه | پوشش | عنصر | مدخل | نسبت‌طرف(اگر نزاع) | امتیاز | اطمینان');
-      lines.push('### ۲) نطق یک‌خطی (اصلی — اجباری · از بذر نه از ردیف بانک)');
+      lines.push('### ۲) نطق یک‌خطی (اصلی — فقط از استخراج قانونی)');
       lines.push(isCause
-        ? 'نطق یک‌خطی: <زنجیره از بذر A/B + مخزن؛ بدون چسباندن بانک؛ بدون طوطی‌وار آوردن مو/دندان/بچه؛ بدون تشخیص پزشکی>'
-        : 'نطق یک‌خطی: <زنجیرهٔ کلاسیک ۸–۲۵ کلمه‌ای از بذر/مخزن؛ بدون نام طرفین؛ شبیه «نادم شوند که … سخت»>');
-      lines.push('پیوند بذر: <A یا B> · <قطعهٔ استفاده‌شده از بذر>');
-      lines.push('پیوند جدول: <واژه: حرف←سطرستون …> (هر حرف از A–D؛ بدون خانه = رد)');
+        ? 'نطق یک‌خطی: <از بذر/لقط/مستحضره؛ بدون چسباندن بانک؛ بدون طوطی‌وار موضوع؛ بدون تشخیص پزشکی>'
+        : 'نطق یک‌خطی: <از حروف قانونی همین حساب؛ نه کپی عین جملهٔ اسکرین مگر قانون همین اجرا همان را بدهد>');
+      lines.push('پیوند بذر: <A یا B> · <قطعه>');
+      lines.push('پیوند قانون: <واژه ← مستحضره‌خانه / لقط‌سطرستون / قطعه بذر>');
       lines.push('### ۳) تفسیر هوش مصنوعی (اجباری)');
       lines.push(isCause
         ? 'تفسیر: <۲–۵ جمله روان؛ چندعامل/رمزی برای صورت‌مسئله؛ صریحاً بگو تشخیص پزشکی نیست>'
@@ -3078,14 +3272,14 @@
         ? '10) در نزاع: قبول نهایی فقط اگر نسبت به مهاجم/مدافع روشن باشد؛ وگرنه مشروط یا رد.'
         : '10) در پایان خوانش غالب را روشن بنویس.',
       isConflict && topic.parties && topic.parties.label ? ('11) طرف‌ها: ' + topic.parties.label) : '11) اگر مولّد نطق یک‌خطی داده، همان را از نظر حروف مخزن و معنا داوری کن.',
-      '12) محصول نهایی: «نطق یک‌خطی» + «پیوند بذر» + «پیوند جدول (خانه به خانه)» + «تفسیر».',
-      '13) رد فوری اگر یک‌خطی فقط چسباندن واژه‌های بانک موضوعی است و از بذر A/B ساخته نشده.',
-      '14) رد فوری اگر حرف خارج از جدول A–D دارد، یا «پیوند جدول» ندارد/جعلی است (مثلاً نادم بدون ن←خانه).',
-      '15) رد یا مشروط اگر «پیوند بذر» نیست یا پیوند مبهم/جعلی است.',
+      '12) محصول نهایی: نطق یک‌خطی + پیوند بذر + پیوند قانون + تفسیر.',
+      '13) رد فوری اگر یک‌خطی فقط چسباندن بانک است.',
+      '14) رد فوری اگر حرف خارج از استخراج قانونی (مستحضره/لقط/بذر) دارد یا پیوند قانون ندارد.',
+      '15) رد اگر جملهٔ اسکرین «نادم…» را به‌عنوان جواب این حساب جا زده بدون پوشش قانونی.',
       isCause
-        ? '16) در سؤال علت: طوطی‌واری موضوع (مو/دندان/بچه) یا ردیف بانک علت به‌عنوان کل نطق = رد.'
-        : '16) اگر نطق یک‌خطی نام طرفین سیاسی دارد یا سبک خبری مدرن است، آن را به زنجیرهٔ کلاسیک (بدون نام طرفین) ویرایش کن؛ نام‌ها فقط در تفسیر بمانند.',
-      '17) در صورت قبول، ویرایش جزئی برای روان‌تر شدن مجاز است ولی حرف جدید خارج از جدول اضافه نکن و اسکلت بذر/جدول را حفظ کن.',
+        ? '16) در سؤال علت: طوطی‌واری موضوع یا ردیف بانک علت = رد.'
+        : '16) اگر نطق نام طرفین سیاسی دارد، ویرایش کن؛ نام‌ها فقط در تفسیر.',
+      '17) ویرایش جزئی مجاز است ولی حرف جدید خارج از استخراج قانونی اضافه نکن.',
       '',
       '## فرمت خروجی داور',
       'برای هر کاندید مولّد:',
@@ -3094,10 +3288,10 @@
       '- دلیل کوتاه:',
       'پایان:',
       '- کاندیدهای قبول‌شده نهایی:',
-      '- نطق یک‌خطی نهایی: <فقط حروف موجود در A–D؛ نه ردیف بانک؛ بدون نام طرفین در نزاع>',
+      '- نطق یک‌خطی نهایی: <فقط حروف استخراج قانونی>',
       '- پیوند بذر: <A یا B> · <قطعه>',
-      '- پیوند جدول: <واژه: حرف←سطرستون …>',
-      '- تفسیر هوش مصنوعی: <۲–۵ جمله روان برای صورت‌مسئله؛ در نزاع طرفین را نام ببر>',
+      '- پیوند قانون: <واژه ← مستحضره/لقط/بذر>',
+      '- تفسیر هوش مصنوعی: <۲–۵ جمله>',
       '- سطح اطمینان: کم/متوسط/زیاد'
     ].join('\n');
   }
@@ -3172,53 +3366,49 @@
           soal: (meta && meta.soal) || ''
         });
       formatNatqChecklistBlock(checklist).forEach((ln) => jadwalLines.push(ln));
-      jadwalLines.push(`- لقط میزانی از انتخاب: ${result.jadwal.mizanExtract}`);
+      jadwalLines.push(`- لقط میزانی از مستحضره: ${result.jadwal.mizanExtract}`);
       if (result.jadwal.classicLaqt) {
         jadwalLines.push(`- لقط کلاسیک (گام=${result.jadwal.classicLaqt.step}): ${result.jadwal.classicLaqt.pooled}`);
         jadwalLines.push(`- لقط کلاسیک یکتا: ${result.jadwal.classicLaqt.unique}`);
       }
-      jadwalLines.push(`- اولویت حروف (انتخاب+میزان): ${result.jadwal.priority || result.jadwal.selected}`);
-      jadwalLines.push(`- مخزن حروف نطق A+B+C+D: ${result.jadwal.poolABCD}`);
-      jadwalLines.push(`- بدون تکرار مخزن: ${result.jadwal.poolUnique}`);
-      jadwalLines.push(`- شمارش حروف مخزن: ${letterBag(result.jadwal.poolABCD)}`);
+      const legal = result.legal || result.jadwal.legal;
+      if (legal) {
+        formatLegalExtractionBlock(legal).forEach((ln) => jadwalLines.push(ln));
+      } else {
+        jadwalLines.push(`- حروف لایه‌ها A–D (نمایش جدول): ${result.jadwal.poolABCD}`);
+      }
       if (result.natqLock || (result.jadwal && result.jadwal.natqLock)) {
         const nl = result.natqLock || result.jadwal.natqLock;
         jadwalLines.push(`- قفل نطق: ${nl.summary}`);
         (nl.rules || []).forEach((rule, i) => jadwalLines.push(`  · ${i + 1}) ${rule}`));
-        if (nl.reference && nl.reference.provenance) {
-          formatProvenanceBlock(nl.reference.provenance, {
-            title: '## منشأ حروف نمونهٔ مرجع (اثبات جدول — جواب از خود ساخته نیست)',
-            note: 'اگر نطق جدید می‌سازی، همین‌طور برای هر واژهٔ اصلی پیوند جدول بنویس.'
-          }).forEach((ln) => jadwalLines.push(ln));
-        } else if (nl.reference && nl.reference.highlight) {
-          jadwalLines.push(`- مسیر رنگ نمونهٔ مرجع: ${nl.reference.highlight.summary}`);
+        if (nl.reference && nl.reference.literarySample) {
+          jadwalLines.push('## نمونهٔ ادبی اسکرین (فقط سبک — خروجی قانونی این حساب نیست)');
+          jadwalLines.push(nl.reference.note || 'نمونه ادبی');
+          jadwalLines.push(nl.reference.text || '');
+          if (nl.reference.legalCover) {
+            jadwalLines.push(`پوشش روی حروف قانونی این اجرا: ${nl.reference.legalCover.summary}`);
+          }
         }
       }
-      jadwalLines.push('## دستور نطق جدولی (حروف فقط از جدول)');
-      if (result.classicBasis || (result.jadwal && result.jadwal.classicBasis)) {
-        jadwalLines.push('۰) حالت مبنا اصولی فعال: سطر مستحضره = حساب اصلی؛ مخزن A–D فقط برای نطق ادبی/جمله یک‌خطی.');
-        jadwalLines.push('۰ب) بذر A/B را از سطر اصولی بخوان؛ جملهٔ ادبی را فقط با حروف مخزن بساز و به سؤال ربط بده.');
-      }
-      jadwalLines.push('1) اول حروف را از سطرهای A–D بردار؛ حرف خارج از جدول ممنوع است.');
-      jadwalLines.push('1ب) برای هر واژهٔ مهم «پیوند جدول» بنویس (حرف←سطرستون). مثال جنگ: نادم: ن←A1 ا←B2 د←D13 م←D16.');
-      jadwalLines.push('1ج) پیش‌نویس بذر (seedDraft) و مسیر A/B را هم بخوان؛ اسکلت را با حروف جدول تکمیل کن.');
-      jadwalLines.push('1د) ممنوع: لیست‌کردن واژه‌های بانک پشت‌سرهم؛ ممنوع: ساختن جوابی که حرفش در جدول نیست.');
-      jadwalLines.push('1ه) پیوند بذر + پیوند جدول هر دو اجباری‌اند.');
+      jadwalLines.push('## دستور نطق جدولی (طبق قانون جفر)');
+      jadwalLines.push('۰) فقط از بخش «استخراج قانونی» بالا حرف بردار.');
+      jadwalLines.push('۰ب) مستحضره + لقط میزانی + بذر A/B = منبع نطق. مخزن کامل A–D منبع آزاد نیست.');
+      jadwalLines.push('1) اول بذر A/B و لقط را بخوان.');
+      jadwalLines.push('1ب) نطق یک‌خطی را از همان حروف بساز.');
+      jadwalLines.push('1ج) «پیوند بذر» و «پیوند قانون» بنویس (خانه مستحضره / ستون لقط / قطعه بذر).');
+      jadwalLines.push('1د) ممنوع: حرف خارج از استخراج قانونی؛ ممنوع: چسباندن بانک؛ ممنوع: جا زدن جملهٔ اسکرین به‌عنوان جواب این حساب.');
       if (rules.isConflict) {
-        jadwalLines.push('2) سبک هدف: زنجیرهٔ واژه‌های حرف‌محور از حروف موجود جدول (نمونهٔ اثبات‌شدهٔ مرجع را عین کپی نکن؛ برای سؤال فعلی از همین جدول بساز).');
-        jadwalLines.push('3) ممنوع در نطق یک‌خطی: نام طرفین (اسرائیل/امریکا/ایران/…) و جملهٔ خبری مدرن با ویرگول‌های تحلیلی.');
-        jadwalLines.push('4) مجاز در تفسیر: نام طرفین + توضیح روان.');
+        jadwalLines.push('2) سبک زنجیرهٔ کلاسیک مجاز است فقط با حروف قانونی همین اجرا.');
+        jadwalLines.push('3) در نطق نام طرفین ننویس.');
+        jadwalLines.push('4) تفسیر: طرفین + معنای نطق.');
       } else if (rules.isCause) {
-        jadwalLines.push('2) سبک هدف: زنجیره از بذر + حروف موجود A–D؛ بانک علت را ردیف نکن؛ واژهٔ موضوع را طوطی‌وار ننویس.');
-        jadwalLines.push('3) بانک قطبی و چسباندن بانک موضوعی ممنوع است.');
-        jadwalLines.push('4) تفسیر: ۲–۵ جمله روان + صریحاً بگو تشخیص پزشکی نیست.');
+        jadwalLines.push('2) علت از بذر/لقط؛ بانک را ردیف نکن؛ موضوع را طوطی‌وار ننویس.');
+        jadwalLines.push('3) تفسیر + تشخیص پزشکی نیست.');
       } else {
-        jadwalLines.push('2) سبک هدف: زنجیره از حروف موجود جدول هم‌خوان با موضوع سؤال.');
-        jadwalLines.push('3) بانک جنگ را وارد نکن مگر حروف جدول مجبور کند؛ بانک موضوعی را ردیف نکن.');
-        jadwalLines.push('4) تفسیر: ۲–۵ جمله روان برای صورت‌مسئلهٔ همین سؤال.');
+        jadwalLines.push('2) موضوع سؤال را رعایت کن؛ بانک جنگ را کپی نکن.');
+        jadwalLines.push('3) تفسیر برای همین صورت‌مسئله.');
       }
-      jadwalLines.push('5) رنگ خانه‌ها = اثبات مصرف حروف از جدول؛ بدون خانه برای حرف = نطق باطل.');
-      jadwalLines.push('6) محصول اصلی = نطق یک‌خطی + پیوند بذر + پیوند جدول + تفسیر.');
+      jadwalLines.push('4) محصول = نطق + پیوند بذر + پیوند قانون + تفسیر.');
       (result.jadwal.layers || []).forEach((row) => {
         jadwalLines.push(`- ${row.title}: ${row.str}`);
       });
@@ -3227,10 +3417,10 @@
     const generator = [
       rules.isChoice ? 'تو مولّد نطق جفر هستی (حالت انتخاب بین گزینه‌ها).'
         : (rules.isYesNo ? 'تو مولّد نطق جفر هستی (حالت بله/خیر).'
-          : (sentenceNatq ? 'تو مولّد نطق جفر هستی (جفر جدولی · نطق جمله‌ای).' : 'تو مولّد نطق جفر هستی (نطق آزاد + پیشنهاد دیکشنری).')),
+          : (sentenceNatq ? 'تو مولّد نطق جفر هستی (جفر جدولی · استخراج قانونی).' : 'تو مولّد نطق جفر هستی (نطق آزاد + پیشنهاد دیکشنری).')),
       'کاندید بساز و رتبه‌بندی کن. داوری نهایی با پرامپت داور است.',
       sentenceNatq
-        ? 'محصول اصلی: نطق یک‌خطی از بذر A/B (+ تکمیل مخزن) + پیوند بذر + تفسیر جدا. بانک را ردیف نکن. جدول کاندید فقط پشتیبان است.'
+        ? 'محصول اصلی: نطق فقط از استخراج قانونی (مستحضره/لقط/بذر) + پیوند بذر + پیوند قانون + تفسیر. حرف از هوا ممنوع.'
         : 'دیکشنری داخلی پیشنهاد است نه زندان. از حروف لایه‌ها می‌توانی نطق‌آزاد بسازی؛ حرف جدید خارج از لایه ممنوع.',
       '', '## صورت مسئله', ...metaLines(meta), '',
       '## روش محاسباتی',
@@ -3242,13 +3432,12 @@
       result.mizan != null ? `- میزان جدولی: ${result.mizan}` : null,
       `- مستحصله کامل: ${result.mustehsila}`, `- شمارش حروف: ${letterBag(result.mustehsila)}`, `- حروف بدون تکرار: ${result.mustehsilaUnique}`, '',
       ...(result.natqSeed ? [
-        '## بذر نطق کلاسیک (اولویت یک‌خطی)',
+        '## بذر نطق قانونی',
         `- مسیر A (قمری): ${result.natqSeed.afterNazira || result.natqSeed.readingLine}`,
         result.natqSeed.qutbPath ? `- مسیر B (قطب): ${result.natqSeed.qutbPath.readingLine}` : null,
         `- پیش‌نویس بذر: ${result.natqSeed.seedDraft || result.natqSeed.draftLine}`,
-        result.natqSeed.lexAssist ? `- کمک واژگانی (فقط تکمیل): ${result.natqSeed.lexAssist}` : null,
-        `- پیشنهاد یک‌خطی: ${result.natqSeed.draftLine}`,
-        '- یک‌خطی را از بذر بساز؛ بانک را به‌جای بذر ننشان؛ پیوند بذر را بنویس.',
+        result.natqSeed.lexAssist ? `- کمک واژگانی (فقط اگر حرفش قانونی است): ${result.natqSeed.lexAssist}` : null,
+        '- یک‌خطی را از بذر/لقط بساز؛ پیوند بذر و پیوند قانون را بنویس.',
         ''
       ].filter(Boolean) : []),
       ...(!result.jadwal ? formatNatqChecklistBlock(
@@ -3258,19 +3447,17 @@
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']
         : sentenceNatq ? [
-          '1) اول حروف را در سطرهای A–D پیدا کن؛ حرف خارج از جدول ممنوع.',
-          '2) یک «نطق یک‌خطی» از همان حروف بساز؛ چسباندن بانک ممنوع.',
-          '3) «پیوند بذر» و «پیوند جدول» (خانه به خانه مثل نادم: ن←A1 …) بنویس.',
+          '1) بخش استخراج قانونی را باز کن (مستحضره / لقط / بذر).',
+          '2) نطق یک‌خطی فقط از همان حروف بساز.',
+          '3) پیوند بذر + پیوند قانون بنویس.',
           rules.isConflict
-            ? '4) در نطق نام طرفین ننویس؛ ویرگول خبری کم کن؛ زنجیرهٔ که/و/به/ز.'
+            ? '4) نام طرفین در نطق ننویس؛ جملهٔ اسکرین را جواب این حساب جا نزن.'
             : (rules.isCause
-              ? '4) طوطی‌واری موضوع (مو/دندان/بچه) و ردیف بانک علت ممنوع؛ جزئیات در تفسیر.'
-              : '4) بانک جنگ را وارد نکن مگر حروف جدول مجبور کند؛ جزئیات روان در تفسیر.'),
-          '5) جدول کاندید پشتیبان بده (معنادار؛ پنجرهٔ بی‌معنا غالب نشود).',
-          rules.isConflict
-            ? '6) «تفسیر هوش مصنوعی» جدا بنویس و آنجا طرفین را نام ببر.'
-            : '6) «تفسیر هوش مصنوعی» جدا بنویس برای همین صورت‌مسئله.',
-          '7) بدون پیوند جدول یا با حرف خارج از A–D = رد داور.'
+              ? '4) طوطی‌واری موضوع و ردیف بانک ممنوع.'
+              : '4) بانک جنگ را کپی نکن مگر حروف قانونی مجبور کند.'),
+          '5) جدول کاندید پشتیبان.',
+          '6) تفسیر جدا.',
+          '7) حرف خارج از استخراج قانونی = رد.'
         ]
         : ['1) از دیکشنری شروع کن ولی به آن محدود نشو.', '2) در صورت نیاز نطق‌آزاد از لایه‌ها بساز.', '3) پایدارها را بالاتر بنویس.', '4) جدول ۳ تا ۸ کاندید + خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
     ].filter((x) => x != null).join('\n');
@@ -3407,6 +3594,7 @@
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     buildAskRefinePrompt, describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight, buildNatqProvenance, formatProvenanceBlock,
+    extractByMizanStepDetailed, buildLegalExtraction, provenanceAgainstLegal, formatLegalExtractionBlock,
     classifyQuestionScope, buildMustehsilaGrid,
     LETTER_CATEGORIES, letterCategory, LETTER_MUQARRARA, ELEMENT_MUQARRARA,
     muqarraraOf, measureLetterByMuqarrara, measureStringByMuqarrara, buildClassicalNatqSeed,
