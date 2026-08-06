@@ -177,7 +177,20 @@ assert(E.takseerMuakhkharSadr(E.mapNazira(exM)) === 'بضدمهاجرین', 'م�
 const seed = E.buildClassicalNatqSeed('غتخجقنا', { pool: warLayers.poolABCD, bank: ['خوف', 'سخت', 'بقا', 'نادم'] });
 assert(seed.afterTakseer && seed.afterNazira && seed.draftLine, 'بذر نطق کلاسیک تولید می‌شود');
 assert(seed.qutbPath && seed.qutbPath.readingLine && seed.readingLine, 'مسیر قطب و قمری هر دو موجودند');
+assert(seed.seedDraft, 'seedDraft از بذر موجود است');
+assert(typeof seed.lexAssist === 'string', 'lexAssist جدا از بذر موجود است');
+// اولویت بذر بر بانک: حتی با بانک قوی، draftLine از seedDraft می‌آید نه از چسباندن بانک
+assert(seed.draftLine === seed.seedDraft || seed.draftLine === seed.lexAssist || seed.draftLine === seed.afterNazira, 'draftLine از بذر یا کمک است');
 assert(E.segmentReadingLine('بضدمهاجرین', ['بضد', 'مهاجرین']).readable === 'بضد مهاجرین', 'بخش‌بندی متصل حروف');
+
+// اولویت seedDraft روی lexAssist وقتی بخش‌بندی معنادار است
+const seedPri = E.buildClassicalNatqSeed('بضدمهاجرین', {
+  pool: 'بضدمهاجرینخوفسخت',
+  bank: ['خوف', 'سخت', 'بقا', 'نادم', 'بضد', 'مهاجرین']
+});
+assert(seedPri.seedDraft && seedPri.seedDraft !== seedPri.lexAssist, 'seedDraft غیر از lexAssist وقتی بخش‌بندی هست');
+assert(seedPri.draftLine === seedPri.seedDraft, 'draftLine اولویت با seedDraft دارد نه چسباندن بانک');
+assert(!/^خوف\s+سخت/.test(seedPri.draftLine), 'draftLine با ردیف بانک شروع نمی‌شود');
 
 // تفکیک نقش: میزان از اساس کامل، ستون فقط از سؤال
 const warDate = 'هشتم مراد هزاروچهارصدو پنج هجری شمسی در ایران';
@@ -420,6 +433,10 @@ const causePrompt = E.buildNatqPrompt(causeRun, causeMeta).generator;
 assert(/علت|وضعیت/.test(causePrompt) && /آری\/خیر|آری‌خیر|بانک قطبی/.test(causePrompt), 'پرامپت علت قواعد ضد آری‌خیر دارد');
 assert(/تشخیص پزشکی/.test(causePrompt), 'پرامپت علت هشدار غیرپزشکی دارد');
 assert(!/پاسخ قطبی آری/.test(causePrompt), 'پرامپت علت قالب بله‌خیر ندارد');
+assert(/چسباندن/.test(causePrompt) && /پیوند بذر/.test(causePrompt), 'پرامپت علت ضد چسباندن بانک + پیوند بذر دارد');
+assert(/پیش‌نویس از بذر|پیش‌نویس بذر/.test(causePrompt), 'پرامپت علت پیش‌نویس بذر را نشان می‌دهد');
+const causeJudge = E.buildNatqPrompt(causeRun, causeMeta).judge;
+assert(/چسباندن/.test(causeJudge) && /پیوند بذر/.test(causeJudge), 'داور علت چسباندن بانک را رد می‌کند');
 assert(E.detectQuestionProfile({ soal: 'آیا این دارو برای من مفید است' }).id === 'yesno', 'آیا+مفید همچنان بله‌خیر');
 assert(E.detectTopic({ soal: 'چرا سردرد شبانه دارم' }).id === 'medical_cause', 'چرا+درد = علت');
 assert(E.looksLikeCauseQuest('جراسردردشبانهدارم'), 'پس از نرمال چ→ج هم علت تشخیص داده شود');

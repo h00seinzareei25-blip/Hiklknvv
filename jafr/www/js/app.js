@@ -404,7 +404,8 @@
     }
     if ($('natqLineA')) $('natqLineA').textContent = ns.afterNazira || ns.readingLine || '—';
     if ($('natqLineB')) $('natqLineB').textContent = (ns.qutbPath && ns.qutbPath.readingLine) || '—';
-    if ($('natqDraft')) $('natqDraft').textContent = ns.draftLine || '—';
+    if ($('natqDraft')) $('natqDraft').textContent = ns.seedDraft || ns.draftLine || '—';
+    if ($('natqLexAssist')) $('natqLexAssist').textContent = ns.lexAssist || '— (بانک فقط کمکی؛ اسکلت نطق نیست)';
     if ($('natqWords')) {
       const words = (ns.candidateWords || []).filter((w) => w.complete).slice(0, 14).map((w) => w.word);
       $('natqWords').textContent = words.length ? words.join('، ') : '—';
