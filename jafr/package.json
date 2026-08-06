@@ -1,0 +1,23 @@
+{
+  "name": "jafr-workbench",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:android": "npx cap sync android && cd android && ./gradlew assembleDebug",
+    "sync": "npx cap sync android",
+    "test": "node test/engine.test.js",
+    "build:apk": "npx cap sync android && cd android && ./gradlew assembleDebug && mkdir -p ../dist && cp app/build/outputs/apk/debug/app-debug.apk ../dist/jafr-workbench-debug.apk"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/clipboard": "^8.0.1",
+    "@capacitor/core": "^8.5.0"
+  },
+  "private": true
+}

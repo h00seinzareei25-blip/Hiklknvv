@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a5c45">
+  <meta name="description" content="میز کار جفر — محاسبه اصولی تا مستحصله و پرامپت نطق">
+  <title>میز کار جفر</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1 class="brand">میز کار جفر</h1>
+      <p class="tagline">محاسبه اصولی از سؤال تا مستحصله — پرامپت نطق آماده برای هوش مصنوعی</p>
+      <div class="badge-row">
+        <span class="badge">جفر کبیر کلاسیک</span>
+        <span class="badge">چندروش</span>
+        <span class="badge">بدون AI در محاسبه</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="alert" class="alert"></div>
+
+    <section class="card">
+      <h2>صورت مسئله</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="sael">سائل</label>
+          <input id="sael" type="text" placeholder="نام سائل (برای سؤال محوری)" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="taleb">طالب</label>
+          <input id="taleb" type="text" placeholder="جوینده / موضوع‌خواه" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="matloob">مطلوب</label>
+          <input id="matloob" type="text" placeholder="خواسته / شخص یا چیز" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="modda">مدعا</label>
+          <input id="modda" type="text" placeholder="آماج پرسش" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label for="soal">متن سؤال</label>
+        <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
+      </div>
+
+      <div class="mode-row" style="margin-top:8px">
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeAuto" value="auto" checked>
+          <span>نوع سؤال: خودکار</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeMarkazi" value="markazi">
+          <span>مرکزی (عامه)</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="questionScope" id="scopeMehvari" value="mehvari">
+          <span>محوری (شخصی)</span>
+        </label>
+      </div>
+      <p class="hint">محوری = سائل (+تاریخ) در اساس؛ مرکزی = بدون سائل.</p>
+
+      <div id="mizanDateBox" class="extra-box" style="margin-top:10px">
+        <div class="field">
+          <label for="questionDate">تاریخ سؤال (فارسی حروفی · برای میزان/جدولی)</label>
+          <div class="date-row">
+            <input id="questionDate" type="text" placeholder="مثال: پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران" autocomplete="off">
+            <button class="btn btn-ghost" id="btnTodayDate" type="button" title="امروز را به فارسی حروفی می‌گذارد">امروز فارسی</button>
+          </div>
+        </div>
+        <div class="date-help">
+          <p class="hint"><strong>تاریخ حروفی (سبک اسکرین):</strong> مثل «هشتم مرداد هزار و چهارصد و پنج هجری شمسی در ایران» — در همین فیلد بنویس، نه داخل متن سؤال.</p>
+          <p class="hint">چرا؟ تاریخ وارد <strong>جمل/میزان</strong> می‌شود؛ ستون جدول فقط از متن سؤال است. رقم مثل <code>1405/05/15</code> یا دکمهٔ عددی قدیمی با تاریخ حروفی یکی نیست و جواب عوض می‌شود.</p>
+          <p class="hint">دکمهٔ «امروز فارسی» همان عبارت حروفی + «هجری شمسی در ایران» را خودکار می‌گذارد.</p>
+        </div>
+      </div>
+
+      <div class="check" style="margin-top:8px">
+        <input id="extraEnabled" type="checkbox">
+        <span>اطلاعات تکمیلی (فامیلی، ساعت)</span>
+      </div>
+
+      <div id="extraFields" class="extra-box hidden">
+        <div class="grid">
+          <div class="field">
+            <label for="saelFamily">فامیلی سائل</label>
+            <input id="saelFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="talebFamily">فامیلی طالب</label>
+            <input id="talebFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="matloobFamily">فامیلی مطلوب</label>
+            <input id="matloobFamily" type="text" placeholder="اختیاری" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="questionTime">ساعت سؤال</label>
+            <input id="questionTime" type="text" placeholder="مثال: 14:30" autocomplete="off">
+          </div>
+        </div>
+        <p class="hint">فامیلی‌ها به نام‌ها و ساعت (با تبدیل رقم به واژه) به اساس اضافه می‌شوند. تاریخ جداگانه بالاتر است.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>تنظیمات دقت</h2>
+
+      <div class="mode-row">
+        <label class="mode-pill">
+          <input type="radio" name="runMode" id="modeSingle" value="single" checked>
+          <span>تک‌روش</span>
+        </label>
+        <label class="mode-pill">
+          <input type="radio" name="runMode" id="modeMulti" value="multi">
+          <span>چندروش</span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label for="table">جدول ابجد (مشترک)</label>
+        <select id="table">
+          <option value="kabir" selected>ابجد کبیر</option>
+          <option value="saghir">ابجد صغیر</option>
+          <option value="wazie">ابجد وضعی (۱–۲۸)</option>
+        </select>
+      </div>
+
+      <div id="singleSettings" class="opts">
+        <div class="field">
+          <label for="pipeline">زنجیره محاسبه</label>
+          <select id="pipeline">
+            <option value="jadwali" selected>جفر جدولی میزان‌دار (مهم)</option>
+            <option value="classic">کلاسیک کبیر (بسط → تکسیر → تخلیص)</option>
+            <option value="fifteen">جفر ۱۵ سطری</option>
+          </select>
+        </div>
+        <p class="hint" id="pipelineHint">جدولی: میزان از سائل+سؤال+تاریخ · ستون از سؤال · نطق آزاد از مخزن A–D · رنگ پس از نطق (جاروی چندباره). قفل جمل کلاسیک: سائلِ ۵۹.</p>
+        <div id="jadwalOpts">
+          <div class="field">
+            <label for="jadwalModel">مدل لایه‌های جدولی</label>
+            <select id="jadwalModel">
+              <option value="quarter28" selected>ربع دایره (A+0 / B+7 / C+14 / D+21)</option>
+              <option value="tttm">ترفع · ترقی · تنزل · مساوات (کلاسیک کتب)</option>
+            </select>
+          </div>
+          <p class="hint">هر دو مدل لقط میزانی کلاسیک (گام=میزان) را هم می‌سازند.</p>
+        </div>
+        <div id="classicOpts" class="hidden">
+          <div class="field">
+            <label for="bastMode">بسط / بینات</label>
+            <select id="bastMode">
+              <option value="bayyinat" selected>بینات</option>
+              <option value="malfuzi">بسط ملفوظی</option>
+              <option value="zabarBayyinat">زبر و بینات</option>
+              <option value="none">بدون بسط</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="takseer">نوع تکسیر</label>
+            <select id="takseer">
+              <option value="sadr_muakhkhar" selected>صدر و مؤخر تا زمام</option>
+              <option value="muakhkhar_sadr">مؤخر و صدر تا زمام</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="takhlis">تخلیص</label>
+            <select id="takhlis">
+              <option value="odd" selected>حروف فرد</option>
+              <option value="laqt2">لقط گام ۲</option>
+              <option value="laqt3">لقط گام ۳</option>
+              <option value="laqt4">لقط گام ۴</option>
+              <option value="none">بدون تخلیص</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="takseerRounds">تعداد دور تکسیر</label>
+            <select id="takseerRounds">
+              <option value="1" selected>۱</option>
+              <option value="2">۲</option>
+              <option value="3">۳</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="check">
+              <input id="mazjNazira" type="checkbox" checked>
+              <span>مزج اساس با نظیره</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="check">
+              <input id="removeDupAsas" type="checkbox">
+              <span>حذف مکرر از اساس</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check">
+            <input id="isqatEnabled" type="checkbox">
+            <span>اسقاط ۹ در گزارش جمل</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="multiSettings" class="hidden">
+        <p class="hint">روش‌های انتخاب‌شده پشت‌سرهم محاسبه می‌شوند و یک پرامپت تجمیعی می‌سازیم. برای سؤال «بین … کدام» ترجیحاً ۳ روش پیش‌فرض کافی است؛ انتخاب همه حروف مشترک را خیلی تنگ می‌کند. لقط۳/۴ و جفر ۱۵ سطری هم در فهرست هستند.</p>
+        <div id="methodList" class="method-list"></div>
+        <div class="actions" style="margin-top:8px">
+          <button class="btn btn-ghost" id="btnSelectDefault" type="button">۳ روش پیش‌فرض</button>
+          <button class="btn btn-ghost" id="btnSelectAll" type="button">انتخاب همه</button>
+          <button class="btn btn-ghost" id="btnSelectNone" type="button">هیچ‌کدام</button>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary" id="btnRun" type="button">اجرای محاسبه اصولی</button>
+        <button class="btn btn-ghost" id="btnClear" type="button">پاک کردن</button>
+        <button class="btn btn-ghost" id="btnSample" type="button">نمونه ازدواج</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="compareCard">
+      <h2>مقایسه چندروش</h2>
+      <div id="compareTable"></div>
+      <label style="margin-top:10px;display:block">حروف مشترک</label>
+      <div class="letters" id="sharedBox" style="font-size:18px;background:#1a5c45">—</div>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+      <h2 id="resultTitle">نتیجه مستحصله</h2>
+      <div class="summary">
+        <div class="stat"><div class="k">جمع جمل اساس</div><div class="v" id="statJamal">—</div></div>
+        <div class="stat"><div class="k">میزان</div><div class="v" id="statMizan">—</div></div>
+        <div class="stat"><div class="k">مدخل</div><div class="v" id="statMadkhal">—</div></div>
+        <div class="stat"><div class="k">تعداد حروف</div><div class="v" id="statCount">—</div></div>
+      </div>
+      <p class="hint" id="profileHint">پروفایل نطق بعد از اجرا نشان داده می‌شود.</p>
+      <label id="mustLabel">مستحصله (روش اصلی)</label>
+      <div class="letters" id="mustehsilaBox">—</div>
+      <label>بدون تکرار</label>
+      <div class="letters" id="uniqueBox" style="font-size:18px;background:#1a5c45">—</div>
+
+      <div id="mustehsilaGridWrap" class="hidden" style="margin-top:12px">
+        <label>جدول مستحصله (نمایش فشرده)</label>
+        <p class="hint" id="mustehsilaGridHint">در کتب مستحصله یک سطر است؛ این شبکه همان حروف را فشرده نشان می‌دهد.</p>
+        <div class="jadwal-scroll" id="mustehsilaGridBox"></div>
+      </div>
+
+      <div id="jadwalGridWrap" class="hidden" style="margin-top:14px">
+        <label>جدول لایه‌ها + مسیر رنگ (جاروی چندباره)</label>
+        <p class="hint" id="jadwalGridHint">خانه‌های رنگی = مسیر مصرف حروف نطق مرجع/نمونه پس از ساخت جمله.</p>
+        <div class="jadwal-scroll" id="jadwalGridBox"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-accent" id="btnCopyPrompt" type="button">کپی پرامپت مولّد</button>
+        <button class="btn btn-ghost" id="btnCopyJudgeTop" type="button">کپی پرامپت داور</button>
+        <button class="btn btn-ghost" id="btnCopyReport" type="button">کپی گزارش کامل</button>
+        <button class="btn btn-ghost" id="btnCopyMust" type="button">کپی مستحصله</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="stabilityCard">
+      <h2>پایداری با/بدون تکمیلی</h2>
+      <p class="hint" id="stabilityNote">—</p>
+      <div id="stabilityList"></div>
+    </section>
+
+    <section class="card hidden" id="stepsCard">
+      <h2>مراحل گام‌به‌گام</h2>
+      <div id="methodTabs" class="method-tabs hidden"></div>
+      <div id="stepsList"></div>
+    </section>
+
+    <section class="card hidden" id="promptCard">
+      <h2>۱) پرامپت مولّد</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">اول این را به AI بده تا کاندید بسازد.</p>
+      <textarea class="prebox" id="promptBox" readonly></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-accent" id="btnCopyPrompt2" type="button">کپی مولّد</button>
+      </div>
+
+      <h2 style="margin-top:18px">۲) جواب مولّد را اینجا پیست کن</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">پاسخ AI مرحلهٔ قبل را کامل اینجا بگذار؛ اپ خودش پرامپت داور آماده می‌سازد.</p>
+      <textarea class="prebox" id="generatorAnswerBox" placeholder="جواب هوش مصنوعی (مولّد) را اینجا پیست کنید..." style="min-height:140px;background:#10261d;"></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-primary" id="btnBuildJudge" type="button">ساخت پرامپت داور</button>
+        <button class="btn btn-ghost" id="btnClearGeneratorAnswer" type="button">پاک کردن جواب</button>
+      </div>
+
+      <h2 style="margin-top:18px">۳) پرامپت داور (آمادهٔ ارسال)</h2>
+      <p style="margin:0 0 10px;color:var(--muted);font-size:13px">این متن را کپی کن و به AI بده تا فقط رد/قبول کند.</p>
+      <textarea class="prebox" id="judgeBox" readonly></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-accent" id="btnCopyJudge" type="button">کپی داور</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="reportCard">
+      <h2>گزارش محاسباتی</h2>
+      <textarea class="prebox" id="reportBox" readonly></textarea>
+    </section>
+
+    <p class="footer-note">محاسبات قاعده‌محور و قطعی‌اند. روش اصلی پیشنهادی: جفر جدولی میزان‌دار. نطق را بیرون با AI انجام دهید. دیکشنری پیشنهاد است نه محدودیت.</p>
+  </main>
+
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
