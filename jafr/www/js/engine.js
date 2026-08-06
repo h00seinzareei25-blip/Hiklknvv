@@ -841,6 +841,126 @@
   }
 
   /**
+   * نمونه‌های کارشدهٔ نطق (آموزشی) — از کتب؛ نه فرمول اجباری برای هر سؤال
+   * اصل: بعد از حساب، ناطق کردن مستحصله با ربط به سؤال است.
+   */
+  const NATQ_TEACHING_SAMPLES = [
+    {
+      id: 'bzed_muhajirin',
+      title: 'بضد مهاجرین',
+      source: 'جهاان۲۲ · مستحصله در علم جفر',
+      soal: 'نمونهٔ کتابی (نه جنگ اسکرین)',
+      mustehsila: 'لظسوغخفقصع',
+      steps: 'مستحصله → نظیره قمری → مؤخرصدر → خواندن متصل',
+      seed: 'بضدمهاجرین',
+      reading: 'بضد مهاجرین',
+      lesson: 'حروف را جابه‌جا نکن؛ همان ترتیب را کلمه کن. خوانش باید معنی‌دار و مربوط به سؤال باشد.'
+    },
+    {
+      id: 'war_screen_style',
+      title: 'سبک نطق جنگ (اسکرین)',
+      source: 'مرجع جدولی · لایهٔ زبان روی مخزن A–D',
+      soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+      mustehsila: 'سطر انتخاب / مخزن A–D پس از میزان ۱۰',
+      steps: 'بذر حرفی از مخزن → ترکیب واژه‌پوش → جملهٔ یک‌خطی کلاسیک',
+      seed: 'نادم‌/سقوط‌/خوف‌/نظامی‌… (از حروف مخزن)',
+      reading: 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت',
+      lesson: 'جملهٔ ادبی نهایی فرمول حرف‌به‌جمله نیست؛ روی بذر + ربط به سؤال ساخته می‌شود.'
+    },
+    {
+      id: 'checklist_core',
+      title: 'اصل خطاهای نطق',
+      source: 'روحانی علوم + رسائل نطق',
+      soal: '—',
+      mustehsila: '—',
+      steps: 'حساب درست ≠ نطق درست',
+      seed: '—',
+      reading: 'بسیاری از جواب‌های غلط از نطق بد است نه از قانون حساب',
+      lesson: 'ربط به سؤال مهم‌تر از هر کلمه‌ی «خوش‌معنی» بی‌ربط است؛ صبر کن و حروف زائد را با احتیاط کنار بگذار.'
+    }
+  ];
+
+  /**
+   * چک‌لیست ناطق کردن مستحصله (پس از اتمام حساب)
+   * done = خودکار از بذر/نتیجه؛ reminder = یادآوری دستی خوانش
+   */
+  function buildNatqChecklist(natqSeed, opts) {
+    const ns = natqSeed || null;
+    const hasSeed = !!(ns && (ns.afterNazira || ns.readingLine));
+    const hasDraft = !!(ns && ns.draftLine);
+    const hasWords = !!(ns && ns.candidateWords && ns.candidateWords.some((w) => w.complete));
+    const soal = normalizeText((opts && opts.soal) || '');
+    const items = [
+      {
+        id: 'satr',
+        title: 'سطر مستحصله را اصل بگیر',
+        detail: 'شبکهٔ فشرده فقط نمایش است؛ خوانش از سطر/بذر است.',
+        status: 'done',
+        auto: true
+      },
+      {
+        id: 'path_ab',
+        title: 'مسیر A یا B را بساز',
+        detail: 'A: مؤخرصدر→نظیره قمری · B: قطب→مؤخرصدر×۲→قمری',
+        status: hasSeed ? 'done' : 'todo',
+        auto: true
+      },
+      {
+        id: 'connected',
+        title: 'متصل بخوان؛ جابه‌جا نکن',
+        detail: 'مثل بضدمهاجرین — ترتیب حروف را حفظ کن.',
+        status: hasSeed ? 'done' : 'todo',
+        auto: true
+      },
+      {
+        id: 'drop_extra',
+        title: 'حروف زائد را با احتیاط کنار بگذار',
+        detail: 'فقط وقتی واژهٔ مربوط به سؤال بسته شد؛ حرف جدید اضافه نکن.',
+        status: hasWords ? 'hint' : 'todo',
+        auto: false
+      },
+      {
+        id: 'bind_soal',
+        title: 'خوانش را به سؤال ببند',
+        detail: soal
+          ? ('سؤال: «' + (opts.soal || '').slice(0, 80) + ((opts.soal || '').length > 80 ? '…' : '') + '»')
+          : 'ربط به سؤال مهم‌تر از هر کلمه‌ی بی‌ربطِ معنی‌دار است.',
+        status: hasDraft ? 'hint' : 'todo',
+        auto: false
+      },
+      {
+        id: 'patience',
+        title: 'صبر در نطق',
+        detail: 'عجله = خطای رایج کتب؛ جملهٔ ادبی را روی بذر و با AI/خوانش بساز.',
+        status: 'todo',
+        auto: false
+      }
+    ];
+    const doneCount = items.filter((i) => i.status === 'done').length;
+    return {
+      title: 'چک‌لیست ناطق کردن مستحصله',
+      summary: doneCount + ' از ' + items.length + ' گام خودکار آماده؛ بقیه خوانش دستی/AI است',
+      items,
+      samples: NATQ_TEACHING_SAMPLES,
+      classicNote: 'پس از حساب، اصل کار ناطق کردن است؛ ربط به سؤال بر هر کلمه‌ی خوش‌معنیِ بی‌ربط مقدم است.'
+    };
+  }
+
+  function formatNatqChecklistBlock(checklist) {
+    if (!checklist) return [];
+    const lines = ['## چک‌لیست نطق (اجباری در خوانش)', checklist.classicNote, checklist.summary];
+    checklist.items.forEach((it, i) => {
+      const mark = it.status === 'done' ? '[x]' : (it.status === 'hint' ? '[~]' : '[ ]');
+      lines.push(`${i + 1}) ${mark} ${it.title} — ${it.detail}`);
+    });
+    lines.push('### نمونه‌های کارشده (آموزشی)');
+    (checklist.samples || NATQ_TEACHING_SAMPLES).forEach((s) => {
+      lines.push(`- ${s.title}: ${s.mustehsila} → ${s.seed} → «${s.reading}» | ${s.lesson}`);
+    });
+    return lines;
+  }
+
+  /**
    * جدول ۹تایی مراتب (آحاد / عشرات / مآت) برای ترفع و مساوات کلاسیک
    * ستون مشترک = همان مرتبهٔ وضعی در ردیف‌های سه‌گانه
    */
@@ -1574,6 +1694,9 @@
         pool: poolABCD,
         bank: (topic && topic.bank) || []
       });
+      const natqChecklist = buildNatqChecklist(natqSeed, {
+        soal: parts.soal || input.soal || ''
+      });
       steps.push({
         id: 'natq_seed',
         title: 'بذر نطق کلاسیک (قمری + قطب خودناطق)',
@@ -1585,6 +1708,13 @@
           'خوانش/پیشنهاد: ' + natqSeed.draftLine,
           natqSeed.classicNote
         ].join(' · ')
+      });
+      steps.push({
+        id: 'natq_checklist',
+        title: 'چک‌لیست ناطق کردن',
+        input: natqChecklist.summary,
+        output: natqChecklist.items.map((it) => it.title).join(' · '),
+        note: natqChecklist.classicNote
       });
 
       steps.push({
@@ -1618,6 +1748,7 @@
         mustehsilaGrid,
         measuredSelected,
         natqSeed,
+        natqChecklist,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
@@ -1640,6 +1771,7 @@
           selectNote: sel.classicNote,
           measuredSelected,
           natqSeed,
+          natqChecklist,
           priority,
           mizanExtract,
           classicLaqt,
@@ -1713,12 +1845,22 @@
         pool: mustehsila,
         bank: (topic && topic.bank) || []
       });
+      const natqChecklist = buildNatqChecklist(natqSeed, {
+        soal: parts.soal || input.soal || ''
+      });
       steps.push({
         id: 'natq_seed',
         title: 'بذر نطق کلاسیک از سطر ۱۵',
         input: mustehsila,
         output: natqSeed.readingLine || natqSeed.afterNazira,
         note: 'خوانش باصبر · مسیر A/B · ربط به سؤال'
+      });
+      steps.push({
+        id: 'natq_checklist',
+        title: 'چک‌لیست ناطق کردن',
+        input: natqChecklist.summary,
+        output: natqChecklist.items.map((it) => it.title).join(' · '),
+        note: natqChecklist.classicNote
       });
       const methodLabel = opts.methodLabel || 'جفر ۱۵ سطری';
       return {
@@ -1736,6 +1878,7 @@
         mustehsila,
         mustehsilaUnique: uniqueLetters(mustehsila),
         natqSeed,
+        natqChecklist,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
@@ -1843,6 +1986,9 @@
       pool: mustehsila,
       bank: (topic && topic.bank) || []
     });
+    const natqChecklist = buildNatqChecklist(natqSeed, {
+      soal: parts.soal || input.soal || ''
+    });
     steps.push({
       id: 'natq_seed',
       title: 'بذر نطق کلاسیک (مستحصله → مؤخرصدر → نظیره)',
@@ -1854,6 +2000,13 @@
         'پیشنهاد: ' + natqSeed.draftLine,
         'با صبر بخوان و به سؤال ربط بده'
       ].join(' · ')
+    });
+    steps.push({
+      id: 'natq_checklist',
+      title: 'چک‌لیست ناطق کردن',
+      input: natqChecklist.summary,
+      output: natqChecklist.items.map((it) => it.title).join(' · '),
+      note: natqChecklist.classicNote
     });
 
     const methodLabel = opts.methodLabel || ('جفر کبیر · ' + describeOptions(opts));
@@ -1873,6 +2026,7 @@
       mustehsila,
       mustehsilaUnique: uniqueLetters(mustehsila),
       natqSeed,
+      natqChecklist,
       letterCount: mustehsila.length,
       dotCount: countDots(mustehsila),
       steps,
@@ -2752,6 +2906,11 @@
           jadwalLines.push(`- واژه‌های پوش‌شده از مخزن: ${ns.candidateWords.filter((w) => w.complete).slice(0, 12).map((w) => w.word).join('، ')}`);
         }
       }
+      const checklist = result.natqChecklist || (result.jadwal && result.jadwal.natqChecklist)
+        || buildNatqChecklist(result.natqSeed || (result.jadwal && result.jadwal.natqSeed), {
+          soal: (meta && meta.soal) || ''
+        });
+      formatNatqChecklistBlock(checklist).forEach((ln) => jadwalLines.push(ln));
       jadwalLines.push(`- لقط میزانی از انتخاب: ${result.jadwal.mizanExtract}`);
       if (result.jadwal.classicLaqt) {
         jadwalLines.push(`- لقط کلاسیک (گام=${result.jadwal.classicLaqt.step}): ${result.jadwal.classicLaqt.pooled}`);
@@ -2814,6 +2973,9 @@
         '- با صبر بخوان و به سؤال ربط بده؛ سطر مستحصله اصل است.',
         ''
       ].filter(Boolean) : []),
+      ...(!result.jadwal ? formatNatqChecklistBlock(
+        result.natqChecklist || buildNatqChecklist(result.natqSeed, { soal: (meta && meta.soal) || '' })
+      ).concat(['']) : []),
       ...jadwalLines, ...assist, '', ...stabilityLines, '', ...choiceLines, ...rules.lines, '', '## درخواست مولّد',
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']
@@ -2968,6 +3130,7 @@
     classifyQuestionScope, buildMustehsilaGrid,
     LETTER_CATEGORIES, letterCategory, LETTER_MUQARRARA, ELEMENT_MUQARRARA,
     muqarraraOf, measureLetterByMuqarrara, measureStringByMuqarrara, buildClassicalNatqSeed,
+    NATQ_TEACHING_SAMPLES, buildNatqChecklist, formatNatqChecklistBlock,
     naziraInCircle, mapNaziraInCircle, mapNaziraQutb, mapNaziraShamsi, segmentReadingLine,
     buildJadwalLayers, selectJadwalRow, extractByMizanStep, buildClassicLaqtBundle, shiftAbjad,
     applyTaraqi, applyTanzilCircle, applyTarfaGrid, applyMusawatGrid,

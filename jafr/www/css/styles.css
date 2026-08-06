@@ -444,6 +444,70 @@ textarea { min-height: 84px; resize: vertical; }
   min-height: 0;
   padding: 10px 12px;
 }
+.natq-check-box {
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.natq-check-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.natq-check-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.natq-check-list .mark {
+  flex: 0 0 1.4em;
+  font-weight: 700;
+  color: var(--accent, #1a5c45);
+}
+.natq-check-list .done .mark { color: #1a5c45; }
+.natq-check-list .todo .mark { color: #a67c00; }
+.natq-check-list .hint-item .mark { color: #3d6b55; }
+.natq-check-list .d {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 2px;
+}
+.natq-samples {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: #f7faf7;
+}
+.natq-samples summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+}
+.natq-sample {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.natq-sample:first-child { border-top: 0; padding-top: 4px; }
+.natq-sample h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.natq-sample .lesson {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+}
 .must-grid-details {
   padding: 8px 10px;
   border: 1px dashed var(--line);

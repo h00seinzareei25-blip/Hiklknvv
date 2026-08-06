@@ -402,7 +402,43 @@
       const words = (ns.candidateWords || []).filter((w) => w.complete).slice(0, 14).map((w) => w.word);
       $('natqWords').textContent = words.length ? words.join('، ') : '—';
     }
+    const checklist = result.natqChecklist
+      || (result.jadwal && result.jadwal.natqChecklist)
+      || (JafrEngine.buildNatqChecklist && JafrEngine.buildNatqChecklist(ns, {
+        soal: (result.parts && result.parts.soal) || ''
+      }));
+    renderNatqChecklist(checklist);
     wrap.classList.remove('hidden');
+  }
+
+  function renderNatqChecklist(checklist) {
+    const list = $('natqCheckList');
+    const summary = $('natqCheckSummary');
+    const samplesBox = $('natqSamplesBox');
+    if (!list) return;
+    if (!checklist) {
+      list.innerHTML = '';
+      if (summary) summary.textContent = '—';
+      return;
+    }
+    if (summary) summary.textContent = checklist.summary || checklist.classicNote || '—';
+    list.innerHTML = (checklist.items || []).map((it) => {
+      const cls = it.status === 'done' ? 'done' : (it.status === 'hint' ? 'hint-item' : 'todo');
+      const mark = it.status === 'done' ? '✓' : (it.status === 'hint' ? '·' : '○');
+      return `<li class="${cls}"><span class="mark">${mark}</span><div><strong>${escapeHtml(it.title)}</strong><span class="d">${escapeHtml(it.detail || '')}</span></div></li>`;
+    }).join('');
+    if (samplesBox) {
+      const samples = checklist.samples || JafrEngine.NATQ_TEACHING_SAMPLES || [];
+      samplesBox.innerHTML = samples.map((s) => (
+        `<article class="natq-sample">
+          <h4>${escapeHtml(s.title)}</h4>
+          <p class="hint">${escapeHtml(s.source || '')}</p>
+          <p><span class="natq-k">مستحصله / بذر</span> ${escapeHtml(s.mustehsila)} → ${escapeHtml(s.seed)}</p>
+          <p><span class="natq-k">خوانش</span> ${escapeHtml(s.reading)}</p>
+          <p class="lesson">${escapeHtml(s.lesson || '')}</p>
+        </article>`
+      )).join('');
+    }
   }
 
   function showPrimary(result, keepCompare) {

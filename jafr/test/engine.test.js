@@ -204,8 +204,15 @@ assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل
 assert(warSael.jamalLock.saelJamal === 59, 'سائل نواب جمل ۵۹');
 assert(warSael.steps.some((s) => s.id === 'jamal_lock'), 'گام قفل جمل در مراحل');
 assert(warSael.natqSeed && warSael.natqSeed.draftLine, 'نتیجهٔ جنگ شامل بذر نطق است');
+assert(warSael.natqChecklist && warSael.natqChecklist.items.length >= 6, 'چک‌لیست نطق روی نتیجهٔ جنگ');
+assert(warSael.natqChecklist.items.filter((i) => i.status === 'done').length >= 3, 'حداقل ۳ گام چک‌لیست خودکار انجام شده');
+assert(E.NATQ_TEACHING_SAMPLES && E.NATQ_TEACHING_SAMPLES.length >= 3, 'نمونه‌های آموزشی نطق موجودند');
+assert(E.NATQ_TEACHING_SAMPLES.some((s) => s.seed === 'بضدمهاجرین'), 'نمونه بضد مهاجرین در آموزش');
+const checkBlock = E.formatNatqChecklistBlock(warSael.natqChecklist);
+assert(checkBlock.some((ln) => /چک‌لیست نطق/.test(ln)) && checkBlock.some((ln) => /بضد/.test(ln)), 'بلوک چک‌لیست برای پرامپت');
 assert(warSael.measuredSelected && warSael.measuredSelected.length === warSael.jadwal.selected.length, 'سنجش مقرره هم‌طول مستحضره');
 assert(warSael.steps.some((s) => s.id === 'muqarrara_measure') && warSael.steps.some((s) => s.id === 'natq_seed'), 'گام‌های مقرره و بذر نطق');
+assert(warSael.steps.some((s) => s.id === 'natq_checklist'), 'گام چک‌لیست نطق در مراحل');
 
 // بذر نطق روی مسیر کلاسیک و ۱۵ سطری هم
 const classicNatq = E.runClassic({
