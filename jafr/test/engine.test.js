@@ -410,6 +410,24 @@ assert(/تشخیص پزشکی/.test(causePrompt), 'پرامپت علت هشدا�
 assert(!/پاسخ قطبی آری/.test(causePrompt), 'پرامپت علت قالب بله‌خیر ندارد');
 assert(E.detectQuestionProfile({ soal: 'آیا این دارو برای من مفید است' }).id === 'yesno', 'آیا+مفید همچنان بله‌خیر');
 assert(E.detectTopic({ soal: 'چرا سردرد شبانه دارم' }).id === 'medical_cause', 'چرا+درد = علت');
+assert(E.looksLikeCauseQuest('جراسردردشبانهدارم'), 'پس از نرمال چ→ج هم علت تشخیص داده شود');
+assert(E.detectQuestionProfile({ soal: 'کی زمان مناسب ازدواج است' }).id === 'timing', 'کی+زمان = پروفایل زمانی (بدون \\b لاتین)');
+assert(E.detectTopic({ soal: 'نتیجه مسابقه فوتبال استقلال و پرسپولیس', modda: 'ورزش' }).id !== 'work', 'پرسپولیس ≠ موضوع کار/پول');
+assert(E.hasFaWord('قیمت پول بالا رفت', 'پول') && !E.hasFaWord('پرسپولیس برد', 'پول'), 'hasFaWord مرز فارسی');
+const causeSeed = E.buildClassicalNatqSeed('غتخجقناصبر', {
+  pool: 'غتخجقناصبرسختضعف',
+  bank: ['صبر', 'سخت', 'ضعف'],
+  forbidPolar: true
+});
+assert(!(causeSeed.candidateWords || []).some((w) => w.complete && E.isPolarBankWord(w.word)), 'بذر forbidPolar بدون آری‌خیر');
+assert(!(causeSeed.draftLine || '').split(/\s+/).some((w) => E.isPolarBankWord(w)), 'draft علت بدون قطبی');
+const causeRunPolar = E.runClassic({
+  sael: 'زهرا', taleb: '', matloob: '', modda: 'درد',
+  soal: 'چرا سردرد شبانه دارم',
+  questionDate: 'پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران',
+  options: { pipeline: 'jadwali', table: 'kabir' }
+});
+assert(causeRunPolar.ok && !(causeRunPolar.natqSeed.draftLine || '').split(/\s+/).some((w) => E.isPolarBankWord(w)), 'اجرای جدولی چرا-درد بذر بدون قطبی');
 
 const yesRun = E.runClassic(Object.assign({ taleb: '', matloob: '', options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, takseerRounds: 1 } }, yesMeta));
 const dict = E.buildInternalDictionary(yesRun.mustehsila, yesMeta, { madkhal: yesRun.madkhal, table: 'kabir' });

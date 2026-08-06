@@ -500,7 +500,7 @@
           : 'بدون سائل = امور عامه؛ نام سائل در اساس نمی‌آید.'
       };
     }
-    if (hasPerson || /ازدواج|همسر|مریض|غائب|فرزند|من\b|برای من/.test(text)) {
+    if (hasPerson || /ازدواج|همسر|مریض|غائب|فرزند|برای من/.test(text) || hasFaWord(text, 'من')) {
       return {
         id: 'mehvari',
         title: 'محوری (شخصی)',
@@ -799,7 +799,10 @@
     const qutbTakseer2 = takseerMuakhkharSadr(qutbTakseer1);
     const qutbRead = mapNazira(qutbTakseer2);
     const pool = (opts && opts.pool) || src;
-    const bank = ((opts && opts.bank) || []).concat(CORE_LEXICON || []);
+    let bank = ((opts && opts.bank) || []).concat(CORE_LEXICON || []);
+    if (opts && opts.forbidPolar) {
+      bank = bank.filter((w) => !isPolarBankWord(w));
+    }
     const words = [];
     const seen = new Set();
     bank.forEach((w) => {
@@ -1689,13 +1692,20 @@
         output: measuredSelected,
         note: 'عدد مقررهٔ حرف (جدول چهار دسته) + میزان → طرح ۲۸ → حرف؛ منبع: رسالهٔ ۲۸ عمل / هیئت موسی بن جعفر'
       });
-      const topic = detectTopic(Object.assign({}, input, parts));
+      const topic = detectTopic({
+        sael: input.sael,
+        taleb: input.taleb,
+        matloob: input.matloob,
+        modda: input.modda,
+        soal: input.soal
+      });
       const natqSeed = buildClassicalNatqSeed(mustehsila, {
         pool: poolABCD,
-        bank: (topic && topic.bank) || []
+        bank: (topic && topic.bank) || [],
+        forbidPolar: !!(topic && (topic.forbidPolar || topic.id === 'medical_cause'))
       });
       const natqChecklist = buildNatqChecklist(natqSeed, {
-        soal: parts.soal || input.soal || ''
+        soal: input.soal || ''
       });
       steps.push({
         id: 'natq_seed',
@@ -1840,13 +1850,20 @@
       });
 
       const mustehsila = L[15] || L[14] || L[13] || '';
-      const topic = detectTopic(Object.assign({}, input, parts));
+      const topic = detectTopic({
+        sael: input.sael,
+        taleb: input.taleb,
+        matloob: input.matloob,
+        modda: input.modda,
+        soal: input.soal
+      });
       const natqSeed = buildClassicalNatqSeed(mustehsila, {
         pool: mustehsila,
-        bank: (topic && topic.bank) || []
+        bank: (topic && topic.bank) || [],
+        forbidPolar: !!(topic && (topic.forbidPolar || topic.id === 'medical_cause'))
       });
       const natqChecklist = buildNatqChecklist(natqSeed, {
-        soal: parts.soal || input.soal || ''
+        soal: input.soal || ''
       });
       steps.push({
         id: 'natq_seed',
@@ -1981,13 +1998,20 @@
       note: `طول: ${mustehsila.length} | بدون تکرار: ${uniqueLetters(mustehsila)} | نقاط: ${countDots(mustehsila)} · اصل کلاسیک «سطر» است`
     });
 
-    const topic = detectTopic(Object.assign({}, input, parts));
+    const topic = detectTopic({
+      sael: input.sael,
+      taleb: input.taleb,
+      matloob: input.matloob,
+      modda: input.modda,
+      soal: input.soal
+    });
     const natqSeed = buildClassicalNatqSeed(mustehsila, {
       pool: mustehsila,
-      bank: (topic && topic.bank) || []
+      bank: (topic && topic.bank) || [],
+      forbidPolar: !!(topic && (topic.forbidPolar || topic.id === 'medical_cause'))
     });
     const natqChecklist = buildNatqChecklist(natqSeed, {
-      soal: parts.soal || input.soal || ''
+      soal: input.soal || ''
     });
     steps.push({
       id: 'natq_seed',
@@ -2283,7 +2307,7 @@
     if (!t.trim()) return false;
     // صریح‌ترین نشانه‌ها
     if (/آیا/.test(t)) return true;
-    if (/یا\s*نه\b|هست\s*یا\s*نیست|آری\s*یا\s*خیر|بله\s*یا\s*خیر/.test(t)) return true;
+    if (/یا\s*نه(?:\s|$)|هست\s*یا\s*نیست|آری\s*یا\s*خیر|بله\s*یا\s*خیر/.test(t)) return true;
     if (/(می\s*شود|می‌شود|میشود)\s*یا/.test(t)) return true;
     // بدون «آیا» فقط اگر ساختار قطبی واضح باشد
     if (/به\s*صلاح\s*(است|می)|مفید\s*(است|می)/.test(t) && /یا\s*نه|میشود|می‌شود|خواهد\s*بود/.test(t)) return true;
@@ -2294,10 +2318,11 @@
   function looksLikeCauseQuest(text) {
     const t = String(text || '');
     if (!t.trim()) return false;
-    if (/علت\b|چرا\b|دلیل\b|سبب\b|منشأ|منشا|ریشه\b/.test(t)) return true;
-    if (/چه\s*چیزی\s*باعث|از\s*چه\s*(ناشی|است)|ناشی\s*از\s*چه/.test(t)) return true;
+    // چرا→جرا پس از نرمال گچپژ؛ هر دو را بپذیر
+    if (/علت|چرا|جرا|دلیل|سبب|منشأ|منشا|ریشه/.test(t)) return true;
+    if (/چه\s*چیزی\s*باعث|جه\s*چیزی\s*باعث|از\s*چه\s*(ناشی|است)|ناشی\s*از\s*چه/.test(t)) return true;
     if (/(دندان\s*قروچه|خواب|درد|بیماری|علائم|نشانه|اضطراب|استرس|تنش)/.test(t) &&
-        /(علت|چرا|دلیل|چیست|چگونه)/.test(t)) return true;
+        /(علت|چرا|جرا|دلیل|چیست|چگونه|جگونه)/.test(t)) return true;
     return false;
   }
 
@@ -2306,6 +2331,18 @@
   function isPolarBankWord(word) {
     const n = normalizeText(word);
     return POLAR_BANK_WORDS.some((w) => normalizeText(w) === n);
+  }
+
+  /** مرز واژه برای فارسی (\\b در JS روی حروف فارسی کار نمی‌کند) */
+  function hasFaWord(text, word) {
+    const w = String(word || '');
+    if (!w) return false;
+    const re = new RegExp('(?:^|[\\s،,؛:؟?!.«»\"\'()\\[\\]])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:[\\s،,؛:؟?!.«»\"\'()\\[\\]]|$)');
+    return re.test(String(text || ''));
+  }
+
+  function hasAnyFaWord(text, words) {
+    return (words || []).some((w) => hasFaWord(text, w));
   }
 
   function detectQuestionProfile(meta) {
@@ -2326,7 +2363,7 @@
     if (looksLikeYesNo(text) && !looksLikeCauseQuest(text)) {
       return { id: 'yesno', title: 'بله / خیر', choices: ['آری', 'خیر'], outputHint: 'پاسخ قطبی آری/خیر/مبهم + ۲–۴ جمله دلیل' };
     }
-    if (/کی\b|چه وقت|زمان\b|موعد|چه روز|چه ماه/.test(text)) {
+    if (/کی\s|چه\s*وقت|زمان\s|موعد|چه\s*روز|چه\s*ماه/.test(text)) {
       return { id: 'timing', title: 'زمانی / وعده', choices: [], outputHint: 'جدول کاندید زمانی + خوانش چندجمله‌ای' };
     }
     if (/اسم|نام|کیست|چه کسی|چی\s*بگیر|کدام دارو|کدام گیاه/.test(text)) {
@@ -2409,13 +2446,14 @@
     if (/دارو|گیاه|دمنوش|اعصاب|آرام|ارام|طب|علاج|درمان/.test(t)) {
       return { id: 'herbal', title: 'موضوع کمکی: دارو/گیاه (بانک فقط پیشنهاد است)', bank: ['به لیمو', 'گل گاوزبان', 'اسطوخودوس', 'بابونه', 'بادرنجبویه', 'سنبل الطیب', 'چای سبز', 'نعناع', 'آویشن', 'گل محمدی', 'خاکشیر', 'شیرین بیان', 'زعفران', 'هل', 'دارچین', 'سیاه دانه', 'اسپند', 'گل بنفشه', 'سیر', 'شنبلیله', 'سماق'], choices: [], isChoice: false, profile };
     }
-    if (/ازدواج|همسر|زن|شوهر|نامزد|عقد/.test(t)) {
+    if (hasAnyFaWord(text, ['ازدواج', 'همسر', 'زن', 'شوهر', 'نامزد', 'عقد']) || /ازدواج|همسر|نامزد/.test(t)) {
       return { id: 'marriage', title: 'موضوع کمکی: ازدواج (بانک فقط پیشنهاد است)', bank: ['صلح', 'وصول', 'تاخیر', 'موانع', 'میسر', 'ناممکن', 'خیر', 'شر'], choices: [], isChoice: false, profile };
     }
-    if (/سفر|رفتن|مقصد|مسافرت/.test(t)) {
+    if (hasAnyFaWord(text, ['سفر', 'رفتن', 'مقصد', 'مسافرت']) || /مسافرت/.test(t)) {
       return { id: 'travel', title: 'موضوع کمکی: سفر (بانک فقط پیشنهاد است)', bank: ['رفتن', 'نرفتن', 'تاخیر', 'خیر', 'خطر', 'امن', 'بازگشت'], choices: [], isChoice: false, profile };
     }
-    if (/کار|شغل|استخدام|پول|سود|معامله|خرید|فروش/.test(t)) {
+    // «پول» را فقط به‌عنوان واژهٔ جدا ببین — نه داخل «پرسپولیس»
+    if (hasAnyFaWord(text, ['کار', 'شغل', 'استخدام', 'پول', 'سود', 'معامله', 'خرید', 'فروش'])) {
       return { id: 'work', title: 'موضوع کمکی: کار/معامله (بانک فقط پیشنهاد است)', bank: ['سود', 'زیان', 'تاخیر', 'موفق', 'ناموفق', 'صبر', 'حرکت'], choices: [], isChoice: false, profile };
     }
     if (profile.id === 'name' || /اسم|نام|کیست|چه کسی/.test(t)) {
@@ -3194,7 +3232,7 @@
     SHAMSI_MONTHS, numberToPersianWords, formatShamsiDatePersian, formatTodayShamsiPersian,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
-    looksLikeYesNo, looksLikeCauseQuest, isPolarBankWord,
+    looksLikeYesNo, looksLikeCauseQuest, isPolarBankWord, hasFaWord, hasAnyFaWord,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
