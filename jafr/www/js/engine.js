@@ -2078,6 +2078,49 @@
     return lines;
   }
 
+  /**
+   * پرامپت بهبود صورت‌مسئله برای AI
+   * خروجی فقط مدعا + متن سؤال دقیق؛ محاسبه/نطق جفر نکند.
+   */
+  function buildAskRefinePrompt(meta) {
+    const m = meta || {};
+    const draft = String(m.soal || '').trim();
+    const profile = detectQuestionProfile(m);
+    const topic = detectTopic(m);
+    const scope = classifyQuestionScope(m, {});
+    const hintScope = scope.id === 'mehvari' ? 'محوری (شخصی — سائل و تاریخ لازم)' : 'مرکزی (امور عامه — معمولاً بدون سائل)';
+    return [
+      'تو ویرایشگر صورت‌مسئلهٔ علم جفر هستی.',
+      'فقط سؤال و مدعا را طبق قواعد کلاسیک بازنویسی کن.',
+      'محاسبه جفر، مستحصله، نطق، پیش‌گویی یا تشخیص پزشکی نکن.',
+      '',
+      '## قواعد نوشتن سؤال (اجباری)',
+      '1) یک مطلب و کوتاه: یک خواسته/پرسش؛ حاشیه و توضیح اضافه ننویس.',
+      '2) تاریخ را داخل متن سؤال ننویس؛ تاریخ فیلد جداست.',
+      '3) نام طرفین را فقط اگر برای معنای سؤال لازم است نگه دار.',
+      '4) محوری (ازدواج/سفر/کار/علت شخصی…): سؤال شخصی و روشن باشد.',
+      '5) مرکزی (امور عامه): بدون وابستگی به یک شخص خاص.',
+      '6) اگر علت/وضعیت است: با «علت / چرا / دلیل» بنویس؛ قطبی آری/خیر نکن مگر کاربر صریحاً بله‌خیر خواسته.',
+      '7) اگر انتخابی است: قالب «بین الف و ب کدام…» را حفظ کن.',
+      '8) اگر بله‌خیر است: «آیا …» یا «… یا نه» را روشن نگه دار.',
+      '9) مدعا = یک تا سه کلمهٔ آماج (مثل ازدواج، سفر، جنگ، علت خواب، معامله).',
+      '10) زبان فارسی روان و قابل‌محاسبه برای حروف ابجد؛ عبارت ادبی طولانی ننویس.',
+      '',
+      '## تشخیص اولیهٔ برنامه (فقط راهنما)',
+      `- پروفایل: ${profile.title} (${profile.id})`,
+      `- موضوع کمکی: ${topic.title}`,
+      `- نوع پیشنهادی: ${hintScope}`,
+      '',
+      '## پیش‌نویس کاربر',
+      ...metaLines(m),
+      draft ? '' : 'نکته: متن سؤال هنوز خالی/ناقص است؛ از نام‌ها و مدعا یک سؤال دقیق بساز.',
+      '',
+      '## فرمت خروجی اجباری (فقط همین دو خط)',
+      'مدعا: <یک تا سه کلمه>',
+      'سؤال: <یک جملهٔ کوتاه و دقیق، بدون تاریخ>'
+    ].join('\n');
+  }
+
   function buildReport(result, meta) {
     if (!result.ok) return result.error;
     const lines = [];
@@ -3236,7 +3279,7 @@
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
-    describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
+    buildAskRefinePrompt, describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
     computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
     classifyQuestionScope, buildMustehsilaGrid,
     LETTER_CATEGORIES, letterCategory, LETTER_MUQARRARA, ELEMENT_MUQARRARA,

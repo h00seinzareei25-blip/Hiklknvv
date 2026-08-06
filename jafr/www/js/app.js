@@ -623,8 +623,9 @@
     ensureTodayDate(true);
     lastBundle = null;
     if ($('generatorAnswerBox')) $('generatorAnswerBox').value = '';
-    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard', 'mustehsilaGridWrap', 'jadwalGridWrap', 'natqReadWrap']
+    ['resultCard', 'stepsCard', 'promptCard', 'reportCard', 'compareCard', 'stabilityCard', 'mustehsilaGridWrap', 'jadwalGridWrap', 'natqReadWrap', 'askRefineWrap']
       .forEach((id) => { const el = $(id); if (el) el.classList.add('hidden'); });
+    if ($('askRefineBox')) $('askRefineBox').value = '';
     hideAlert();
   }
 
@@ -647,6 +648,29 @@
     syncModeUI();
     setMethodSelection(['jadwali_mizan', 'classic_bayyinat', 'classic_malfuzi']);
     showAlert('info', 'نمونه ازدواج با اطلاعات تکمیلی بارگذاری شد');
+  }
+
+  function buildAndShowAskRefine() {
+    const meta = metaFromForm();
+    if (!meta.sael && !meta.taleb && !meta.matloob && !meta.modda && !meta.soal) {
+      showAlert('error', 'اول یک پیش‌نویس سؤال یا مدعا بنویس');
+      return '';
+    }
+    const prompt = JafrEngine.buildAskRefinePrompt(meta);
+    if ($('askRefineBox')) $('askRefineBox').value = prompt;
+    const wrap = $('askRefineWrap');
+    if (wrap) {
+      wrap.classList.remove('hidden');
+      wrap.open = true;
+    }
+    return prompt;
+  }
+
+  async function copyAskRefine() {
+    let prompt = ($('askRefineBox') && $('askRefineBox').value.trim()) || '';
+    if (!prompt) prompt = buildAndShowAskRefine();
+    if (!prompt) return;
+    await copyText(prompt, 'پرامپت بهبود سؤال کپی شد — به AI بده؛ بعد مدعا و سؤال را پیست کن');
   }
 
   // init
@@ -676,6 +700,15 @@
   $('btnRun').addEventListener('click', run);
   $('btnClear').addEventListener('click', clearAll);
   $('btnSample').addEventListener('click', loadSample);
+  if ($('btnAskRefine')) {
+    $('btnAskRefine').addEventListener('click', () => {
+      const p = buildAndShowAskRefine();
+      if (p) showAlert('ok', 'پرامپت آماده شد — کپی کن و به AI بده');
+    });
+  }
+  if ($('btnCopyAskRefine')) {
+    $('btnCopyAskRefine').addEventListener('click', copyAskRefine);
+  }
 
   function copyGenerator() {
     if (!lastBundle) return showAlert('error', 'اول محاسبه را اجرا کنید');

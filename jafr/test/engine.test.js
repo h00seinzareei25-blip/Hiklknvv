@@ -446,5 +446,16 @@ const pack = E.buildNatqPrompt(yesRun, yesMeta, { stability: st });
 assert(pack.judge.includes('داور') && pack.judge.includes('PASTE_GENERATOR'), 'پرامپت داور');
 assert(pack.generator.includes('پایدار'), 'مولّد شامل پایداری');
 
+const refinePrompt = E.buildAskRefinePrompt({
+  sael: 'حسین',
+  modda: 'خواب',
+  soal: 'دندون قروچه تو خواب چرا میاد برام بگو دقیق',
+  questionDate: 'پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران'
+});
+assert(/مدعا:/.test(refinePrompt) && /سؤال:/.test(refinePrompt), 'پرامپت بهبود فرمت مدعا/سؤال دارد');
+assert(/تاریخ را داخل متن سؤال ننویس/.test(refinePrompt), 'پرامپت بهبود تاریخ را جدا می‌خواهد');
+assert(/فرمت خروجی اجباری/.test(refinePrompt) && /محاسبه جفر/.test(refinePrompt), 'پرامپت بهبود فقط ویرایش صورت‌مسئله است');
+assert(!/نطق یک‌خطی:/.test(refinePrompt), 'پرامپت بهبود قالب نطق یک‌خطی ندارد');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

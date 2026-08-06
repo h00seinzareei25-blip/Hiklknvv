@@ -417,6 +417,19 @@ textarea { min-height: 84px; resize: vertical; }
   font-size: 13.5px;
   color: var(--brand);
 }
+.ask-refine-box {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #f7faf7;
+}
+.ask-refine-box summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+}
 .guide-list {
   margin: 10px 0 4px;
   padding-right: 18px;

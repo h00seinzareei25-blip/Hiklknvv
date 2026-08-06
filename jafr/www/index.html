@@ -62,7 +62,18 @@
       </div>
       <div class="field">
         <label for="soal">متن سؤال</label>
-        <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید"></textarea>
+        <textarea id="soal" placeholder="سؤال را به فارسی/عربی بنویسید (پیش‌نویس هم کافی است)"></textarea>
+      </div>
+      <div class="ask-refine-box">
+        <div class="actions" style="margin-top:8px">
+          <button class="btn btn-accent" id="btnAskRefine" type="button">پرامپت بهبود سؤال برای AI</button>
+          <button class="btn btn-ghost" id="btnCopyAskRefine" type="button">کپی پرامپت بهبود</button>
+        </div>
+        <p class="hint">پرامپت را به هوش مصنوعی بده؛ جواب را خودت در <strong>مدعا</strong> و <strong>متن سؤال</strong> پیست کن. تاریخ را دست نزن.</p>
+        <details id="askRefineWrap" class="hidden">
+          <summary>پرامپت بهبود صورت‌مسئله</summary>
+          <textarea class="prebox" id="askRefineBox" readonly style="min-height:160px;margin-top:8px"></textarea>
+        </details>
       </div>
 
       <div class="mode-row" style="margin-top:8px">
