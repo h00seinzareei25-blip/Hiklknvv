@@ -2290,19 +2290,46 @@
     return false;
   }
 
+  /** سؤال علت / وضعیت جسمی‌رمزی — نه بله‌خیر و نه نام‌یابی */
+  function looksLikeCauseQuest(text) {
+    const t = String(text || '');
+    if (!t.trim()) return false;
+    if (/علت\b|چرا\b|دلیل\b|سبب\b|منشأ|منشا|ریشه\b/.test(t)) return true;
+    if (/چه\s*چیزی\s*باعث|از\s*چه\s*(ناشی|است)|ناشی\s*از\s*چه/.test(t)) return true;
+    if (/(دندان\s*قروچه|خواب|درد|بیماری|علائم|نشانه|اضطراب|استرس|تنش)/.test(t) &&
+        /(علت|چرا|دلیل|چیست|چگونه)/.test(t)) return true;
+    return false;
+  }
+
+  const POLAR_BANK_WORDS = ['آری', 'اری', 'خیر', 'بله', 'نه'];
+
+  function isPolarBankWord(word) {
+    const n = normalizeText(word);
+    return POLAR_BANK_WORDS.some((w) => normalizeText(w) === n);
+  }
+
   function detectQuestionProfile(meta) {
     const text = [meta.modda, meta.soal].filter(Boolean).join(' ');
     const choices = extractChoiceOptions(meta.soal || '');
     if (choices.length >= 2) {
       return { id: 'choice', title: 'انتخابی (بین گزینه‌ها)', choices, outputHint: 'برنده بین گزینه‌ها + توضیح چندجمله‌ای' };
     }
-    if (looksLikeYesNo(text)) {
+    // علت قبل از بله‌خیر/نام — حتی اگر «آیا علت…» باشد، قطب‌نما غلط است مگر ساختار قطبی محض
+    if (looksLikeCauseQuest(text) && !(/^آیا\s+(این|آن)\b/.test(text) && /مفید|به\s*صلاح|درست/.test(text))) {
+      return {
+        id: 'cause',
+        title: 'علت / وضعیت (چندخوانشی)',
+        choices: [],
+        outputHint: 'خوانش چندعاملی از بذر/حروف؛ بانک آری‌خیر ممنوع به‌عنوان غالب؛ بدون تشخیص پزشکی قطعی'
+      };
+    }
+    if (looksLikeYesNo(text) && !looksLikeCauseQuest(text)) {
       return { id: 'yesno', title: 'بله / خیر', choices: ['آری', 'خیر'], outputHint: 'پاسخ قطبی آری/خیر/مبهم + ۲–۴ جمله دلیل' };
     }
     if (/کی\b|چه وقت|زمان\b|موعد|چه روز|چه ماه/.test(text)) {
       return { id: 'timing', title: 'زمانی / وعده', choices: [], outputHint: 'جدول کاندید زمانی + خوانش چندجمله‌ای' };
     }
-    if (/اسم|نام|کیست|چه کسی|چه چیزی|چی\s*بگیر|کدام دارو|کدام گیاه/.test(text)) {
+    if (/اسم|نام|کیست|چه کسی|چی\s*بگیر|کدام دارو|کدام گیاه/.test(text)) {
       return { id: 'name', title: 'نام‌یابی', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای؛ در پایان نام غالب یا «نام استخراج نشد»' };
     }
     return { id: 'general', title: 'عمومی (چندخوانشی)', choices: [], outputHint: 'جدول کاندید + خوانش چندجمله‌ای (نه فقط یک کلمه)' };
@@ -2359,6 +2386,23 @@
         parties
       };
     }
+    // علت/وضعیت قبل از دارو/گیاه — تا «علت دندان‌قروچه» بانک آری‌خیر یا گیاه نگیرد
+    if (profile.id === 'cause' || looksLikeCauseQuest(text)) {
+      return {
+        id: 'medical_cause',
+        title: 'موضوع کمکی: علت/وضعیت جسمی‌رمزی (غیرتشخیصی)',
+        bank: ['موانع', 'پنهان', 'پوشیده', 'فشار', 'صبر', 'تاخیر', 'مبهم', 'خواب', 'سخت', 'ضعف', 'سر', 'دل', 'اضطراب', 'مانع', 'تنش', 'آرام'],
+        choices: [],
+        isChoice: false,
+        profile: profile.id === 'cause' ? profile : {
+          id: 'cause',
+          title: 'علت / وضعیت (چندخوانشی)',
+          choices: [],
+          outputHint: 'خوانش چندعاملی از بذر/حروف؛ بانک آری‌خیر ممنوع به‌عنوان غالب؛ بدون تشخیص پزشکی قطعی'
+        },
+        forbidPolar: true
+      };
+    }
     if (/چربی|تری\s*گلیس|کلسترول|قند خون/.test(t)) {
       return { id: 'herbal_lipid', title: 'موضوع کمکی: گیاه/چربی‌خون (بانک فقط پیشنهاد است)', bank: ['سیر', 'شنبلیله', 'سماق', 'زعفران', 'دارچین', 'زنجبیل', 'سیاه دانه', 'آویشن', 'هل'], choices: [], isChoice: false, profile };
     }
@@ -2377,14 +2421,19 @@
     if (profile.id === 'name' || /اسم|نام|کیست|چه کسی/.test(t)) {
       return { id: 'name', title: 'موضوع کمکی: استخراج نام (نطق آزاد از حروف مجاز)', bank: [], choices: [], isChoice: false, profile };
     }
-    return { id: 'general', title: 'عمومی — نطق آزاد از حروف مجاز', bank: ['خیر', 'آری', 'تاخیر', 'صبر', 'موانع', 'میسر', 'مبهم'], choices: [], isChoice: false, profile };
+    // عمومی: آری/خیر فقط برای پروفایل yesno — اینجا غالب نشوند
+    return { id: 'general', title: 'عمومی — نطق آزاد از حروف مجاز', bank: ['تاخیر', 'صبر', 'موانع', 'میسر', 'مبهم', 'وصول', 'مانع'], choices: [], isChoice: false, profile };
   }
 
   function buildInternalDictionary(mustehsila, meta, options) {
     const layers = buildNatiqLayers(mustehsila);
     const topic = detectTopic(meta || {});
     const profile = topic.profile || detectQuestionProfile(meta || {});
-    const bank = (topic.bank || []).concat(CORE_LEXICON);
+    const forbidPolar = !!(topic.forbidPolar || topic.id === 'medical_cause' || profile.id === 'cause');
+    let bank = (topic.bank || []).concat(CORE_LEXICON);
+    if (forbidPolar) {
+      bank = bank.filter((w) => !isPolarBankWord(w));
+    }
     const sources = [
       { layer: 'خام', str: layers.raw },
       { layer: 'نظیره', str: layers.nazira },
@@ -2396,6 +2445,7 @@
     function consider(word, layer, source) {
       const norm = normalizeText(word);
       if (norm.length < 2 || norm.length > 8) return;
+      if (forbidPolar && isPolarBankWord(norm)) return;
       const key = layer + ':' + norm;
       if (seen.has(key)) return;
       seen.add(key);
@@ -2458,6 +2508,11 @@
       lines.push(dict.topic.parties.label);
       lines.push('هر کاندید قطبی (بقا/ناکام/سقوط/…) باید صریحاً به مهاجم یا مدافع نسبت داده شود؛ بدون نسبت‌دهی قبول نهایی ممنوع است.');
     }
+    if (dict.topic && dict.topic.id === 'medical_cause') {
+      lines.push('## هشدار پروفایل علت/وضعیت');
+      lines.push('بانک آری/خیر/بله را کاندید غالب نکن؛ چسباندن ردیف کاندیدهای قطبی به‌عنوان نطق یک‌خطی ممنوع است.');
+      lines.push('بذر نطق A/B و حروف لایه‌ها اصل‌اند؛ تفسیر رمزی/چندعاملی بنویس و صریحاً بگو تشخیص پزشکی نیست.');
+    }
     return lines;
   }
 
@@ -2499,6 +2554,7 @@
     const isYesNo = profile.id === 'yesno';
     const isNameQuest = !isChoice && profile.id === 'name';
     const isConflict = topic.id === 'conflict';
+    const isCause = topic.id === 'medical_cause' || profile.id === 'cause';
     const sentenceNatq = !!(opts && opts.sentenceNatq);
     const lines = [
       '## قواعد نطق (اجباری)',
@@ -2522,15 +2578,21 @@
         lines.push('15) در خودِ نطق یک‌خطی نام طرفین سیاسی/جغرافیایی (اسرائیل، امریکا، ایران، …) ننویس؛ نام‌ها فقط در «تفسیر» مجازند.');
         lines.push('16) ویرگول مدرن (،) و ساختار «الف …، ب با …» را کم کن؛ اتصال با که / و / به / ز / از.');
         lines.push('17) واژه‌های نتیجه را از مخزن بچین: ندامت، سخت، خوف، نظامی/نظام، سقوط، حصول، بقا، نصر، باخت، عمید، … — نه روایت خبری بلند.');
+      } else if (isCause) {
+        lines.push('13) این سؤال علت/وضعیت است؛ نطق یک‌خطی = زنجیرهٔ کلاسیک از بذر A/B و مخزن — نه چسباندن آری/خیر/میسر.');
+        lines.push('14) بانک قطبی (آری، خیر، بله) را کاندید غالب و مادهٔ نطق یک‌خطی نکن.');
+        lines.push('15) موضوع جسمی/خواب/درد را رمزی بخوان (مانع، پنهان، فشار، صبر، مبهم، …) اگر حروف اجازه دهد؛ تشخیص پزشکی قطعی ممنوع.');
+        lines.push('16) ویرگول مدرن کم کن؛ اتصال با که / و / به / ز / از.');
+        lines.push('17) جدول کاندید پشتیبان باشد؛ اگر فقط آری/خیر/میسر پر شد، نطق‌آزاد از بذر بساز.');
       } else {
         lines.push('13) سبک نطق یک‌خطی = زنجیرهٔ کلاسیک حرف‌محور از مخزن (۸–۲۵ کلمه)؛ الگوی جنگ را کپی نکن.');
-        lines.push('14) موضوع سؤال (ازدواج/سفر/کار/نام/…) را در نطق رعایت کن؛ بانک جنگ (نادم/سقوط/نظامی) را وارد نکن مگر حروف مجبور کند.');
+        lines.push('14) موضوع سؤال (ازدواج/سفر/کار/نام/علت/…) را در نطق رعایت کن؛ بانک جنگ (نادم/سقوط/نظامی) را وارد نکن مگر حروف مجبور کند.');
         lines.push('15) نام اشخاص خاص سؤال را در نطق ننویس مگر برای نام‌یابی؛ جزئیات روان در تفسیر بیاید.');
         lines.push('16) ویرگول مدرن کم کن؛ اتصال با که / و / به / ز / از.');
-        lines.push('17) از واژه‌های هم‌خوان با موضوع و حروف مخزن استفاده کن (مثل میسر، تاخیر، موانع، خیر، صبر، …).');
+        lines.push('17) از واژه‌های هم‌خوان با موضوع و حروف مخزن استفاده کن؛ برای سؤال غیرقطبی آری/خیر را غالب نکن.');
       }
       lines.push('18) رنگ/هایلایت را کلید استخراج ندان؛ بعد از نطق با جاروی چندبارهٔ جدول خانه‌های مصرف‌شده مشخص می‌شود.');
-      lines.push('19) بعد از نطق یک‌خطی، بخش «تفسیر هوش مصنوعی» را جدا بنویس (۲–۵ جملهٔ فارسی روان' + (isConflict ? '؛ اینجا می‌توانی طرفین را نام ببری' : '') + ').');
+      lines.push('19) بعد از نطق یک‌خطی، بخش «تفسیر هوش مصنوعی» را جدا بنویس (۲–۵ جملهٔ فارسی روان' + (isConflict ? '؛ اینجا می‌توانی طرفین را نام ببری' : '') + (isCause ? '؛ صریحاً بگو تشخیص پزشکی نیست' : '') + ').');
       lines.push('20) جدول کاندید فقط پشتیبان است؛ جواب آخر همان نطق یک‌خطی + تفسیر است.');
       lines.push('21) حرف خارج از مخزن ممنوع. حروف اولویت (انتخاب/میزان) کمکی‌اند نه زندان ترتیب.');
     } else if (isChoice) {
@@ -2542,6 +2604,11 @@
       lines.push('11) اول بین آری/خیر/مبهم کاندید بده؛ ۲–۴ جمله دلیل حرفی/عنصری/مدخل.');
       lines.push('12) کاندیدهای پشتیبان می‌توانند از دیکشنری یا نطق‌آزاد باشند.');
       lines.push('13) اگر مثبت/منفی نزدیک بودند، مبهم اعلام کن.');
+    } else if (isCause) {
+      lines.push('11) سؤال علت/وضعیت است؛ آری/خیر را جواب غالب نکن.');
+      lines.push('12) از بذر نطق و حروف لایه‌ها خوانش چندعاملی بساز؛ چسباندن ردیف دیکشنری قطبی ممنوع.');
+      lines.push('13) تفسیر رمزی بنویس و بگو تشخیص پزشکی نیست.');
+      lines.push('14) علاوه بر جدول کاندید، خوانش چندجمله‌ای (۲ تا ۶ جمله) بنویس.');
     } else if (isNameQuest) {
       lines.push('11) نام را از حروف لایه‌ها استخراج کن (۲ تا ۸ حرف ترجیحاً)؛ دیکشنری فقط کمک است.');
       lines.push('12) اگر نام غالب روشن نبود بگو «نام استخراج نشد» و ۲–۳ کاندید محتمل بیاور.');
@@ -2570,6 +2637,7 @@
       lines.push(isChoice ? '## گزینه‌های خود سؤال (تنها بانک اصلی)' : '## بانک واژگانی پیشنهادی (الزامی نیست)');
       lines.push(topic.bank.join('، '));
       if (!isChoice) lines.push('الزام به همین بانک نیست؛ نطق‌آزاد از حروف لایه‌ها مجاز است.');
+      if (isCause) lines.push('یادآوری: آری/خیر در این پروفایل بانک غالب نیستند.');
     }
     lines.push('');
     lines.push('## فرمت خروجی اجباری');
@@ -2583,9 +2651,13 @@
       lines.push('### ۱) جدول کاندید پشتیبان');
       lines.push('کاندید | نوع | منبع‌لایه | پوشش | عنصر | مدخل | نسبت‌طرف(اگر نزاع) | امتیاز | اطمینان');
       lines.push('### ۲) نطق یک‌خطی (اصلی — اجباری)');
-      lines.push('نطق یک‌خطی: <زنجیرهٔ کلاسیک ۸–۲۵ کلمه‌ای فقط از حروف مخزن؛ بدون نام طرفین؛ شبیه «نادم شوند که … سخت»>');
+      lines.push(isCause
+        ? 'نطق یک‌خطی: <زنجیرهٔ کلاسیک از بذر/مخزن؛ نه ردیف آری‌خیر‌میسر؛ بدون تشخیص پزشکی>'
+        : 'نطق یک‌خطی: <زنجیرهٔ کلاسیک ۸–۲۵ کلمه‌ای فقط از حروف مخزن؛ بدون نام طرفین؛ شبیه «نادم شوند که … سخت»>');
       lines.push('### ۳) تفسیر هوش مصنوعی (اجباری)');
-      lines.push('تفسیر: <۲–۵ جمله روان؛ معنای نطق را برای صورت‌مسئله بگو؛ اینجا طرفین را نام ببر؛ غلبه را دقیق تعریف کن>');
+      lines.push(isCause
+        ? 'تفسیر: <۲–۵ جمله روان؛ چندعامل/رمزی برای صورت‌مسئله؛ صریحاً بگو تشخیص پزشکی نیست>'
+        : 'تفسیر: <۲–۵ جمله روان؛ معنای نطق را برای صورت‌مسئله بگو؛ اینجا طرفین را نام ببر؛ غلبه را دقیق تعریف کن>');
       lines.push('### پایان');
       lines.push('پایان: نطق یک‌خطی نهایی + سطح اطمینان');
     } else {
@@ -2593,7 +2665,7 @@
       lines.push('سپس خوانش چندجمله‌ای (۲ تا ۶ جمله) — نه فقط یک کلمه.');
       lines.push('پایان: بهترین کاندید معتبر + یک خط خلاصه خوانش');
     }
-    return { topic, profile, lines, isChoice, isYesNo, isConflict, sentenceNatq };
+    return { topic, profile, lines, isChoice, isYesNo, isConflict, isCause, sentenceNatq };
   }
 
   function stripExtraInput(input) {
@@ -3122,6 +3194,7 @@
     SHAMSI_MONTHS, numberToPersianWords, formatShamsiDatePersian, formatTodayShamsiPersian,
     extractChoiceOptions, coverageAgainst, scoreChoiceOptions,
     detectTopic, detectQuestionProfile, extractConflictParties, letterElement, elementProfile,
+    looksLikeYesNo, looksLikeCauseQuest, isPolarBankWord,
     buildNatiqLayers, buildInternalDictionary, madkhalOfWord,
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,

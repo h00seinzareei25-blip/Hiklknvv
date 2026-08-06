@@ -381,6 +381,36 @@ assert(E.detectQuestionProfile({ modda: 'دارو گیاهی', soal: 'اسم گ�
 assert(E.detectQuestionProfile({ modda: 'ازدواج', soal: 'نتیجه پیوند حسین و فاطمه' }).id !== 'yesno', 'بدون نشانه قطبی بله‌خیر نشود');
 assert(E.detectQuestionProfile({ soal: 'بین سیر و سماق کدام بهتر است' }).id === 'choice', 'بین/کدام = انتخابی');
 assert(/چندخوانشی|خوانش چندجمله‌ای/.test(E.detectQuestionProfile({ modda: 'دارو گیاهی', soal: '' }).outputHint), 'عمومی چندخوانشی');
+
+// پروفایل علت/دندان‌قروچه — بانک آری‌خیر غالب نشود
+const causeMeta = {
+  sael: 'حسین', taleb: '', matloob: '', modda: 'دندان قروچه',
+  soal: 'علت دندان قروچه حسین در خواب چیست',
+  questionDate: 'پانزدهم مرداد هزار و چهارصد و پنج هجری شمسی در ایران'
+};
+assert(E.looksLikeCauseQuest(causeMeta.soal), 'تشخیص متن علت');
+assert(E.detectQuestionProfile(causeMeta).id === 'cause', 'پروفایل علت برای دندان‌قروچه');
+assert(E.detectTopic(causeMeta).id === 'medical_cause', 'موضوع medical_cause');
+assert(!E.detectTopic(causeMeta).bank.some((w) => E.isPolarBankWord(w)), 'بانک علت بدون آری/خیر');
+assert(E.detectTopic(causeMeta).forbidPolar === true, 'forbidPolar روی علت');
+const causeRun = E.runClassic(Object.assign({}, causeMeta, {
+  options: { pipeline: 'jadwali', table: 'kabir' }
+}));
+assert(causeRun.ok, 'اجرای جدولی علت موفق');
+const causeDict = E.buildInternalDictionary(
+  causeRun.jadwal.poolABCD || causeRun.mustehsila,
+  causeMeta,
+  { madkhal: causeRun.madkhal, table: 'kabir' }
+);
+assert(causeDict.profile.id === 'cause' && causeDict.topic.id === 'medical_cause', 'دیکشنری با پروفایل علت');
+assert(!causeDict.candidates.some((c) => E.isPolarBankWord(c.word) || E.isPolarBankWord(c.norm)), 'کاندیدهای دیکشنری علت بدون آری/خیر');
+const causePrompt = E.buildNatqPrompt(causeRun, causeMeta).generator;
+assert(/علت|وضعیت/.test(causePrompt) && /آری\/خیر|آری‌خیر|بانک قطبی/.test(causePrompt), 'پرامپت علت قواعد ضد آری‌خیر دارد');
+assert(/تشخیص پزشکی/.test(causePrompt), 'پرامپت علت هشدار غیرپزشکی دارد');
+assert(!/پاسخ قطبی آری/.test(causePrompt), 'پرامپت علت قالب بله‌خیر ندارد');
+assert(E.detectQuestionProfile({ soal: 'آیا این دارو برای من مفید است' }).id === 'yesno', 'آیا+مفید همچنان بله‌خیر');
+assert(E.detectTopic({ soal: 'چرا سردرد شبانه دارم' }).id === 'medical_cause', 'چرا+درد = علت');
+
 const yesRun = E.runClassic(Object.assign({ taleb: '', matloob: '', options: { table: 'kabir', bastMode: 'bayyinat', takseer: 'sadr_muakhkhar', takhlis: 'odd', mazjNazira: true, takseerRounds: 1 } }, yesMeta));
 const dict = E.buildInternalDictionary(yesRun.mustehsila, yesMeta, { madkhal: yesRun.madkhal, table: 'kabir' });
 assert(dict.candidates.length > 0, 'دیکشنری داخلی غیرخالی');

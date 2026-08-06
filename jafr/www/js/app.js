@@ -276,9 +276,12 @@
     let mode = 'چندخوانشی';
     if (p.id === 'yesno') mode = 'قطبی (آری/خیر/مبهم)';
     else if (p.id === 'choice') mode = 'انتخاب بین گزینه‌ها';
+    else if (p.id === 'cause') mode = 'علت/وضعیت (بدون آری‌خیر غالب)';
     let text = `پروفایل نطق: ${p.title} → ${mode}` +
       (topic && topic.title ? ` | موضوع کمکی: ${topic.title}` : '') +
-      ' | اگر «آیا / یا نه» ننوشته باشی معمولاً چندخوانشی است.';
+      (p.id === 'cause'
+        ? ' | نطق از بذر/حروف؛ تشخیص پزشکی نیست.'
+        : ' | اگر «آیا / یا نه» ننوشته باشی معمولاً چندخوانشی است.');
     if (result && result.jamalLock) {
       const jl = result.jamalLock;
       if (jl.matched) {
