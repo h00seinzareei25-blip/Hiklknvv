@@ -1656,31 +1656,45 @@
       const condensed = takhlisOdd(sel.selected);
       const poolABCD = layers.poolABCD || (layers.A + layers.B + layers.C + layers.D);
       const priority = sel.priority || (sel.selected + mizanExtract);
-      // مستحصله نمایشی: اولویت انتخاب + لقط کلاسیک + مخزن
+      const classicBasis = opts.classicBasis !== false; // پیش‌فرض: مبنا اصولی
+      // مهندسی (بدون تیک): مستحصله = یکتای اولویت+لقط+مخزن
+      // اصولی (با تیک): مستحصله = سطر مستحضره؛ مخزن فقط برای نطق ادبی
       let mustehsila = '';
-      const seen = new Set();
-      for (const ch of String(priority + classicLaqt.pooled + poolABCD)) {
-        if (!ch || seen.has(ch)) continue;
-        seen.add(ch);
-        mustehsila += ch;
+      let mustehsilaMode = 'engineered_pool';
+      if (classicBasis) {
+        mustehsila = sel.selected;
+        mustehsilaMode = 'classic_satr';
+      } else {
+        const seen = new Set();
+        for (const ch of String(priority + classicLaqt.pooled + poolABCD)) {
+          if (!ch || seen.has(ch)) continue;
+          seen.add(ch);
+          mustehsila += ch;
+        }
+        if (mustehsila.length < 4) mustehsila = condensed || sel.selected;
       }
-      if (mustehsila.length < 4) mustehsila = condensed || sel.selected;
 
       steps.push({
         id: 'jadwal_pool',
-        title: 'مخزن حروف نطق (A+B+C+D)',
+        title: 'مخزن حروف نطق ادبی (A+B+C+D · مهندسی)',
         input: 'چهار لایهٔ اصلی',
         output: poolABCD,
-        note: `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)}`
+        note: classicBasis
+          ? `مخزن فقط برای نطق ادبی/AI است · طول ${poolABCD.length} | یکتا: ${uniqueLetters(poolABCD)}`
+          : `طول ${poolABCD.length} | بدون تکرار: ${uniqueLetters(poolABCD)}`
       });
 
       const mustehsilaGrid = buildMustehsilaGrid(uniqueLetters(mustehsila));
       steps.push({
         id: 'mustehsila',
-        title: 'مستحصله نهایی (جدولی)',
-        input: `اولویت:${priority.length} | لقط:${classicLaqt.pooled.length} | مخزن:${poolABCD.length}`,
+        title: classicBasis ? 'سطر مستحصله اصولی (مستحضره)' : 'مستحصله نهایی (جدولی · مخزن)',
+        input: classicBasis
+          ? `مستحضره دسته‌ای · میزان=${mizan}`
+          : `اولویت:${priority.length} | لقط:${classicLaqt.pooled.length} | مخزن:${poolABCD.length}`,
         output: mustehsila,
-        note: `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | در کتب مستحصله «سطر» است؛ شبکهٔ فشرده فقط نمایش است`
+        note: classicBasis
+          ? `مبنا اصولی: سطر مستحضره = مستحصله · مخزن A–D فقط نطق ادبی · ستون=${columnBase.length}`
+          : `میزان=${mizan} | ستون=${columnBase.length} | مدل=${jadwalModel} | در کتب مستحصله «سطر» است؛ شبکهٔ فشرده فقط نمایش است`
       });
 
       // سنجش مقرره + بذر نطق کلاسیک
@@ -1699,6 +1713,7 @@
         modda: input.modda,
         soal: input.soal
       });
+      // بذر A/B از سطر اصولی؛ واژه‌پوش ادبی از مخزن مهندسی
       const natqSeed = buildClassicalNatqSeed(mustehsila, {
         pool: poolABCD,
         bank: (topic && topic.bank) || [],
@@ -1713,6 +1728,7 @@
         input: mustehsila,
         output: natqSeed.readingLine || natqSeed.afterNazira,
         note: [
+          classicBasis ? 'مبنا: سطر اصولی · ادبی: مخزن A–D' : 'مبنا: مخزن/یکتا',
           'A قمری: ' + natqSeed.afterNazira,
           'B قطب: ' + ((natqSeed.qutbPath && natqSeed.qutbPath.readingLine) || '—'),
           'خوانش/پیشنهاد: ' + natqSeed.draftLine,
@@ -1736,8 +1752,8 @@
       });
 
       const methodLabel = opts.methodLabel || (jadwalModel === 'tttm'
-        ? 'جفر جدولی · ترفع/ترقی/تنزل/مساوات'
-        : 'جفر جدولی میزان‌دار');
+        ? (classicBasis ? 'جفر جدولی · tttm · مبنا اصولی' : 'جفر جدولی · ترفع/ترقی/تنزل/مساوات')
+        : (classicBasis ? 'جفر جدولی · مبنا اصولی (مستحضره)' : 'جفر جدولی میزان‌دار'));
       return {
         ok: true,
         method: methodLabel,
@@ -1759,13 +1775,16 @@
         measuredSelected,
         natqSeed,
         natqChecklist,
+        classicBasis,
+        mustehsilaMode,
         letterCount: mustehsila.length,
         dotCount: countDots(mustehsila),
         steps,
         options: Object.assign({}, opts, {
           natqStyle: 'sentence',
           pipeline: 'jadwali',
-          jadwalModel
+          jadwalModel,
+          classicBasis
         }),
         normalize: fullNorm,
         extraEnabled,
@@ -1790,7 +1809,9 @@
           poolUnique: uniqueLetters(poolABCD),
           natqLock,
           mustehsilaGrid,
-          questionScope
+          questionScope,
+          classicBasis,
+          mustehsilaMode
         }
       };
     }
@@ -3082,6 +3103,10 @@
         }
       }
       jadwalLines.push('## دستور نطق جدولی (قفل باز)');
+      if (result.classicBasis || (result.jadwal && result.jadwal.classicBasis)) {
+        jadwalLines.push('۰) حالت مبنا اصولی فعال: سطر مستحضره = حساب اصلی؛ مخزن A–D فقط برای نطق ادبی/جمله یک‌خطی.');
+        jadwalLines.push('۰ب) بذر A/B را از سطر اصولی بخوان؛ جملهٔ ادبی را فقط با حروف مخزن بساز و به سؤال ربط بده.');
+      }
       jadwalLines.push('1) از مخزن A+B+C+D یک «نطق یک‌خطی کلاسیک» با ترتیب آزاد بساز (ترتیب ستون اجباری نیست).');
       jadwalLines.push('1ب) بذر کلاسیک A/B را بخوان؛ با صبر ترکیب کن و حتماً به صورت‌مسئله ربط بده (از کتب: نطق مرتبط با پرسش مهم‌تر از واژهٔ معنادارِ بی‌ربط است).');
       jadwalLines.push('1ج) مستحصله در کتب «سطر» است؛ شبکهٔ فشرده فقط نمایش است — مبنای خوانش همان سطر/بذر است.');

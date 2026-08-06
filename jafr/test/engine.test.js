@@ -199,6 +199,18 @@ const warSael = E.runClassic({
 assert(warSael.jamal === 5022 && warSael.mizan === 10, 'با سائل نواب: جمل ۵۰۲۲ / میزان ۱۰');
 assert(warSael.columnBase.length === 49, 'سائل عرض ستون را عوض نمی‌کند');
 assert(warSael.jadwal.selected.length === 49, 'انتخاب روی ۴۹ ستون با میزان ۱۰');
+assert(warSael.classicBasis === true && warSael.mustehsilaMode === 'classic_satr', 'پیش‌فرض مبنا اصولی');
+assert(warSael.mustehsila === warSael.jadwal.selected, 'اصولی: مستحصله = سطر مستحضره');
+assert(warSael.jadwal.poolABCD && warSael.jadwal.poolABCD.length >= 49, 'مخزن مهندسی برای نطق ادبی موجود است');
+const warEng = E.runClassic({
+  sael: 'نواب', taleb: '', matloob: '', modda: '',
+  soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
+  questionDate: warDate,
+  options: { pipeline: 'jadwali', table: 'kabir', classicBasis: false }
+});
+assert(warEng.classicBasis === false && warEng.mustehsilaMode === 'engineered_pool', 'تیک خاموش = مهندسی');
+assert(warEng.mustehsila !== warEng.jadwal.selected, 'مهندسی: مستحصله از مخزن یکتا نه عین مستحضره');
+assert(E.coverageAgainst(warTarget, warEng.jadwal.poolABCD).complete, 'مخزن مهندسی همچنان مرجع ادبی را می‌پوشاند');
 assert(E.extractByMizanStep(warSael.columnBase, 10).length >= 4, 'لقط گام ۱۰ از ۴۹ ستون');
 assert(warSael.jamalLock && warSael.jamalLock.matched, 'تشخیص قفل جمل بسته');
 assert(warSael.jamalLock.saelJamal === 59, 'سائل نواب جمل ۵۹');

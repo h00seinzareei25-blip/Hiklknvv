@@ -172,10 +172,15 @@
           <div class="field">
             <label for="jadwalModel">مدل لایه‌های جدولی</label>
             <select id="jadwalModel">
-              <option value="quarter28" selected>ربع دایره (A+0 / B+7 / C+14 / D+21)</option>
+              <option value="quarter28" selected>ربع دایره (A+0 / B+7 / C+14 / D+21) · لایه مهندسی نطق</option>
               <option value="tttm">ترفع · ترقی · تنزل · مساوات (کلاسیک کتب)</option>
             </select>
           </div>
+          <div class="check" style="margin-top:8px">
+            <input id="classicBasis" type="checkbox" checked>
+            <span>مبنا اصولی (مستحضره = حساب) · مهندسی فقط برای نطق ادبی</span>
+          </div>
+          <p class="hint" id="classicBasisHint">فعال: سطر مستحضرهٔ دسته‌ای اصل جواب حسابی است؛ مخزن A–D فقط برای جملهٔ ادبی/AI. غیرفعال: مستحصله از مخزن یکتا (حالت مهندسی کامل).</p>
           <p class="hint">هر دو مدل لقط میزانی کلاسیک (گام=میزان) را هم می‌سازند.</p>
         </div>
         <div id="classicOpts" class="hidden">

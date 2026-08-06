@@ -44,7 +44,10 @@
     if ($('pipelineHint')) {
       if (pipe === 'jadwali') {
         $('pipelineHint').hidden = false;
-        $('pipelineHint').textContent = 'جدولی: میزان از اساس کامل · ستون از سؤال · نطق از مخزن A–D · رنگ پس از نطق';
+        const usuli = !$('classicBasis') || $('classicBasis').checked;
+        $('pipelineHint').textContent = usuli
+          ? 'جدولی · مبنا اصولی: مستحضره دسته‌ای = حساب · مخزن A–D فقط نطق ادبی · میزان از اساس کامل'
+          : 'جدولی · مهندسی: مستحصله از مخزن یکتا A–D · رنگ پس از نطق · میزان از اساس کامل';
       } else if (pipe === 'fifteen') {
         $('pipelineHint').hidden = false;
         $('pipelineHint').textContent = '۱۵ سطری: اساس، نظیره، نسبت، قوا، جواب. تقریب کاربردی قابل‌ممیزی.';
@@ -176,10 +179,11 @@
       opts.pipeline = 'jadwali';
       const model = ($('jadwalModel') && $('jadwalModel').value) || 'quarter28';
       opts.jadwalModel = model === 'tttm' ? 'tttm' : 'quarter28';
+      opts.classicBasis = !$('classicBasis') || $('classicBasis').checked;
       opts.methodId = opts.jadwalModel === 'tttm' ? 'jadwali_tttm' : 'jadwali_mizan';
       opts.methodLabel = opts.jadwalModel === 'tttm'
-        ? 'جفر جدولی · ترفع/ترقی/تنزل/مساوات'
-        : 'جفر جدولی میزان‌دار (ربع دایره)';
+        ? (opts.classicBasis ? 'جفر جدولی · tttm · مبنا اصولی' : 'جفر جدولی · ترفع/ترقی/تنزل/مساوات')
+        : (opts.classicBasis ? 'جفر جدولی · مبنا اصولی (مستحضره)' : 'جفر جدولی میزان‌دار (ربع/مخزن)');
       opts.natqStyle = 'sentence';
     }
     const scopeEl = document.querySelector('input[name="questionScope"]:checked');
@@ -466,6 +470,12 @@
       } else if (lock && !lock.relevant) {
         t = (t ? t + ' | ' : '') + `جمل ${lock.jamal} → میزان ${lock.mizan}`;
       }
+      if (result.classicBasis || (result.jadwal && result.jadwal.classicBasis)) {
+        t = (t ? t + ' | ' : '') + 'مبنا: اصولی (مستحضره) · ادبی: مخزن A–D';
+      } else if (result.mustehsilaMode === 'engineered_pool' ||
+          (result.options && result.options.pipeline === 'jadwali' && result.options.classicBasis === false)) {
+        t = (t ? t + ' | ' : '') + 'مبنا: مهندسی (مخزن یکتا)';
+      }
       $('profileHint').textContent = t || 'پروفایل نطق بعد از اجرا نشان داده می‌شود.';
     }
     renderNatqReading(result);
@@ -683,6 +693,7 @@
   $('modeSingle').addEventListener('change', syncModeUI);
   $('modeMulti').addEventListener('change', syncModeUI);
   if ($('pipeline')) $('pipeline').addEventListener('change', syncPipelineUI);
+  if ($('classicBasis')) $('classicBasis').addEventListener('change', syncPipelineUI);
   if ($('btnTodayDate')) {
     $('btnTodayDate').addEventListener('click', () => {
       ensureTodayDate(true);
