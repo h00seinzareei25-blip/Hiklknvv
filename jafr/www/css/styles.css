@@ -337,6 +337,43 @@ textarea { min-height: 84px; resize: vertical; }
 .jadwal-table td.hl-s5 { background: #e0b0ff; color: #1a1a1a; font-weight: 800; }
 .jadwal-table tr.sel-row td:not(.row-label) { background: #f7f3e8; }
 
+.natq-prov-box {
+  padding: 10px 12px;
+  background: #f7f3e8;
+  border: 1px solid #d4cbb8;
+  border-radius: 8px;
+}
+.natq-prov-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.natq-prov-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.natq-prov-list li strong {
+  min-width: 4.5rem;
+  color: #1a3d2e;
+}
+.natq-prov-list .d {
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: 12px;
+  color: #333;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+.natq-prov-list li.ok strong { color: #1a5c45; }
+.natq-prov-list li.bad strong { color: #8b2e2e; }
+.natq-prov-list li.bad .d { color: #8b2e2e; }
+
 .must-grid-table {
   border-collapse: collapse;
   font-size: 13px;

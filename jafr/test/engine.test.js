@@ -308,29 +308,40 @@ assert(warSael.steps.some((s) => s.id === 'question_scope'), 'گام نوع سؤ
 assert(warSael.steps.some((s) => s.id === 'mustehsila_grid'), 'گام جدول مستحصله در مراحل');
 assert(warSael.jamalLock && warSael.jamalLock.matched && warSael.jamalLock.resolvedPath === 'sael_mahdi', 'مسیر قفل sael_mahdi');
 
-// قفل نطق: مخزن‌آزاد + جاروی چندباره برای رنگ
+// قفل نطق: حروف فقط از جدول + منشأ خانه به خانه
 const refNatq = 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت';
 assert(E.coverageAgainst(E.normalizeText(refNatq), warSael.jadwal.poolABCD).complete, 'نطق مرجع از مخزن ABCD قابل‌ساخت است');
-const hl = E.planNatqHighlight(refNatq, {
+const warLayerMap = {
   A: warSael.jadwal.layers.find((l) => l.id === 'A').str,
   B: warSael.jadwal.layers.find((l) => l.id === 'B').str,
   C: warSael.jadwal.layers.find((l) => l.id === 'C').str,
   D: warSael.jadwal.layers.find((l) => l.id === 'D').str
-});
+};
+const hl = E.planNatqHighlight(refNatq, warLayerMap);
 assert(hl.complete && hl.sweeps === 6 && hl.picks.length === E.normalizeText(refNatq).length, 'جاروی ۶باره مسیر رنگ نطق مرجع را کامل می‌کند');
 assert(hl.picks[0].row === 'A' && hl.picks[0].col === 1, 'شروع مسیر رنگ از A1');
+const prov = E.buildNatqProvenance(refNatq, warLayerMap);
+assert(prov.complete && prov.words[0].word === 'نادم', 'منشأ واژه به واژه کامل است');
+assert(prov.words[0].detail === 'ن←A1 ا←B2 د←D13 م←D16', 'نادم از خانه‌های مشخص جدول می‌آید');
 assert(warSael.natqLock && warSael.natqLock.unlocked, 'قفل نطق در نتیجه باز علامت خورده');
-assert(warSael.natqLock.reference && warSael.natqLock.reference.highlight.complete, 'نمونه مرجع جنگ مسیر رنگ کامل دارد');
+assert(warSael.natqLock.reference && warSael.natqLock.reference.provenance.complete, 'نمونه مرجع جنگ منشأ جدول کامل دارد');
+assert(warSael.natqLock.reference.provenance.words[0].detail.indexOf('ن←A1') >= 0, 'نتیجهٔ جنگ منشأ نادم را دارد');
 assert(warSael.steps.some((s) => s.id === 'natq_lock'), 'گام قفل نطق در مراحل');
 assert(E.analyzeNatqLock({ A: 'اب', B: 'جد', C: 'هز', D: 'حط', poolABCD: 'ابجدهزحط' }).unlocked, 'analyzeNatqLock unlocked');
+assert(/حرف خارج از جدول|منشأ خانه|پیوند جدول/.test(E.analyzeNatqLock({ A: 'ا', B: 'ب', C: 'ج', D: 'د' }).rules.join(' ')), 'قواعد اثبات جدول');
 
 const jadPrompt = E.buildNatqPrompt(jadwali, { sael: 'حسین', soal: 'نتیجه جنگ چگونه خواهد بود', modda: 'جنگ', extraEnabled: false });
 assert(jadPrompt.generator.includes('میزان') && jadPrompt.generator.includes('نطق یک‌خطی'), 'پرامپت جدولی جمله‌ای');
 assert(jadPrompt.generator.includes('مخزن') || jadPrompt.generator.includes('A+B+C+D'), 'پرامپت شامل مخزن ABCD');
 assert(jadPrompt.generator.includes('نادم شوند') && jadPrompt.generator.includes('تفسیر هوش مصنوعی'), 'الگوی نطق یک‌خطی + تفسیر در پرامپت');
-assert(jadPrompt.generator.includes('نام طرفین') && jadPrompt.generator.includes('ویرگول'), 'قواعد سبک کلاسیک نطق (بدون نام طرفین / ویرگول خبری)');
+assert(jadPrompt.generator.includes('نام طرفین') && (jadPrompt.generator.includes('ویرگول') || jadPrompt.generator.includes('پیوند جدول')), 'قواعد سبک کلاسیک نطق');
 assert(jadPrompt.judge.includes('نطق یک‌خطی نهایی') && jadPrompt.judge.includes('تفسیر هوش مصنوعی'), 'داور خواهان نطق یک‌خطی + تفسیر است');
-assert(jadPrompt.judge.includes('بدون نام طرفین') || jadPrompt.judge.includes('نام طرفین سیاسی'), 'داور سبک کلاسیک را اصلاح می‌کند');
+assert(jadPrompt.judge.includes('پیوند جدول') && (jadPrompt.judge.includes('بدون نام طرفین') || jadPrompt.judge.includes('نام طرفین سیاسی')), 'داور پیوند جدول و سبک کلاسیک');
+const warPrompt = E.buildNatqPrompt(warSael, {
+  sael: 'نواب', soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود', modda: 'جنگ'
+});
+assert(/ن←A1|منشأ حروف نمونه/.test(warPrompt.generator), 'پرامپت جنگ منشأ نادم را نشان می‌دهد');
+assert(/پیوند جدول/.test(warPrompt.generator) && /پیوند جدول/.test(warPrompt.judge), 'مولّد و داور جنگ پیوند جدول می‌خواهند');
 
 assert(E.detectTopic({ soal: 'نتیجه پیروزی تیم چیست', modda: 'ورزش' }).id !== 'conflict', 'پیروزی ورزشی = جنگ نشود');
 assert(E.detectTopic({ soal: 'سقوط قیمت دلار', modda: 'اقتصاد' }).id !== 'conflict', 'سقوط اقتصادی = جنگ نشود');

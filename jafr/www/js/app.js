@@ -297,8 +297,10 @@
       }
     }
     if (result && result.natqLock && result.natqLock.unlocked) {
-      text += ' | قفل نطق: باز (مخزن‌آزاد + رنگ پس از نطق)';
-      if (result.natqLock.reference && result.natqLock.reference.highlight && result.natqLock.reference.highlight.complete) {
+      text += ' | قفل نطق: حروف فقط از جدول A–D';
+      if (result.natqLock.reference && result.natqLock.reference.provenance && result.natqLock.reference.provenance.complete) {
+        text += ` · منشأ ${result.natqLock.reference.provenance.words.length} واژه اثبات شد`;
+      } else if (result.natqLock.reference && result.natqLock.reference.highlight && result.natqLock.reference.highlight.complete) {
         text += ` · نمونه ${result.natqLock.reference.highlight.sweeps} جارو`;
       }
     }
@@ -358,9 +360,35 @@
     box.innerHTML = html;
     if (hint) {
       hint.textContent = hl && hl.complete
-        ? ('مسیر رنگ کامل · ' + hl.sweeps + ' جارو · ' + hl.picks.length + ' خانه (نارنجی→زرد→سبز→آبی بر اساس شماره جارو)')
-        : 'جدول لایه‌های A–D؛ پس از نطق مرجع، خانه‌های مصرف‌شده رنگ می‌شوند.';
+        ? ('اثبات جدول کامل · ' + hl.sweeps + ' جارو · ' + hl.picks.length + ' خانه از A–D (رنگ = منشأ حرف)')
+        : 'سطرهای A–D؛ هر حرف نطق باید از یکی از این خانه‌ها باشد.';
     }
+    renderNatqProvenance(result);
+    wrap.classList.remove('hidden');
+  }
+
+  function renderNatqProvenance(result) {
+    const wrap = $('natqProvWrap');
+    const list = $('natqProvList');
+    const summary = $('natqProvSummary');
+    if (!wrap || !list) return;
+    const prov = (result.natqLock && result.natqLock.reference && result.natqLock.reference.provenance)
+      || (result.jadwal && result.jadwal.natqLock && result.jadwal.natqLock.reference && result.jadwal.natqLock.reference.provenance)
+      || null;
+    if (!prov || !prov.words || !prov.words.length) {
+      wrap.classList.add('hidden');
+      list.innerHTML = '';
+      if (summary) summary.textContent = '—';
+      return;
+    }
+    if (summary) {
+      summary.textContent = (prov.complete ? '✓ ' : '⚠ ') + (prov.summary || '') +
+        (prov.text ? ' — «' + prov.text + '»' : '');
+    }
+    list.innerHTML = prov.words.map((w) => {
+      const cls = w.ok ? 'ok' : 'bad';
+      return `<li class="${cls}"><strong>${escapeHtml(w.word)}</strong><span class="d">${escapeHtml(w.detail || '')}</span></li>`;
+    }).join('');
     wrap.classList.remove('hidden');
   }
 

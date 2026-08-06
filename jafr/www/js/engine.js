@@ -864,14 +864,14 @@
     },
     {
       id: 'war_screen_style',
-      title: 'سبک نطق جنگ (اسکرین)',
-      source: 'مرجع جدولی · لایهٔ زبان روی مخزن A–D',
+      title: 'سبک نطق جنگ (اسکرین) + اثبات جدول',
+      source: 'مرجع جدولی · حروف فقط از A–D',
       soal: 'نتیجه نهایی جنگ اسراییل و آمریکا علیه ایران چگونه خواهد بود',
-      mustehsila: 'سطر انتخاب / مخزن A–D پس از میزان ۱۰',
-      steps: 'بذر حرفی از مخزن → ترکیب واژه‌پوش → جملهٔ یک‌خطی کلاسیک',
-      seed: 'نادم‌/سقوط‌/خوف‌/نظامی‌… (از حروف مخزن)',
+      mustehsila: 'سطرهای A–D پس از میزان ۱۰',
+      steps: 'انتخاب حروف از سطرهای جدول → واژه → جمله؛ هر حرف خانه دارد',
+      seed: 'مثال: نادم = ن←A1 ا←B2 د←D13 م←D16',
       reading: 'نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت',
-      lesson: 'جملهٔ ادبی نهایی فرمول حرف‌به‌جمله نیست؛ روی بذر + ربط به سؤال ساخته می‌شود.'
+      lesson: 'جواب «از خود» نیست اگر هر حرف در جدول باشد و منشأ خانه نوشته شود. ترتیب برداشتن آزمایش خوانش است؛ حرف خارج از A–D ممنوع.'
     },
     {
       id: 'checklist_core',
@@ -1213,8 +1213,8 @@
   }
 
   /**
-   * مسیر رنگ/هایلایت پس از نطق: جاروی چندبارهٔ چپ→راست روی سطرهای A–D
-   * (قفل بازشده: رنگ فرمول استخراج نیست؛ خانه‌های مصرف‌شدهٔ جمله را نشان می‌دهد)
+   * مسیر رنگ/هایلایت: جاروی چندبارهٔ چپ→راست روی سطرهای A–D
+   * هر حرف نطق باید در یکی از خانه‌های جدول باشد؛ این تابع منشأ خانه به خانه را ثابت می‌کند.
    */
   function planNatqHighlight(natqText, layers, opts) {
     const rowIds = ['A', 'B', 'C', 'D'];
@@ -1272,14 +1272,73 @@
       picks,
       coverPool,
       summary: complete
-        ? `مسیر رنگ کامل با ${sweep} جاروی چپ→راست روی A–D (${picks.length} خانه)`
-        : `مسیر ناقص ${ti}/${needle.length} پس از ${sweep} جارو`
+        ? `اثبات جدول کامل: ${picks.length} حرف از A–D با ${sweep} جارو`
+        : `اثبات ناقص ${ti}/${needle.length} پس از ${sweep} جارو — حرف خارج از جدول یا کمبود تکرار`
     };
   }
 
   /**
-   * مدل باز قفل نطق (تحقیق + سؤال از جفر + تطبیق اسکرین):
-   * نطق = جمله آزاد از مخزن چهار لایه؛ رنگ = جاروی چندباره بعد از نطق
+   * منشأ واژه به واژه: هر کلمهٔ نطق → خانه‌های جدول (مثلاً نادم: ن←A1 ا←B2 د←D13 م←D16)
+   * این همان چیزی است که کارشناس جفر می‌خواهد ببیند — نه جملهٔ «از خود ساخته».
+   */
+  function buildNatqProvenance(natqText, layers, opts) {
+    const text = String(natqText || '').trim();
+    const highlight = planNatqHighlight(text, layers, opts);
+    const rawWords = text ? text.split(/\s+/).filter(Boolean) : [];
+    const words = [];
+    let pi = 0;
+    rawWords.forEach((w) => {
+      const norm = normalizeText(w);
+      const letters = [];
+      let ok = true;
+      for (let i = 0; i < norm.length; i++) {
+        const p = highlight.picks[pi];
+        if (!p || p.ch !== norm[i]) {
+          ok = false;
+          break;
+        }
+        letters.push(p);
+        pi++;
+      }
+      words.push({
+        word: w,
+        norm,
+        ok: ok && letters.length === norm.length,
+        letters,
+        cells: letters.map((p) => p.row + String(p.col)),
+        detail: letters.length
+          ? letters.map((p) => p.ch + '←' + p.row + p.col).join(' ')
+          : (norm ? 'یافت نشد در A–D' : '—')
+      });
+    });
+    const lines = words.map((w) => (w.ok ? `${w.word}: ${w.detail}` : `${w.word}: ناقص — ${w.detail}`));
+    const complete = !!(highlight.complete && words.every((w) => w.ok));
+    return {
+      text,
+      highlight,
+      words,
+      lines,
+      complete,
+      summary: complete
+        ? `منشأ جدول برای ${words.length} واژه کامل است`
+        : `منشأ جدول ناقص (${words.filter((w) => w.ok).length}/${words.length} واژه)`
+    };
+  }
+
+  function formatProvenanceBlock(provenance, opts) {
+    const title = (opts && opts.title) || 'منشأ حروف از جدول A–D (اثبات — نه از خود ساختن)';
+    const lines = [title, provenance && provenance.summary ? provenance.summary : '—'];
+    if (provenance && Array.isArray(provenance.lines)) {
+      provenance.lines.forEach((ln) => lines.push('- ' + ln));
+    }
+    if (opts && opts.note) lines.push(opts.note);
+    return lines;
+  }
+
+  /**
+   * مدل قفل نطق:
+   * حرف جواب باید در سطرهای A–D باشد؛ منشأ خانه به خانه قابل اثبات است.
+   * ترتیب برداشتن آزاد است (آزمایش/خوانش ادبی روی حروف موجود)، حرف خارج از جدول ممنوع.
    */
   function analyzeNatqLock(layers, opts) {
     const pool = (layers && layers.poolABCD) || (
@@ -1289,30 +1348,33 @@
       String((layers && layers.D) || '')
     );
     const rules = [
-      'نطق یک‌خطی فقط از حروف مخزن A+B+C+D با ترتیب آزاد (نه اجبار ترتیب ستون)',
-      'رنگ/هایلایت فرمول استخراج نیست؛ بعد از نطق با جاروی چندبارهٔ چپ→راست مشخص می‌شود',
-      'لقط/سطر انتخاب تقریب کمکی است نه کلید قفل رنگ نرم‌افزار'
+      'هر حرف نطق باید در یکی از خانه‌های سطرهای A–D باشد؛ حرف خارج از جدول ممنوع',
+      'برای هر واژهٔ مهم، منشأ خانه بنویس (مثال: نادم: ن←A1 ا←B2 د←D13 م←D16)',
+      'ترتیب برداشتن حروف آزاد است (آزمایش خوانش روی حروف موجود)؛ رنگ = اثبات مصرف خانه',
+      'لقط/سطر انتخاب برای حساب کمکی است؛ نطق ادبی از مخزن A–D با اثبات جدول'
     ];
     const out = {
       unlocked: true,
-      id: 'pool_free_order_plus_multisweep_highlight',
-      title: 'قفل نطق باز',
+      id: 'pool_letters_with_table_provenance',
+      title: 'قفل نطق: حروف فقط از جدول',
       rules,
       poolUnique: uniqueLetters(pool),
-      summary: 'قفل نطق باز: مخزن‌آزاد + رنگ پس‌از‌نطق (جاروی چندباره)',
+      summary: 'قفل نطق: فقط حروف A–D + منشأ خانه به خانه',
       reference: null
     };
     const ref = opts && opts.referenceNatq ? String(opts.referenceNatq) : '';
     if (ref) {
       const normalized = normalizeText(ref);
+      const provenance = buildNatqProvenance(ref, layers, opts);
       out.reference = {
         text: ref,
         normalized,
         poolCover: coverageAgainst(normalized, pool),
-        highlight: planNatqHighlight(ref, layers, opts)
+        highlight: provenance.highlight,
+        provenance
       };
       if (out.reference.highlight.complete && out.reference.poolCover.complete) {
-        out.summary += ` · نمونه مرجع با ${out.reference.highlight.sweeps} جارو کامل شد`;
+        out.summary += ` · نمونه مرجع اثبات‌شده (${out.reference.highlight.sweeps} جارو)`;
       }
     }
     return out;
@@ -1646,13 +1708,17 @@
       });
       steps.push({
         id: 'natq_lock',
-        title: 'قفل نطق (باز)',
-        input: 'مخزن A+B+C+D · ترتیب آزاد · رنگ پس از نطق',
+        title: 'قفل نطق (حروف فقط از جدول)',
+        input: 'مخزن A+B+C+D · منشأ خانه به خانه',
         output: natqLock.summary,
         note: natqLock.rules.concat(
-          natqLock.reference && natqLock.reference.highlight
-            ? [natqLock.reference.highlight.summary]
-            : []
+          natqLock.reference && natqLock.reference.provenance
+            ? [natqLock.reference.provenance.summary].concat(
+              (natqLock.reference.provenance.lines || []).slice(0, 4)
+            )
+            : (natqLock.reference && natqLock.reference.highlight
+              ? [natqLock.reference.highlight.summary]
+              : [])
         ).join(' · ')
       });
 
@@ -2680,6 +2746,7 @@
       lines.push('12ب) ممنوع: چسباندن ردیف کاندیدهای بانک پشت‌سرهم به‌عنوان نطق یک‌خطی (مثل «فشار سخت مانع پنهان صبر آرام»).');
       lines.push('12ج) واجب: اول بذر A یا B را بخوان؛ از روی همان حروف/بخش‌ها زنجیره بساز؛ بانک فقط کمکی است.');
       lines.push('12د) در خروجی، یک خط «پیوند بذر» بنویس: از کدام مسیر (A/B) و کدام قطعهٔ بذر استفاده شد.');
+      lines.push('12ه) واجب اثبات جدول: هر حرف نطق باید در سطرهای A–D باشد؛ برای واژه‌های اصلی «پیوند جدول» خانه به خانه بنویس (مثال نادم: ن←A1 ا←B2 …). حرف خارج از جدول = رد.');
       if (isConflict) {
         lines.push('13) الگوی مطلوب شبیه این است (فقط سبک؛ عین این جمله را کپی نکن): «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت».');
         lines.push('14) سبک نطق یک‌خطی = زنجیرهٔ کلاسیک حرف‌محور (نادم شوند که … / حصول به … / … سخت). نه خبر تحلیلی مدرن.');
@@ -2764,6 +2831,7 @@
         ? 'نطق یک‌خطی: <زنجیره از بذر A/B + مخزن؛ بدون چسباندن بانک؛ بدون طوطی‌وار آوردن مو/دندان/بچه؛ بدون تشخیص پزشکی>'
         : 'نطق یک‌خطی: <زنجیرهٔ کلاسیک ۸–۲۵ کلمه‌ای از بذر/مخزن؛ بدون نام طرفین؛ شبیه «نادم شوند که … سخت»>');
       lines.push('پیوند بذر: <A یا B> · <قطعهٔ استفاده‌شده از بذر>');
+      lines.push('پیوند جدول: <واژه: حرف←سطرستون …> (هر حرف از A–D؛ بدون خانه = رد)');
       lines.push('### ۳) تفسیر هوش مصنوعی (اجباری)');
       lines.push(isCause
         ? 'تفسیر: <۲–۵ جمله روان؛ چندعامل/رمزی برای صورت‌مسئله؛ صریحاً بگو تشخیص پزشکی نیست>'
@@ -3010,13 +3078,14 @@
         ? '10) در نزاع: قبول نهایی فقط اگر نسبت به مهاجم/مدافع روشن باشد؛ وگرنه مشروط یا رد.'
         : '10) در پایان خوانش غالب را روشن بنویس.',
       isConflict && topic.parties && topic.parties.label ? ('11) طرف‌ها: ' + topic.parties.label) : '11) اگر مولّد نطق یک‌خطی داده، همان را از نظر حروف مخزن و معنا داوری کن.',
-      '12) محصول نهایی باید مثل سنت جدولی باشد: اول «نطق یک‌خطی کلاسیک»، بعد «پیوند بذر»، بعد «تفسیر هوش مصنوعی».',
+      '12) محصول نهایی: «نطق یک‌خطی» + «پیوند بذر» + «پیوند جدول (خانه به خانه)» + «تفسیر».',
       '13) رد فوری اگر یک‌خطی فقط چسباندن واژه‌های بانک موضوعی است و از بذر A/B ساخته نشده.',
-      '14) رد یا مشروط اگر «پیوند بذر» نیست یا پیوند مبهم/جعلی است (بدون اشاره به A یا B یا قطعهٔ بذر).',
+      '14) رد فوری اگر حرف خارج از جدول A–D دارد، یا «پیوند جدول» ندارد/جعلی است (مثلاً نادم بدون ن←خانه).',
+      '15) رد یا مشروط اگر «پیوند بذر» نیست یا پیوند مبهم/جعلی است.',
       isCause
-        ? '15) در سؤال علت: طوطی‌واری موضوع (مو/دندان/بچه) یا ردیف بانک علت به‌عنوان کل نطق = رد.'
-        : '15) اگر نطق یک‌خطی نام طرفین سیاسی دارد یا سبک خبری مدرن است، آن را به زنجیرهٔ کلاسیک (بدون نام طرفین) ویرایش کن؛ نام‌ها فقط در تفسیر بمانند.',
-      '16) در صورت قبول، ویرایش جزئی برای روان‌تر شدن مجاز است ولی حرف جدید اضافه نکن و اسکلت را از بذر حفظ کن.',
+        ? '16) در سؤال علت: طوطی‌واری موضوع (مو/دندان/بچه) یا ردیف بانک علت به‌عنوان کل نطق = رد.'
+        : '16) اگر نطق یک‌خطی نام طرفین سیاسی دارد یا سبک خبری مدرن است، آن را به زنجیرهٔ کلاسیک (بدون نام طرفین) ویرایش کن؛ نام‌ها فقط در تفسیر بمانند.',
+      '17) در صورت قبول، ویرایش جزئی برای روان‌تر شدن مجاز است ولی حرف جدید خارج از جدول اضافه نکن و اسکلت بذر/جدول را حفظ کن.',
       '',
       '## فرمت خروجی داور',
       'برای هر کاندید مولّد:',
@@ -3025,8 +3094,9 @@
       '- دلیل کوتاه:',
       'پایان:',
       '- کاندیدهای قبول‌شده نهایی:',
-      '- نطق یک‌خطی نهایی: <زنجیره از بذر/مخزن؛ نه ردیف بانک؛ بدون نام طرفین در نزاع>',
+      '- نطق یک‌خطی نهایی: <فقط حروف موجود در A–D؛ نه ردیف بانک؛ بدون نام طرفین در نزاع>',
       '- پیوند بذر: <A یا B> · <قطعه>',
+      '- پیوند جدول: <واژه: حرف←سطرستون …>',
       '- تفسیر هوش مصنوعی: <۲–۵ جمله روان برای صورت‌مسئله؛ در نزاع طرفین را نام ببر>',
       '- سطح اطمینان: کم/متوسط/زیاد'
     ].join('\n');
@@ -3115,35 +3185,40 @@
         const nl = result.natqLock || result.jadwal.natqLock;
         jadwalLines.push(`- قفل نطق: ${nl.summary}`);
         (nl.rules || []).forEach((rule, i) => jadwalLines.push(`  · ${i + 1}) ${rule}`));
-        if (nl.reference && nl.reference.highlight) {
+        if (nl.reference && nl.reference.provenance) {
+          formatProvenanceBlock(nl.reference.provenance, {
+            title: '## منشأ حروف نمونهٔ مرجع (اثبات جدول — جواب از خود ساخته نیست)',
+            note: 'اگر نطق جدید می‌سازی، همین‌طور برای هر واژهٔ اصلی پیوند جدول بنویس.'
+          }).forEach((ln) => jadwalLines.push(ln));
+        } else if (nl.reference && nl.reference.highlight) {
           jadwalLines.push(`- مسیر رنگ نمونهٔ مرجع: ${nl.reference.highlight.summary}`);
         }
       }
-      jadwalLines.push('## دستور نطق جدولی (قفل باز)');
+      jadwalLines.push('## دستور نطق جدولی (حروف فقط از جدول)');
       if (result.classicBasis || (result.jadwal && result.jadwal.classicBasis)) {
         jadwalLines.push('۰) حالت مبنا اصولی فعال: سطر مستحضره = حساب اصلی؛ مخزن A–D فقط برای نطق ادبی/جمله یک‌خطی.');
         jadwalLines.push('۰ب) بذر A/B را از سطر اصولی بخوان؛ جملهٔ ادبی را فقط با حروف مخزن بساز و به سؤال ربط بده.');
       }
-      jadwalLines.push('1) اول پیش‌نویس بذر (seedDraft) و مسیر A/B را بخوان؛ اسکلت یک‌خطی از همین‌جاست.');
-      jadwalLines.push('1ب) از مخزن A+B+C+D فقط برای تکمیل/روان‌سازی همان بذر استفاده کن (ترتیب ستون اجباری نیست).');
-      jadwalLines.push('1ج) ممنوع: لیست‌کردن واژه‌های بانک پشت‌سرهم به‌عنوان یک‌خطی؛ اگر فقط بانک را چسباندی، رد کن و از بذر دوباره بنویس.');
-      jadwalLines.push('1د) در خروجی خط «پیوند بذر» بنویس (A یا B + قطعهٔ استفاده‌شده).');
-      jadwalLines.push('1ه) مستحصله در کتب «سطر» است؛ شبکهٔ فشرده فقط نمایش است — مبنای خوانش همان سطر/بذر است.');
+      jadwalLines.push('1) اول حروف را از سطرهای A–D بردار؛ حرف خارج از جدول ممنوع است.');
+      jadwalLines.push('1ب) برای هر واژهٔ مهم «پیوند جدول» بنویس (حرف←سطرستون). مثال جنگ: نادم: ن←A1 ا←B2 د←D13 م←D16.');
+      jadwalLines.push('1ج) پیش‌نویس بذر (seedDraft) و مسیر A/B را هم بخوان؛ اسکلت را با حروف جدول تکمیل کن.');
+      jadwalLines.push('1د) ممنوع: لیست‌کردن واژه‌های بانک پشت‌سرهم؛ ممنوع: ساختن جوابی که حرفش در جدول نیست.');
+      jadwalLines.push('1ه) پیوند بذر + پیوند جدول هر دو اجباری‌اند.');
       if (rules.isConflict) {
-        jadwalLines.push('2) سبک هدف: زنجیرهٔ واژه‌های حرف‌محور شبیه «نادم شوند که نهایت گرفت عمید سقوط حصول به خوف نظامی باخت سخت» (عین آن را کپی نکن؛ برای سؤال فعلی از بذر بساز).');
+        jadwalLines.push('2) سبک هدف: زنجیرهٔ واژه‌های حرف‌محور از حروف موجود جدول (نمونهٔ اثبات‌شدهٔ مرجع را عین کپی نکن؛ برای سؤال فعلی از همین جدول بساز).');
         jadwalLines.push('3) ممنوع در نطق یک‌خطی: نام طرفین (اسرائیل/امریکا/ایران/…) و جملهٔ خبری مدرن با ویرگول‌های تحلیلی.');
-        jadwalLines.push('4) مجاز در تفسیر: نام طرفین + توضیح روان (ندامت مهاجم، بقا/نصر مدافع، فرسایش، نه لزوماً پیروزی سریع بی‌خسارت).');
+        jadwalLines.push('4) مجاز در تفسیر: نام طرفین + توضیح روان.');
       } else if (rules.isCause) {
-        jadwalLines.push('2) سبک هدف: زنجیره از بذر A/B + حروف مخزن؛ بانک علت را ردیف نکن؛ واژهٔ موضوع (مو/دندان/بچه) را طوطی‌وار ننویس.');
-        jadwalLines.push('3) بانک قطبی (آری/خیر) و چسباندن بانک موضوعی ممنوع است.');
+        jadwalLines.push('2) سبک هدف: زنجیره از بذر + حروف موجود A–D؛ بانک علت را ردیف نکن؛ واژهٔ موضوع را طوطی‌وار ننویس.');
+        jadwalLines.push('3) بانک قطبی و چسباندن بانک موضوعی ممنوع است.');
         jadwalLines.push('4) تفسیر: ۲–۵ جمله روان + صریحاً بگو تشخیص پزشکی نیست.');
       } else {
-        jadwalLines.push('2) سبک هدف: زنجیرهٔ کلاسیک از بذر/مخزن هم‌خوان با موضوع سؤال — الگوی جنگ را کپی نکن.');
-        jadwalLines.push('3) بانک جنگ (نادم/سقوط/نظامی/…) را وارد نکن مگر حروف مخزن مجبور کند؛ بانک موضوعی را ردیف نکن.');
-        jadwalLines.push('4) تفسیر: ۲–۵ جمله روان برای صورت‌مسئلهٔ همین سؤال (ازدواج/سفر/کار/نام/…).');
+        jadwalLines.push('2) سبک هدف: زنجیره از حروف موجود جدول هم‌خوان با موضوع سؤال.');
+        jadwalLines.push('3) بانک جنگ را وارد نکن مگر حروف جدول مجبور کند؛ بانک موضوعی را ردیف نکن.');
+        jadwalLines.push('4) تفسیر: ۲–۵ جمله روان برای صورت‌مسئلهٔ همین سؤال.');
       }
-      jadwalLines.push('5) رنگ/هایلایت را فرمول استخراج فرض نکن؛ بعد از نطق، حروف مصرف‌شده در جدول جارو می‌شوند.');
-      jadwalLines.push('6) جدول کاندید فقط پشتیبان است؛ محصول اصلی = نطق یک‌خطی + پیوند بذر + تفسیر. حرف خارج از مخزن ممنوع.');
+      jadwalLines.push('5) رنگ خانه‌ها = اثبات مصرف حروف از جدول؛ بدون خانه برای حرف = نطق باطل.');
+      jadwalLines.push('6) محصول اصلی = نطق یک‌خطی + پیوند بذر + پیوند جدول + تفسیر.');
       (result.jadwal.layers || []).forEach((row) => {
         jadwalLines.push(`- ${row.title}: ${row.str}`);
       });
@@ -3183,19 +3258,19 @@
       ...(rules.isChoice ? ['1) فقط گزینه‌های سؤال را مقایسه کن.', '2) جدول پوشش + عنصر + مدخل + پایداری را مبنا بگیر.', '3) ۳ تا ۵ رتبه + ۲–۴ جمله توضیح بده.', '4) کاندیدهای پایدار را علامت بزن.']
         : rules.isYesNo ? ['1) بین آری/خیر/مبهم کاندید بده.', '2) ۲–۴ جمله دلیل از حروف/عنصر/مدخل.', '3) ۲ تا ۴ کاندید پشتیبان (دیکشنری یا نطق‌آزاد).']
         : sentenceNatq ? [
-          '1) اول بذر A/B و پیش‌نویس بذر را بخوان.',
-          '2) یک «نطق یک‌خطی» از همان بذر بساز؛ مخزن فقط تکمیل است؛ چسباندن بانک ممنوع.',
-          '3) خط «پیوند بذر» بنویس (A یا B + قطعه).',
+          '1) اول حروف را در سطرهای A–D پیدا کن؛ حرف خارج از جدول ممنوع.',
+          '2) یک «نطق یک‌خطی» از همان حروف بساز؛ چسباندن بانک ممنوع.',
+          '3) «پیوند بذر» و «پیوند جدول» (خانه به خانه مثل نادم: ن←A1 …) بنویس.',
           rules.isConflict
             ? '4) در نطق نام طرفین ننویس؛ ویرگول خبری کم کن؛ زنجیرهٔ که/و/به/ز.'
             : (rules.isCause
               ? '4) طوطی‌واری موضوع (مو/دندان/بچه) و ردیف بانک علت ممنوع؛ جزئیات در تفسیر.'
-              : '4) بانک جنگ را وارد نکن مگر حروف مجبور کند؛ جزئیات روان در تفسیر.'),
+              : '4) بانک جنگ را وارد نکن مگر حروف جدول مجبور کند؛ جزئیات روان در تفسیر.'),
           '5) جدول کاندید پشتیبان بده (معنادار؛ پنجرهٔ بی‌معنا غالب نشود).',
           rules.isConflict
             ? '6) «تفسیر هوش مصنوعی» جدا بنویس و آنجا طرفین را نام ببر.'
             : '6) «تفسیر هوش مصنوعی» جدا بنویس برای همین صورت‌مسئله.',
-          '7) قضاوت نهایی با داور — لیست بانک به‌عنوان یک‌خطی = رد.'
+          '7) بدون پیوند جدول یا با حرف خارج از A–D = رد داور.'
         ]
         : ['1) از دیکشنری شروع کن ولی به آن محدود نشو.', '2) در صورت نیاز نطق‌آزاد از لایه‌ها بساز.', '3) پایدارها را بالاتر بنویس.', '4) جدول ۳ تا ۸ کاندید + خوانش ۲ تا ۶ جمله‌ای بده؛ نهایی‌سازی با داور.'])
     ].filter((x) => x != null).join('\n');
@@ -3331,7 +3406,7 @@
     analyzeStabilityForResult, analyzeStabilityForMulti, formatStabilityBlock, buildJudgePrompt, fillJudgePrompt,
     runClassic, runMany, buildReport, buildNatqPrompt, buildMultiReport, buildMultiNatqPrompt,
     buildAskRefinePrompt, describeOptions, sumAbjad, nazira, mapNazira, mapTarfa, mapTanzil, istintaqKabir, nisbatRow, haroofQuwa,
-    computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight,
+    computeMizan, analyzeJamalLock, analyzeNatqLock, planNatqHighlight, buildNatqProvenance, formatProvenanceBlock,
     classifyQuestionScope, buildMustehsilaGrid,
     LETTER_CATEGORIES, letterCategory, LETTER_MUQARRARA, ELEMENT_MUQARRARA,
     muqarraraOf, measureLetterByMuqarrara, measureStringByMuqarrara, buildClassicalNatqSeed,
